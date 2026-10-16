@@ -37,7 +37,7 @@ class SchedulingConfigurationTest {
 	void nodeCapDefaultsFromApplicationProperties() {
 		runner.run(context -> {
 			assertThat(context).hasNotFailed();
-			assertThat(context.getBean(SchedulingProperties.class).nodeCap()).isEqualTo(200000);
+			assertThat(context.getBean(SchedulingProperties.class).nodeCap()).isEqualTo(1000000);
 		});
 	}
 

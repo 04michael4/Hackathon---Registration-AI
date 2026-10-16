@@ -68,7 +68,7 @@ Status code usage:
 
 | Code | When |
 |---|---|
-| 400 | Malformed JSON, missing required fields, values out of range; scheduling credit minimum above maximum; more than 10 optional course selections |
+| 400 | Malformed JSON, missing required fields, values out of range; scheduling credit minimum above maximum; more than 8 optional course selections |
 | 403 | CORS origin, method, or requested header is not allowed |
 | 404 | Unknown resource (e.g. course ID) in a path |
 | 405 | Unsupported HTTP method; preserves the `Allow` header |
@@ -355,7 +355,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 1. Validate the original request before catalog lookups or engine invocation. `term` must be nonblank; `preferences` and `hardConstraints` are required. Required course IDs must form a nonempty list of nonblank strings.
 2. Both credit bounds must be integers in **1–21**, with `minCredits <= maxCredits`; violations return **HTTP 400**. Omitted/null bounds use 12 and 18. `maxResults` is an integer in **1–10**, default 5. Numeric strings and fractional numbers are rejected, not rounded or clamped.
 3. Every supplied preference must include its value (except `minimizeGaps`) and an integer weight in **0–5**, including 0. Omitted preferences are inactive. Missing/null weights and invalid days/times return 400. Blocked times require nonempty valid days and `start < end`; times use `HH:mm`.
-4. **Requests containing more than 10 optional courses receive HTTP 400.** This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
+4. **Requests containing more than 8 optional courses receive HTTP 400.** (Was 10; lowered 2026-10-16 because each optional course multiplies the engine's search.) This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
 5. De-duplicate by stable course ID. A course in both lists remains required and is removed from optional selections. Prepare courses sorted by ID and sections sorted by CRN. Unknown terms or selected course IDs return 422.
 6. Exclude sections outside the requested term or selected courses. With `includeClosedSections=false` (also the default when null), exclude **every CLOSED component**, including lectures, labs, and recitations. OPEN and UNKNOWN remain eligible. With `true`, closed status alone does not exclude a section. **A lecture that loses every section of one linked component type** (e.g. all its labs are closed) **is excluded too**, along with its remaining linked sections, because it can't be taken alone. This uses the engine's own rule, `CourseOption.excluding`. Preserve component types and lecture links; never infer links. **`lectureLink` is the CRN of the lecture a lab or recitation must be taken with, and `null` for a lecture or standalone section.** A lecture with linked sections is always scheduled with exactly one of them per component type. TBA/online sections without scheduled times have empty meetings lists. A course with no eligible sections is passed to the engine for normal infeasibility diagnostics.
 
@@ -413,7 +413,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 **Result mapping:** preserve engine schedule and section ordering; assign ranks starting at 1. Copy `totalCredits`, score, breakdown, diagnostics, and `searchLimitReached` from the result. Derive overload solely from each result's actual `totalCredits > 18`: 18 is false, 19 and 21 are true, regardless of the requested maximum. Section display details come from the same prepared catalog snapshot. Unknown returned CRNs or missing score/breakdown are internal integration failures, not invented data.
 
-**Exploration configuration:** `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` in `application.properties` defaults to 200,000. It is passed to the engine adapter on every call. Values must be positive 32-bit integers; zero, negative, fractional, nonnumeric, and overflowing values fail application startup. There is no request-level override. See architecture §7 for the pending production adapter.
+**Exploration configuration:** `scheduling.node-cap=${SCHEDULING_NODE_CAP:1000000}` in `application.properties` defaults to 1,000,000 (was 200,000; raised 2026-10-16 so typical requests finish their search, worst measured about 160 ms). It is passed to the engine adapter on every call. Values must be positive 32-bit integers; zero, negative, fractional, nonnumeric, and overflowing values fail application startup. There is no request-level override. See architecture §7 for the pending production adapter.
 
 ---
 
@@ -439,6 +439,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-16 | Optional-course limit lowered from 10 to **8** (more than 8 → 400). Default `scheduling.node-cap` raised from 200,000 to **1,000,000**. Engine-owner decisions; **contract change**, so the Backend API and frontend owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Native scheduling engine integrated behind `SchedulingEngine`. `lectureLink` defined as the lecture's CRN (was opaque). With `includeClosedSections=false`, a lecture whose labs (or recitations) are all closed is now excluded as well. **Contract change:** the Backend API and Data owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-15 | Implement Schedule API validation and mapping with test doubles; require HTTP 400 for more than 10 original optional selections and reversed credit bounds; document normalization, closed-component filtering, exact score pass-through, overload, configurable node cap, and 503 while production adapters are absent. Shared preference record shapes retained from AI branch; consuming-owner review required. | Codex, Backend API task |
 | 2026-10-15 | Implement the agreed Problem Details error format in `common`; add request IDs, sorted validation errors, safe fallback errors, and configurable CORS. Frontend consumers must migrate from the old default error JSON; consuming-module review required before merge. | Codex, Backend API task |

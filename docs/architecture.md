@@ -213,12 +213,12 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 `schedule.integration.SchedulingEngine` is an **API-owned provisional adapter boundary**, not a replacement engine model. Tests provide doubles. Once Sunny publishes the native engine interface, implement an adapter in `schedule` that converts the prepared input to native records and returns the engine's score, breakdown, totals, CRNs, diagnostics, and cap flag unchanged. Keep the engine pure Java and independent of `schedule`. The adapter must preserve actual component/link semantics; the current boundary carries a source-provided, opaque `lectureLink` without inferring links. Engine-owner review of that mapping is required before claiming full integration.
 
 **Caller rules implemented by the API:**
-- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 10 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
+- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 8 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
 - De-duplicate by course ID; required membership wins over optional membership. Resolve all selected IDs against the requested term. Prepare courses by ID and sections by CRN for deterministic input.
 - `includeClosedSections=false` excludes closed lectures, labs, recitations and other components. `true` retains closed sections; term/course eligibility still applies. Preserve component types and opaque lecture associations; retain UNKNOWN availability. Unscheduled sections use empty meetings lists. Duplicate identical section rows collapse; contradictory rows and malformed scheduled meetings are internal errors, not guessed data.
 - Pass required courses with no eligible sections to the engine for infeasibility diagnostics. Conflict solving, blocked-time exclusion, linked-component selection, credit feasibility, ranking and scoring remain engine responsibilities.
 - Map engine results in their returned order. Copy score/breakdown without rescaling, rounding or adding missing values. Derive overload only from the returned `totalCredits > 18`; resolve display metadata from the same prepared snapshot. Unknown result CRNs or missing scores/breakdowns fail safely with 500.
-- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:1000000}` (default raised from 200,000 on 2026-10-16) through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
 
 **Update 2026-10-16 (engine integration).** The native engine now exists (`engine` package, sections below). `schedule.integration.NativeSchedulingEngine` is the adapter: it translates the boundary records to engine records and back, and passes score, breakdown, credits, CRNs, diagnostics and the cap flag through unchanged. Two caller rules were settled with the engine owner:
 - **`lectureLink`** is the lecture's CRN (or `null` for a lecture).
@@ -249,13 +249,13 @@ The `schedule` package calls the engine through these types only. They're a [sha
 
 **Rules for the caller (`schedule` package, Backend API).** The engine defines these; the Backend API follows them:
 1. Reject invalid requests before calling the engine: credits outside 1–21, `minCredits > maxCredits`, weights outside 0–5, an empty `requiredCourseIds`, `maxResults` outside 1–10.
-2. Pass **at most 10 optional courses**; reject more with `400`. *(This needs a line in api-contract.md, which the Backend API owner maintains. See "Search size" below for why the team might lower it.)*
+2. Pass **at most 8 optional courses**; reject more with `400`. *(Decided 2026-10-16, down from 10. Enforced by `ScheduleRequestValidator.MAX_OPTIONAL_COURSES` and documented in api-contract.md. See "Search size" for why.)*
 3. If a course is both required and optional, treat it as required only.
 4. When `includeClosedSections` is false, remove closed sections with **`course.excluding(s -> closed)`**, not by filtering the list yourself. `excluding` also removes a lecture that lost all its labs (or all its recitations), because it can't be taken alone. *(Done in `EngineMapper`, 2026-10-16.)*
 5. Fill in `component` and `parentCrn` for every section from the catalog's lecture–lab relation. A section with no scheduled time (TBA/online) gets an empty `meetings` list.
 6. Put a course's credits on its lecture and the catalog's own value (usually 0) on its linked sections; the engine adds them up.
 7. Set `overload` from `totalCredits` (> 18), and copy `score`, `breakdown` and `diagnostics` through unchanged.
-8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, which defaults to 200,000 on `pre-main`. Whether to raise it to the engine's default of 1,000,000 is still open; see "Search size".)*
+8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, whose default was raised to 1,000,000 on 2026-10-16; see "Search size".)*
 
 **Linked sections (decided 2026-10-15).** One lecture may allow several labs or recitations. A lecture that has linked sections **must** be taken with exactly one of them **per component type**. For example, lecture 010 with labs 011 and 012 and recitations R1 and R2 gives four choices. The engine expands each lecture into these bundles itself. It discards any bundle whose parts overlap each other or a blocked time, and it never picks a linked section without its lecture.
 
@@ -291,6 +291,8 @@ Measured on an Apple M5 Pro (JDK 25 running Java 21 bytecode). Synthetic catalog
 | 5 required + 5 optional | 30 ms / 19 of 20 | 124 ms / 6 of 20 | 183 ms / 0 of 20 |
 | 4 required + 10 optional | 33 ms / 20 of 20 | 162 ms / 20 of 20 | 626 ms / 16 of 20 |
 
+**Decided 2026-10-16 (engine owner):** the default node cap is **1,000,000**, and requests may list at most **8 optional courses**. Above about 5 optional courses with many sections each, a search can still stop at the cap. Its results are then valid but flagged `searchLimitReached`.
+
 **Optional courses drive the cost.** Each optional course multiplies the choices by (sections + 1). Required courses are cheap, because conflicts and the credit cap prune them hard. Real catalogs usually have far fewer sections per course than these synthetic ones. Options if the cap is hit too often in practice:
 - lower the optional-course limit (rule 2);
 - raise the node cap;
@@ -313,7 +315,7 @@ score  = 100 − Σ points               5 preferences × 20 = 100, so score is 
 | `minimizeGaps` | min(1, weekly idle minutes between consecutive same-day classes ÷ 600) |
 | `optionalCourseIds` | optional courses left out ÷ number of optional courses (including ones that can't fit at all) |
 
-`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values.
+`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values. They were kept on 2026-10-16, to revisit with real schedules. **Earliest start, latest end and days off stay soft** (decided 2026-10-16): they lower a schedule's rank but never remove it. Blocked times are the way to forbid a time outright.
 
 **Ranking:**
 - By displayed points first, so a higher rank never shows a lower score.

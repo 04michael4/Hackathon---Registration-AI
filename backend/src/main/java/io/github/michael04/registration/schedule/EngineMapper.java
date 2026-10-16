@@ -49,8 +49,8 @@ public class EngineMapper {
 			.map(id -> new SchedulingEngine.Course(id, required.contains(id), eligible.values().stream()
 				.filter(section -> id.equals(section.courseId())).map(this::toSection).toList()))
 			.toList();
-		if (inputs.stream().filter(course -> !course.required()).count() > 10) {
-			throw new IllegalArgumentException("At most 10 optional courses may reach the engine");
+		if (inputs.stream().filter(course -> !course.required()).count() > ScheduleRequestValidator.MAX_OPTIONAL_COURSES) {
+			throw new IllegalArgumentException("Too many optional courses for the engine");
 		}
 		var hard = request.preferences().hardConstraints();
 		var constraints = new SchedulingEngine.Constraints(hard.minCredits(), hard.maxCredits(),

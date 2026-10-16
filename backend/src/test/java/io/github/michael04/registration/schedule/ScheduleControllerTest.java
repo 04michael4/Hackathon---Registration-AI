@@ -100,12 +100,12 @@ class ScheduleControllerTest {
 			Arguments.of("preferences.hardConstraints.minCredits", "\"\""),
 			Arguments.of("preferences.hardConstraints.maxCredits", "21.9"),
 			Arguments.of("includeClosedSections", "\"true\""),
-			Arguments.of("preferences.softPreferences.optionalCourseIds.value", optionalIds(11)),
+			Arguments.of("preferences.softPreferences.optionalCourseIds.value", optionalIds(9)),
 			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "[\"\"]"),
 			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "[null]"),
 			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "[true]"),
 			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "null"),
-			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "[" + String.join(",", java.util.Collections.nCopies(11, "\"CSE-017\"")) + "]"),
+			Arguments.of("preferences.softPreferences.optionalCourseIds.value", "[" + String.join(",", java.util.Collections.nCopies(9, "\"CSE-017\"")) + "]"),
 			Arguments.of("preferences.softPreferences.daysOff.value", "[null]"),
 			Arguments.of("preferences.softPreferences.daysOff.value", "[\"FUNDAY\"]"),
 			Arguments.of("preferences.softPreferences.earliestStart.value", "\"10:00:30\""),
@@ -161,10 +161,10 @@ class ScheduleControllerTest {
 	}
 
 	@Test
-	void exactlyTenOptionalCoursesAreAccepted() throws Exception {
-		send(changed(VALID, "preferences.softPreferences.optionalCourseIds.value", optionalIds(10)))
+	void exactlyEightOptionalCoursesAreAccepted() throws Exception {
+		send(changed(VALID, "preferences.softPreferences.optionalCourseIds.value", optionalIds(8)))
 			.andExpect(status().isOk());
-		assertThat(capturedProblem().courses().stream().filter(course -> !course.required())).hasSize(10);
+		assertThat(capturedProblem().courses().stream().filter(course -> !course.required())).hasSize(8);
 	}
 
 	@Test
@@ -230,7 +230,7 @@ class ScheduleControllerTest {
 			.andExpect(jsonPath("$.searchLimitReached").value(true)).andReturn().getResponse().getContentAsString();
 		// Check raw decimal text, avoiding the JSON test helper's conversion to double.
 		assertThat(response).contains("87.1234567890123456789", "0.1234567890123456789");
-		verify(engine).solve(any(), eq(200000));
+		verify(engine).solve(any(), eq(1000000));
 	}
 
 	@Test
@@ -251,7 +251,7 @@ class ScheduleControllerTest {
 
 	private SchedulingEngine.Problem capturedProblem() {
 		var captor = ArgumentCaptor.forClass(SchedulingEngine.Problem.class);
-		verify(engine).solve(captor.capture(), eq(200000));
+		verify(engine).solve(captor.capture(), eq(1000000));
 		return captor.getValue();
 	}
 
