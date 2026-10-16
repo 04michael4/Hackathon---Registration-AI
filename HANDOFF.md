@@ -129,6 +129,12 @@ The engine **logic** can be built and unit-tested now, before the database or ca
   - `CourseOptionTest` (4);
   - `BacktrackingScheduleSolverTest` (25), which includes the README worked example, lecture/lab bundles, every diagnostic, determinism under shuffled input, and 200 seeded random catalogs. Each catalog is checked by an independent validity checker and against a **brute-force solver**: the returned schedules must be exactly the true top K.
   - Also: 7 × 10 sections solving in under 1 s (`assertTimeout`).
+- 2026-10-16: **Manual mode support: `SelectionChecker`** (owner decisions: grey out + warn on bad drops; lecture and lab dragged separately, with the lab prompted). It checks a hand-picked set of CRNs and returns:
+  - conflicts and missing pieces, each with a message the UI can show;
+  - for every unplaced section, whether it fits, why not, and whether it completes a placed lecture;
+  - credits and a score computed the same way as for generated schedules.
+
+  `SelectionCheckerTest` (12) includes a cross-check: every schedule the solver generates passes the checker with zero issues and an identical score. Documented in architecture.md § 7 "Manual mode".
 
 **In progress:** Sunny, branch `feature/engine-core` (pushed to `origin/feature/engine-core`). The engine is functionally complete; team-agreement items are deferred to the merge, per the owner.
 
@@ -150,6 +156,8 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 3. **Marpu:** the scoring formula (0–20 points per preference, `score = 100 − Σ`), and the per-preference `breakdown` keys, which equal the contract's `softPreferences` field names.
 4. **David:** the catalog must give each section a component type and the CRN of its lecture, so the "lecture must have its lab" rule works. The credits convention is course credits on the lecture and 0 on its labs, unless the catalog says otherwise.
 5. **Michael:** nothing engine-specific. AI output reaches the engine only through `SchedulePreferences`.
+6. **Marpu:** add `POST /api/schedules/check` (proposed in architecture.md § 7 "Manual mode") and a `check` method on the `SchedulingEngine` adapter. **David:** the frontend's two modes: suggested (`generate` with `maxResults: 4`), and manual (calendar with every section of the student's courses, grey-out and highlight from `/check`). Manual mode also needs `GET /api/courses/{courseId}` (endpoint 4) for section times.
+7. **Whole team, scope change:** the owner wants manual mode to list **the major's required courses automatically**. The README currently puts degree requirements out of scope. It needs degree-requirement data per major (David), the student's major and completed courses as input (frontend/AI), and an endpoint that returns the courses still required and offered this term (Marpu). A hand-entered requirement list for one demo major would be a feasible hackathon version. Not engine work.
 
 **Next recommended**
 1. At merge: write the `SchedulingEngine` adapter and resolve the merge notes above, together with Marpu.
@@ -222,6 +230,7 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 14:11 EDT | Claude Code for Sunny | Scheduling Engine | Manual-mode support on `feature/engine-core`: added `SelectionChecker`, `SelectionReport`, `SelectionIssue` and `SectionFit`, plus 12 tests including a cross-check with the solver. Documented the manual mode and a proposed `/api/schedules/check` endpoint, and flagged the "major's required courses" scope change. `cd backend && ./mvnw -B test` → `Tests run: 67, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. |
 | 2026-10-16 12:44 EDT | Claude Code for Sunny | Scheduling Engine | Owner asked to commit and push `feature/engine-core`. Added merge notes for `origin/pre-main`'s `SchedulingEngine` boundary (adapter mapping, closed-section risk, node-cap mismatch). Test run before commit: 55/55 pass (see 22:44 entry); no code changed since. |
 | 2026-10-15 22:44 EDT | Claude Code for Sunny | Scheduling Engine | Committed the engine types as `d37eec8` (owner's request; not pushed). Implemented `BacktrackingScheduleSolver`, `ScheduleScorer`, `Bundle`, `Meeting.overlaps` and `CourseOption.excluding`, plus 35 new engine tests (including a brute-force optimality check). Measured search size; default node cap raised to 1,000,000. `cd backend && ./mvnw -B test` → `Tests run: 55, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Solver uncommitted. |
 | 2026-10-15 22:08 EDT | Claude Code for Sunny | Scheduling Engine | Lecture/lab links added to the engine types (`component`, `parentCrn`; one lecture → many labs). Documented the infeasibility suggestion, the 8 caller rules for the Backend API, and the search-size plan in architecture.md § 7–8. `cd backend && ./mvnw -B test` → `Tests run: 23, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
