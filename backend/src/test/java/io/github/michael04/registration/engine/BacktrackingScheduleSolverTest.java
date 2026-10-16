@@ -309,6 +309,8 @@ class BacktrackingScheduleSolverTest {
 		assertTrue(result.schedules().isEmpty());
 		assertEquals("These courses add up to at most 7 credits, below your minimum of 12.",
 				result.diagnostics().getFirst());
+		assertEquals("Suggestion: add courses worth at least 5 more credits (for example as electives), "
+				+ "or lower your minimum credits to 7.", result.diagnostics().get(1));
 	}
 
 	@Test
