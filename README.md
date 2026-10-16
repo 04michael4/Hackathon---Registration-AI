@@ -8,8 +8,8 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Backend foundation merged to `main`; `common` error handling and CORS implemented and verified on `feature/backend-common`; integration target: `pre-main` for testing |
-| **What works today** | Spring Boot health endpoint, standardized Problem Details errors, validation infrastructure, configurable CORS; 48 automated tests passed |
+| **Current phase** | Schedule API validation and mapping on `feature/backend-schedule`, based on testing branch `pre-main`; production catalog/engine adapters pending |
+| **What works today** | Health, Problem Details, CORS, and Schedule API validation/preparation/response mapping; schedule success paths use test doubles until production adapters are available |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -44,7 +44,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Course search by code/title for a term | ✔ | ⬜ Planned |
 | AI preference extraction from free text | ✔ | ⬜ Planned |
 | Editable preference form (works without AI too) | ✔ | ⬜ Planned |
-| Conflict-free schedule generation, ranked by preferences | ✔ | ⬜ Planned |
+| Conflict-free schedule generation, ranked by preferences | ✔ | 🟡 API layer implemented; catalog and solver adapters pending |
 | Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
 | AI explanation of a schedule | Stretch | ⬜ Planned |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
@@ -146,6 +146,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 |---|---|---|---|
 | `PORT` | Backend | No | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
+| `SCHEDULING_NODE_CAP` | Schedule API | No | `200000` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Backend *(planned)* | No | — |
 | `NEXT_PUBLIC_API_BASE_URL` | Frontend *(planned)* | No | `http://localhost:8080` |
@@ -153,6 +154,10 @@ cp .env.example .env    # optional right now; nothing is required yet
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
 
 `CORS_ALLOWED_ORIGINS` accepts comma-separated exact frontend origins, for example `http://localhost:3000,https://planner.example`. Do not include trailing slashes, paths, or wildcards. The allowlist replaces the localhost default. An empty value disables cross-origin access when using a same-origin frontend proxy. CORS covers `/api/**`, allows GET/HEAD/POST/OPTIONS with Accept/Content-Type headers, and disables credentials. Error responses use Problem Details with a `requestId` and matching `X-Request-Id` header; see the [API contract](docs/api-contract.md#error-responses).
+
+`SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 200,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
+
+**Schedule API status:** `POST /api/schedules/generate` now validates requests, prepares catalog input, and maps solver results. Success paths are tested with explicit doubles. The fetched repository has no production scheduling engine or section catalog; valid requests return a safe **503** until `CourseCatalog`, `SectionCatalog`, and a `SchedulingEngine` adapter are registered. Invalid requests still return **400** before those dependencies are accessed. This includes more than 10 optional selections, measured before deduplication. See [architecture §7](docs/architecture.md#7-scheduling-engine) for the pending native-engine mapping; no solver algorithm or successful production results are fabricated.
 
 ### 4. Run the automated tests
 
@@ -256,7 +261,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 ## Known limitations and future work
 
 **Current limitations**
-- Health is the only implemented `/api` endpoint; shared errors and CORS are available. No catalog data, database, AI or frontend yet.
+- Health and Schedule API validation/mapping are implemented; shared errors and CORS are available. Schedule generation needs production catalog and engine adapters; the API currently returns 503 for valid generation requests. No catalog data, database, AI or frontend is integrated on this branch.
 - **The source for Lehigh course data hasn't been chosen.** This blocks course search and scheduling against real data.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.

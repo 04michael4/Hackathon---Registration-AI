@@ -2,7 +2,7 @@
 
 This file is the **source of truth** for the HTTP interface between the frontend and the backend. Change it in the same PR as the code that changes the contract (see [CLAUDE.md § Shared interfaces](../CLAUDE.md#shared-interfaces)).
 
-> ✅ **Agreed by the team (2026-10-15).** Michael, David, Marpu and Sunny agreed on this contract, including the `SchedulePreferences` shape, the formats, the 0–5 weights, the credit limits, and the planned error format. Only endpoint 1 (`GET /api/health`) is implemented so far; endpoints 2–7 are agreed designs that haven't been built yet (⬜). From now on, changes follow the [shared-interface rules](../CLAUDE.md#shared-interfaces).
+> ✅ **Agreed by the team (2026-10-15).** Michael, David, Marpu and Sunny agreed on this contract, including the `SchedulePreferences` shape, formats, weights, credit limits, and error format. Health and shared errors are implemented. Endpoint 6 now has an API implementation tested with doubles; production catalog and solver adapters are still missing. Other endpoints remain planned on this branch. Changes follow the [shared-interface rules](../CLAUDE.md#shared-interfaces).
 
 **Status legend**
 
@@ -19,7 +19,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
 | 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
 | 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ⬜ Planned | AI Integration |
-| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ⬜ Planned | Scheduling Engine |
+| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | 🟡 API implemented; catalog/solver integration pending | Backend API + Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
 
 ---
@@ -58,27 +58,27 @@ Every problem includes `type` (`about:blank`), the HTTP status phrase as `title`
   "detail": "Request validation failed",
   "instance": "/api/schedules/generate",
   "requestId": "123e4567-e89b-42d3-a456-426614174000",
-  "errors": [ { "field": "hardConstraints.maxCredits", "message": "must be between 1 and 21" } ]
+  "errors": [ { "field": "preferences.hardConstraints.maxCredits", "message": "must be less than or equal to 21" } ]
 }
 ```
 
-The example is illustrative; schedule generation is still planned. Validation fields use property paths such as `hardConstraints.maxCredits`, or a method parameter name for parameter constraints. Object-level/cross-parameter errors use `$`. Messages must be safe for public display; rejected values are never serialized. Unexpected failures and upstream errors use fixed messages, without exception messages, stack traces, provider responses, or request contents.
+Validation fields use property paths such as `preferences.hardConstraints.maxCredits`, or a method parameter name for parameter constraints. Object-level/cross-parameter errors without a specific property path use `$`. Messages must be safe for public display; rejected values are never serialized. Unexpected failures and upstream errors use fixed messages, without exception messages, stack traces, provider responses, or request contents. Malformed JSON or invalid JSON types return 400 without a field-error array.
 
 Status code usage:
 
 | Code | When |
 |---|---|
-| 400 | Malformed JSON, missing required fields, values out of range |
+| 400 | Malformed JSON, missing required fields, values out of range; scheduling credit minimum above maximum; more than 10 optional course selections |
 | 403 | CORS origin, method, or requested header is not allowed |
 | 404 | Unknown resource (e.g. course ID) in a path |
 | 405 | Unsupported HTTP method; preserves the `Allow` header |
 | 406 | Requested response media type is not supported |
 | 415 | Request content type is not supported |
-| 422 | Well-formed request that can't be processed, e.g. unknown course IDs in a body, or `minCredits > maxCredits` |
+| 422 | Unknown course IDs or term in a scheduling request body |
 | 429 | Rate limit exceeded (AI endpoints; mechanism TBD) |
 | 500 | Unexpected server error. Never includes stack traces. |
 | 502 | The AI provider returned an error or output that failed validation |
-| 503 | AI features are not configured (no API key) or the provider is unavailable |
+| 503 | A required service is unavailable, including missing scheduling catalog/engine adapters or an unconfigured AI provider |
 
 Backend consumers can throw `common.NotFoundException` (404) and `common.UnprocessableException` (422) with a **public, sanitized message**, or `common.AiUnavailableException` (503, fixed message). Spring `ResponseStatusException`/`ErrorResponseException` statuses and protocol headers are preserved, with sanitized problem bodies; these support future 429/502 mappings without coupling `common` to the AI SDK. Unknown exceptions, including unexpected `IllegalArgumentException`, and return-value validation failures are 500. This infrastructure does not implement AI calls or rate limiting.
 
@@ -268,7 +268,7 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 ### Credit limits
 
-These are based on Lehigh's overload policy (text provided by the team, 2026-10-15), plus a team rule capping every schedule at 21 credits. Keep the numbers in configuration rather than hard-coding them.
+These are based on Lehigh's overload policy (text provided by the team, 2026-10-15), plus a team rule capping every schedule at 21 credits. The Schedule API enforces the fixed public-contract limits through shared `CreditLimits` constants and Bean Validation; changing them requires a contract change. The operational scheduling node cap is separately configurable.
 
 | Rule | Value | Source |
 |---|---|---|
@@ -337,7 +337,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 
 ## 6. `POST /api/schedules/generate`
 
-**Status: ⬜ Planned, not implemented.** Module: Scheduling Engine (logic and endpoint), using the Backend API's course data. **Priority: high.**
+**Status: 🟡 API implemented; production integration pending.** Module: Backend API (controller, validation, preparation and mapping), Scheduling Engine (solver). No engine implementation or section catalog exists in the fetched base. Automated success tests use explicit doubles; the running app returns a safe 503 until catalog and solver adapters are registered. No successful schedule results are fabricated.
 
 **Purpose:** run the deterministic scheduling engine and return up to `maxResults` conflict-free schedules, ranked by how well they satisfy the soft preferences. **This endpoint never calls the AI.** The same request against the same catalog snapshot always returns the same response.
 
@@ -350,6 +350,17 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 | `maxResults` | int | no | 1–10, default 5 |
 | `includeClosedSections` | boolean | no | Default `false` |
 
+**Validation and preparation order**
+
+1. Validate the original request before catalog lookups or engine invocation. `term` must be nonblank; `preferences` and `hardConstraints` are required. Required course IDs must form a nonempty list of nonblank strings.
+2. Both credit bounds must be integers in **1–21**, with `minCredits <= maxCredits`; violations return **HTTP 400**. Omitted/null bounds use 12 and 18. `maxResults` is an integer in **1–10**, default 5. Numeric strings and fractional numbers are rejected, not rounded or clamped.
+3. Every supplied preference must include its value (except `minimizeGaps`) and an integer weight in **0–5**, including 0. Omitted preferences are inactive. Missing/null weights and invalid days/times return 400. Blocked times require nonempty valid days and `start < end`; times use `HH:mm`.
+4. **Requests containing more than 10 optional courses receive HTTP 400.** This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
+5. De-duplicate by stable course ID. A course in both lists remains required and is removed from optional selections. Prepare courses sorted by ID and sections sorted by CRN. Unknown terms or selected course IDs return 422.
+6. Exclude sections outside the requested term or selected courses. With `includeClosedSections=false` (also the default when null), exclude **every CLOSED component**, including lectures, labs, and recitations. OPEN and UNKNOWN remain eligible. With `true`, closed status alone does not exclude a section. Preserve component types and opaque lecture associations; never infer links. TBA/online sections without scheduled times have empty meetings lists. A course with no eligible sections is passed to the engine for normal infeasibility diagnostics.
+
+The solver owns blocked-time exclusion, conflict solving, linked-component selection, credit feasibility and scoring. The API supplies validated constraints; it does not duplicate that logic. Omitted/null `blockedTimes` becomes an empty list; omitted/null `softPreferences` means no soft preferences. Explicit null for `maxResults` uses its default.
+
 **Response schema** (`200 OK`)
 
 | Field | Type | Description |
@@ -357,11 +368,11 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 | `term` | string | Echo of the request term |
 | `schedules` | `Schedule[]` | Best first; empty if no feasible schedule exists |
 | `schedules[].rank` | int | 1 = best |
-| `schedules[].score` | number | 0–100. Higher means better soft-preference fit. |
+| `schedules[].score` | number | Engine-provided 0–100 score, copied unchanged without rounding or reweighting |
 | `schedules[].totalCredits` | number | Never more than 21 |
 | `schedules[].overload` | boolean | `true` if `totalCredits > 18`, meaning the schedule needs overload approval (see [Credit limits](#credit-limits)) |
 | `schedules[].sections` | object[] | `{ crn, courseId, sectionCode, title, credits, meetings[] }` (`meetings` as in endpoint 4) |
-| `schedules[].scoreBreakdown` | object | Penalty per soft preference, e.g. `{ "earliestStart": 0, "daysOff": 4 }` |
+| `schedules[].scoreBreakdown` | object | Engine-provided penalty values copied unchanged, e.g. `{ "earliestStart": 0, "daysOff": 4 }`; no missing entries are invented |
 | `diagnostics` | string[] | When results are empty or limited: why, e.g. which required courses conflict |
 | `searchLimitReached` | boolean | `true` if the engine stopped at its exploration cap. The results are still valid but might not be the global best. |
 
@@ -396,9 +407,13 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 }
 ```
 
-**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for validation errors. `422` for unknown course IDs or term, or `minCredits > maxCredits`.
+**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for the validation rules above, including reversed credit bounds and more than 10 optional courses. `422` for unknown course IDs or term. `503` while catalog/engine adapters are unavailable. `500` for unexpected internal failures, using the safe shared error body.
 
 **Error handling:** infeasibility is a normal result, not an error. Validation runs before the engine, so the engine only ever receives well-formed input.
+
+**Result mapping:** preserve engine schedule and section ordering; assign ranks starting at 1. Copy `totalCredits`, score, breakdown, diagnostics, and `searchLimitReached` from the result. Derive overload solely from each result's actual `totalCredits > 18`: 18 is false, 19 and 21 are true, regardless of the requested maximum. Section display details come from the same prepared catalog snapshot. Unknown returned CRNs or missing score/breakdown are internal integration failures, not invented data.
+
+**Exploration configuration:** `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` in `application.properties` defaults to 200,000. It is passed to the engine adapter on every call. Values must be positive 32-bit integers; zero, negative, fractional, nonnumeric, and overflowing values fail application startup. There is no request-level override. See architecture §7 for the pending production adapter.
 
 ---
 
@@ -424,6 +439,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-15 | Implement Schedule API validation and mapping with test doubles; require HTTP 400 for more than 10 original optional selections and reversed credit bounds; document normalization, closed-component filtering, exact score pass-through, overload, configurable node cap, and 503 while production adapters are absent. Shared preference record shapes retained from AI branch; consuming-owner review required. | Codex, Backend API task |
 | 2026-10-15 | Implement the agreed Problem Details error format in `common`; add request IDs, sorted validation errors, safe fallback errors, and configurable CORS. Frontend consumers must migrate from the old default error JSON; consuming-module review required before merge. | Codex, Backend API task |
 | 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
 | 2026-10-15 | Team agreed the whole contract as written; provisional status removed | Michael, David, Marpu, Sunny |
