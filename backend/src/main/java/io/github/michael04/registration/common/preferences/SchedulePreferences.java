@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotNull;
  * Structured scheduling preferences shared by the AI, backend, engine and frontend.
  * Shape is defined in docs/api-contract.md (endpoint 5).
  *
- * <p>Retains the record shape introduced on the AI branch. Backend-owned;
- * changes must remain compatible with the AI assembler and frontend contract.
+ * <p>Backend-owned (Marpu). The record shape was introduced on the AI branch; changes must stay
+ * compatible with the AI assembler, the Schedule API and the frontend contract.
  */
 public record SchedulePreferences(
 		@Valid @NotNull HardConstraints hardConstraints,
