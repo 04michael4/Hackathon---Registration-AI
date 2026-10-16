@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-15):** Phase 1 (backend foundation) is implemented. Only `GET /api/health` exists. Everything else in this document is **planned design**, labeled ⬜. Implemented parts are labeled ✅. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
+> **Status at a glance (2026-10-15):** The backend foundation and `common` error/CORS infrastructure are implemented. `POST /api/preferences/extract` (AI preference extraction) is implemented and live-verified (eval 19/20 = 95%). `POST /api/schedules/generate` has validation, preparation and mapping with automated test doubles; production engine and catalog integration remain pending (503 until available). `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -69,7 +69,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 3. Component interaction and data flow
 
-Main user flow (all ⬜ planned):
+Main user flow (status per package in [§4](#4-backend-package-structure)):
 
 ```mermaid
 sequenceDiagram
@@ -114,12 +114,12 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 |---|---|---|---|
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
-| `common` | ⬜ | Global error handling (`@RestControllerAdvice`), web config such as CORS | Backend API |
-| `course` | ⬜ | Course/section entities, repositories, search service, `CourseController` | Backend API |
+| `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
+| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); persistence, production providers and course endpoints pending | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
-| `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; not yet called by an endpoint ([§7](#7-scheduling-engine)). | Scheduling Engine |
-| `schedule` | ⬜ | `ScheduleController`, maps `course` data to `engine` input, maps results to DTOs | Scheduling Engine |
-| `ai` | ⬜ | Claude client wrapper, prompts, output validation, `PreferenceController` | AI Integration |
+| `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
+| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine (2026-10-16). Production catalogs pending. | Backend API |
+| `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
 
@@ -208,6 +208,26 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 **Status: 🟡 implemented (2026-10-15).** Unit-tested (plain JUnit), but not yet wired into an endpoint. Module: Scheduling Engine. Package: `engine`. Implementation: [`BacktrackingScheduleSolver`](../backend/src/main/java/io/github/michael04/registration/engine/BacktrackingScheduleSolver.java).
 
+**Schedule API integration status (2026-10-15).** The fetched repository has no `engine` implementation, database entities/migrations or section repository. The README's `ScheduleSolver.solve(ScheduleProblem)` sample is a starting point, not a published implementation: its section record has no component/link metadata, and its result exposes a penalty rather than the score and actual credit total required by the API. This section has no finalized scoring formula. Those gaps are explicit; the API does not invent a penalty-to-score conversion or implement a second solver.
+
+`schedule.integration.SchedulingEngine` is an **API-owned provisional adapter boundary**, not a replacement engine model. Tests provide doubles. Once Sunny publishes the native engine interface, implement an adapter in `schedule` that converts the prepared input to native records and returns the engine's score, breakdown, totals, CRNs, diagnostics, and cap flag unchanged. Keep the engine pure Java and independent of `schedule`. The adapter must preserve actual component/link semantics; the current boundary carries a source-provided, opaque `lectureLink` without inferring links. Engine-owner review of that mapping is required before claiming full integration.
+
+**Caller rules implemented by the API:**
+- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 8 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
+- De-duplicate by course ID; required membership wins over optional membership. Resolve all selected IDs against the requested term. Prepare courses by ID and sections by CRN for deterministic input.
+- `includeClosedSections=false` excludes closed lectures, labs, recitations and other components. `true` retains closed sections; term/course eligibility still applies. Preserve component types and opaque lecture associations; retain UNKNOWN availability. Unscheduled sections use empty meetings lists. Duplicate identical section rows collapse; contradictory rows and malformed scheduled meetings are internal errors, not guessed data.
+- Pass required courses with no eligible sections to the engine for infeasibility diagnostics. Conflict solving, blocked-time exclusion, linked-component selection, credit feasibility, ranking and scoring remain engine responsibilities.
+- Map engine results in their returned order. Copy score/breakdown without rescaling, rounding or adding missing values. Derive overload only from the returned `totalCredits > 18`; resolve display metadata from the same prepared snapshot. Unknown result CRNs or missing scores/breakdowns fail safely with 500.
+- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:1000000}` (default raised from 200,000 on 2026-10-16) through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+
+**Update 2026-10-16 (engine integration).** The native engine now exists (`engine` package, sections below). `schedule.integration.NativeSchedulingEngine` is the adapter: it translates the boundary records to engine records and back, and passes score, breakdown, credits, CRNs, diagnostics and the cap flag through unchanged. Two caller rules were settled with the engine owner:
+- **`lectureLink`** is the lecture's CRN (or `null` for a lecture).
+- **Closed sections:** `EngineMapper` removes closed sections with `CourseOption.excluding`, so a lecture whose labs are all closed is removed too.
+
+`ScheduleEngineIntegrationTest` covers the whole path with the real engine. Only production catalogs are missing.
+
+`CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. The `ai` package uses these shared records and `CourseCatalog`; `engine` and `schedule` never depend on `ai`. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
+
 **Problem:** for each required course, pick exactly one section (a lecture plus its linked labs or recitations) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty. The engine plans **one semester**. Choosing *which* courses to take is degree planning, which is out of MVP scope.
 
 ### Engine API (🟡 implemented, shared interface)
@@ -229,13 +249,13 @@ The `schedule` package calls the engine through these types only. They're a [sha
 
 **Rules for the caller (`schedule` package, Backend API).** The engine defines these; the Backend API follows them:
 1. Reject invalid requests before calling the engine: credits outside 1–21, `minCredits > maxCredits`, weights outside 0–5, an empty `requiredCourseIds`, `maxResults` outside 1–10.
-2. Pass **at most 10 optional courses**; reject more with `400`. *(This needs a line in api-contract.md, which the Backend API owner maintains. See "Search size" below for why the team might lower it.)*
+2. Pass **at most 8 optional courses**; reject more with `400`. *(Decided 2026-10-16, down from 10. Enforced by `ScheduleRequestValidator.MAX_OPTIONAL_COURSES` and documented in api-contract.md. See "Search size" for why.)*
 3. If a course is both required and optional, treat it as required only.
-4. When `includeClosedSections` is false, remove closed sections with **`course.excluding(s -> closed)`**, not by filtering the list yourself. `excluding` also removes a lecture that lost all its labs (or all its recitations), because it can't be taken alone.
+4. When `includeClosedSections` is false, remove closed sections with **`course.excluding(s -> closed)`**, not by filtering the list yourself. `excluding` also removes a lecture that lost all its labs (or all its recitations), because it can't be taken alone. *(Done in `EngineMapper`, 2026-10-16.)*
 5. Fill in `component` and `parentCrn` for every section from the catalog's lecture–lab relation. A section with no scheduled time (TBA/online) gets an empty `meetings` list.
 6. Put a course's credits on its lecture and the catalog's own value (usually 0) on its linked sections; the engine adds them up.
 7. Set `overload` from `totalCredits` (> 18), and copy `score`, `breakdown` and `diagnostics` through unchanged.
-8. Register one `BacktrackingScheduleSolver` as a `@Bean`, with the node cap read from configuration (default 1,000,000).
+8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, whose default was raised to 1,000,000 on 2026-10-16; see "Search size".)*
 
 **Linked sections (decided 2026-10-15).** One lecture may allow several labs or recitations. A lecture that has linked sections **must** be taken with exactly one of them **per component type**. For example, lecture 010 with labs 011 and 012 and recitations R1 and R2 gives four choices. The engine expands each lecture into these bundles itself. It discards any bundle whose parts overlap each other or a blocked time, and it never picks a linked section without its lecture.
 
@@ -271,6 +291,8 @@ Measured on an Apple M5 Pro (JDK 25 running Java 21 bytecode). Synthetic catalog
 | 5 required + 5 optional | 30 ms / 19 of 20 | 124 ms / 6 of 20 | 183 ms / 0 of 20 |
 | 4 required + 10 optional | 33 ms / 20 of 20 | 162 ms / 20 of 20 | 626 ms / 16 of 20 |
 
+**Decided 2026-10-16 (engine owner):** the default node cap is **1,000,000**, and requests may list at most **8 optional courses**. Above about 5 optional courses with many sections each, a search can still stop at the cap. Its results are then valid but flagged `searchLimitReached`.
+
 **Optional courses drive the cost.** Each optional course multiplies the choices by (sections + 1). Required courses are cheap, because conflicts and the credit cap prune them hard. Real catalogs usually have far fewer sections per course than these synthetic ones. Options if the cap is hit too often in practice:
 - lower the optional-course limit (rule 2);
 - raise the node cap;
@@ -293,7 +315,7 @@ score  = 100 − Σ points               5 preferences × 20 = 100, so score is 
 | `minimizeGaps` | min(1, weekly idle minutes between consecutive same-day classes ÷ 600) |
 | `optionalCourseIds` | optional courses left out ÷ number of optional courses (including ones that can't fit at all) |
 
-`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values.
+`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values. They were kept on 2026-10-16, to revisit with real schedules. **Earliest start, latest end and days off stay soft** (decided 2026-10-16): they lower a schedule's rank but never remove it. Blocked times are the way to forbid a time outright.
 
 **Ranking:**
 - By displayed points first, so a higher rank never shows a lower score.
@@ -376,18 +398,39 @@ To stay fast, the fix checks re-solve only the required courses plus that one el
 
 ## 9. AI integration and validation
 
-**Status: ⬜ planned.** Module: AI Integration. Package: `ai`.
+**Status: ✅ preference extraction implemented and live-verified** (2026-10-15: one request passed 16/16 checks; 20-case eval 19/20 = 95%, failure `vague-time` documented in api-contract.md). Automated tests run offline against a fake Anthropic API. Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
 2. Schedule explanation (`POST /api/schedules/explain`): stretch goal.
 
-**Integration plan:**
-- Use the **official Anthropic Java SDK**, `com.anthropic:anthropic-java`. The version will be pinned when the AI phase starts. Use the SDK rather than hand-rolled HTTP; the SDK brings typed requests and errors, retries and timeouts.
-- **Structured outputs.** Request JSON constrained to a schema derived from a Java record (the SDK's `outputConfig(Class)` support), so responses parse straight into typed objects.
-- **Model** comes from configuration (`ANTHROPIC_MODEL`), never hard-coded. Current candidate: `claude-opus-5-5`; the team will make the final choice based on cost and latency.
-- Hide the SDK behind our own interface, e.g. `PreferenceExtractor`. Tests then use a fake and never call the real API, and the provider can be swapped without touching controllers.
-- To verify when the SDK is added: Spring Boot 4 uses Jackson 3 (`tools.jackson.*`), and the SDK may bring its own Jackson version. Check for dependency conflicts with `./mvnw dependency:tree`.
+**How it's built:**
+
+```mermaid
+flowchart LR
+    PC[PreferenceController] --> PS[PreferenceExtractionService]
+    PS --> PE{{PreferenceExtractor}}
+    PE -.->|AI_PROVIDER=none| UN[Unavailable → 503]
+    PE -.->|dummy| DU[DummyPreferenceExtractor]
+    PE -.->|claude| CL[ClaudePreferenceExtractor<br/>prompt + retry-once]
+    CL --> GW{{ClaudeGateway}}
+    GW --> AG[AnthropicClaudeGateway<br/>SDK, structured output,<br/>error mapping]
+    PS --> PA[PreferenceAssembler<br/>+ CourseMentionResolver]
+```
+
+- **Official Anthropic Java SDK**, `com.anthropic:anthropic-java` **2.71.0**, pinned. It brings Jackson **2.21** (`com.fasterxml.jackson.*`), separate from Spring Boot 4's Jackson **3.1** (`tools.jackson.*`). The two use different packages and coexist; `dependency:tree` shows no conflicts. The SDK uses its own mapper internally, and our REST API uses Boot's.
+- **Structured outputs.** `StructuredOutputConfig.format(ClaudeExtraction.class)` derives a JSON schema from an AI-internal record.
+  - Scalar fields are `Optional`, which becomes nullable in the schema, so the model answers `null` for anything not mentioned instead of inventing a value.
+  - Days are restricted to `MONDAY`…`SUNDAY`.
+  - Course mentions stay raw strings. Java resolves them through `CourseCatalog`, so the model never supplies course IDs.
+- **Model** from `ANTHROPIC_MODEL`. Default: **`claude-haiku-5-5`**, Anthropic's fast, low-cost model recommended for extraction; it's set in `application.properties`, not in code. Effort `low` keeps latency and cost down. Thinking is adaptive, and thinking blocks are skipped when reading the reply.
+- **`ClaudeGateway`** is the only class that touches the SDK. That keeps the extraction logic testable with a simple fake, and SDK upgrades contained in one place.
+- **Retries are bounded and not doubled:**
+  - The SDK retries transient HTTP failures (429, 5xx, connection) once (`max-retries=1`, `timeout=20s` per attempt).
+  - The application re-asks once only for truncated or malformed output.
+  - A refusal is final.
+- **Secrets and privacy:** the key is read only from `ANTHROPIC_API_KEY`. Logs contain outcomes, status codes and token counts, never the key, the prompt or the student's text.
+- **Prompt:** `backend/src/main/resources/ai/preference-extraction-system-prompt.md`. It covers hard vs. soft rules, the weight scale, formats, assumptions, and injection resistance. The student's text is wrapped in `<student_text>`, and an embedded closing tag is neutralized.
 
 **Validation pipeline:**
 
@@ -407,15 +450,17 @@ flowchart LR
 ```
 
 - Matching the schema doesn't make the output correct, so semantic validation is always done in Java.
-- Handle the SDK's non-success outcomes explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. Map them to the `502`/`503`/`429` codes defined in the contract.
+- The SDK's non-success outcomes are handled explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. They map to the `502`/`503`/`429` codes in [api-contract.md, endpoint 5](api-contract.md#5-post-apipreferencesextract). Implemented and tested offline.
 - **Prompt injection.** Student text is untrusted. The model has **no tools** and no database access. Its only output is a preferences object that is validated and then shown to the student. The worst a malicious prompt can do is produce odd preferences, which the student sees.
 - **If AI is unavailable** (no key, outage), the extract endpoint returns `503`, and the frontend falls back to the manual preference form. Schedule generation still works.
 
 ## 10. Error handling
 
-- **Implemented ✅:** Spring Boot's default error JSON (`timestamp`, `status`, `error`, `path`). Verified for 404 and 405; see [api-contract.md § Error responses](api-contract.md#error-responses).
-- **Planned ⬜:** a single `@RestControllerAdvice` in `common` that produces RFC 9457 **Problem Details** for every error, with a consistent mapping: validation → 400, semantic → 422, upstream AI → 502/503, unknown → 500.
-- **Rules:** never leak stack traces or provider error messages to clients. Log them server-side with a request ID. Infeasible schedules are a **normal 200 result** with `diagnostics`, not an error.
+- **Implemented and verified ✅:** `common.GlobalExceptionHandler` extends Spring's `ResponseEntityExceptionHandler` and emits RFC 9457 **Problem Details**. It handles body and method-parameter validation (400), semantic errors (422), missing resources (404), unavailable AI (503), framework HTTP errors, and unknown failures (500). Spring error-response exceptions preserve their status and headers, including future 429/502 mappings. `spring-boot-starter-validation` supplies the validator used at controller boundaries; `spring.mvc.problemdetails.enabled=true` enables framework support.
+- **Shared rendering:** `ApiProblems` creates safe bodies with a generated request ID. `ApiErrorController` uses it for servlet error dispatches; `ProblemDetailCorsProcessor` uses it for rejected CORS requests. The same ID appears in `requestId` and `X-Request-Id`. `ValidationErrorResponse` is a record; the enclosing problem uses Spring's native `ProblemDetail` type and Jackson support rather than a separate error envelope.
+- **Rules:** never return stack traces, rejected values, or provider messages. Application messages for `NotFoundException` and `UnprocessableException` must be safe to display. Server-error logs from the advice contain the request ID, status, and exception class, avoiding exception messages/causes that might contain secrets or student text. Return-value validation errors remain 500. Infeasible schedules remain a **normal 200 result** with `diagnostics`.
+
+`common.WebConfig` registers a `CorsFilter` for `/api/**`: exact configured origins only, GET/HEAD/POST/OPTIONS, Accept/Content-Type headers, no credentials, and a 3600-second preflight cache. Configuration is `app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:3000}`. An empty value disables cross-origin access. The filter also supplies CORS headers on errors for allowed origins. This implements the assigned CORS feature; the frontend may still use the proposed same-origin Next.js proxy. See [API contract](api-contract.md#cors).
 
 ## 11. Security
 
@@ -425,7 +470,7 @@ flowchart LR
 | Anthropic API key | Backend only. Never in frontend code, `NEXT_PUBLIC_*` variables, logs, or error bodies. | ⬜ |
 | Authentication | None in the MVP: no accounts, no stored personal data. Revisit if we add saved schedules. | Decision |
 | Input limits | Bean Validation on all request DTOs; text ≤ 2000 chars; page size ≤ 100 | ⬜ |
-| CORS | Allow only the known frontend origin(s), or avoid CORS entirely by proxying through Next.js. _TBD._ | ⬜ |
+| CORS | Exact origin allowlist from `CORS_ALLOWED_ORIGINS`, default `http://localhost:3000`; no credentials. Empty list supports same-origin/proxy use. | ✅ |
 | AI abuse and cost | Rate-limit AI endpoints (mechanism _TBD_); cap request size and `max_tokens` | ⬜ |
 | Data | Commit only public or synthetic data; no student records | Policy ✅ |
 | Dependencies | Minimal set; Spring Boot version pinned and upgraded deliberately | ✅ |
@@ -434,7 +479,7 @@ flowchart LR
 
 | Layer | Tool | What it proves | Status |
 |---|---|---|---|
-| Controller slice | `@WebMvcTest` + MockMvc | HTTP contract: status codes, JSON shape, validation | ✅ health |
+| Controller slice | `@WebMvcTest` + MockMvc | Health, Problem Details, validation, sanitized failures, protocol headers, and default/custom/disabled CORS | ✅ health and common |
 | Application context | `@SpringBootTest` | Configuration and wiring load | ✅ |
 | Engine unit tests | Plain JUnit 5, no Spring | Correctness, infeasibility diagnostics, **determinism** (run twice, compare), "no returned schedule has a conflict" checks | ⬜ |
 | AI layer | JUnit with a fake `PreferenceExtractor` / recorded responses | Validation pipeline, error mapping. **No real API calls in `./mvnw test`.** | ⬜ |
@@ -485,6 +530,6 @@ The expected load is a demo with a handful of users, so these points are about n
 - **Course data source** for Lehigh (public catalog export, manual snapshot, or something else) and its terms of use. This blocks the Data module.
 - Exact formats for terms, CRNs, linked sections, and variable credits. These depend on the data source.
 - Migration tool (Flyway vs. Liquibase); local Postgres setup (Docker Compose vs. Testcontainers only).
-- CORS policy vs. a Next.js proxy.
+- Frontend choice of direct API access using the implemented CORS allowlist vs. a Next.js proxy.
 - AI rate-limiting mechanism, and the final model choice.
 - Hosting provider and CI.
