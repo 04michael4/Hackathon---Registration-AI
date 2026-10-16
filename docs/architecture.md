@@ -320,6 +320,30 @@ score  = 100 − Σ points               5 preferences × 20 = 100, so score is 
 - Then by the exact weighted sum, which `ScheduleScorer` keeps as integers, so rounding ties are broken without floating point.
 - Then by the sorted list of CRNs.
 
+### Manual mode: `SelectionChecker` (🟡 implemented 2026-10-16)
+
+The app has two modes (owner decision, 2026-10-16):
+- **Suggested:** the frontend asks `generate` for `maxResults: 4`.
+- **Manual:** the student sees every section of their courses on a calendar and drags sections in.
+
+The engine supports manual mode with `new SelectionChecker().check(problem, selectedCrns)`. It uses the same `ScheduleProblem` as the solver and returns a `SelectionReport`:
+
+| Field | Use in the UI |
+|---|---|
+| `sections`, `totalCredits`, `score`, `breakdown` | Current schedule, scored exactly like generated ones |
+| `issues` (`SelectionIssue`: `type`, `severity`, `crns`, `message`) | `CONFLICT` → red warning on the placed sections (time clash, blocked time, two lectures of one course, two labs for one lecture, over max credits, unknown CRN). `INCOMPLETE` → prompt (lecture needs a LAB, lab needs its lecture, required course not placed, under min credits). `complete()` = no issues. |
+| `candidates` (`SectionFit`: `crn`, `fits`, `completesLecture`, `reasons`), one per unplaced section | `fits = false` → grey out while dragging, and show `reasons` on hover. `completesLecture = true` → highlight: the labs a placed lecture still needs. |
+
+Decisions (owner, 2026-10-16):
+- Bad drops are **greyed out and warned about**, not blocked. A placed conflict is reported, never refused.
+- Lecture and lab are **dragged separately**. Placing a lecture highlights its compatible labs, and a lab can't fit until its lecture is placed.
+
+Tests check that every schedule the solver generates passes the checker with zero issues and the identical score, so the two modes never disagree.
+
+**Proposed endpoint (for the Backend API owner to add and own in api-contract.md):** `POST /api/schedules/check`, with request `{ term, preferences, crns: string[] }`. The response is the `SelectionReport` fields above plus `overload`, with `breakdown` as `scoreBreakdown` like `generate`. It also needs one adapter method on `SchedulingEngine`. The frontend loads section times for the calendar from `GET /api/courses/{courseId}` (endpoint 4, planned).
+
+**Not engine scope:** listing a major's required courses automatically. That needs degree-requirement data and the student's major and completed courses (see HANDOFF).
+
 **Determinism rules.** The same input and catalog snapshot always give the same output, and tests check that shuffling the input changes nothing:
 - No randomness and no wall-clock limits. A time limit would make results depend on machine speed.
 - Iterate in a stable order: courses by ID, sections by CRN, components by name.
