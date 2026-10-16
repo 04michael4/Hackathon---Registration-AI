@@ -16,11 +16,13 @@ This file is the **source of truth** for the HTTP interface between the frontend
 |---|---|---|---|---|---|
 | 1 | GET | [`/api/health`](#1-get-apihealth) | Liveness check | ✅ Implemented, verified | Backend API |
 | 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | ⬜ Planned | Backend API (+ Data) |
-| 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
-| 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
+| 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ✅ Implemented, verified | Backend API (+ Data) |
+| 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ✅ Implemented, verified | Backend API (+ Data) |
 | 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ✅ Implemented, live-verified (eval 19/20 = 95%); PR #2 into `pre-main` pending review | AI Integration |
-| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | 🟡 API and engine integrated; production catalog pending | Backend API + Scheduling Engine |
+| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ✅ Implemented, verified (demo catalog; database catalog in PR #5) | Backend API + Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
+| 8 | POST | [`/api/schedules/check`](#8-post-apischedulescheck) | **Manual mode**: check placed sections, fit hints | ✅ Implemented, verified | Backend API + Scheduling Engine |
+| 9 | POST | [`/api/schedules/suggest-electives`](#9-post-apischedulessuggest-electives) | Electives that fit a schedule | ✅ Implemented, verified | Backend API + Scheduling Engine |
 
 ---
 
@@ -144,7 +146,7 @@ Content-Type: application/json
 
 ## 3. `GET /api/courses`
 
-**Status: ⬜ Planned, not implemented.** Module: Backend API (endpoint), Data (catalog content). **Priority: high.**
+**Status: ✅ Implemented, verified (2026-10-16).** Code: `course.CourseController` / `CourseService`; tests `CourseControllerTest`, `CourseServiceTest`. Works over the demo catalog (`CATALOG_SOURCE=dummy`) and the database catalog. `sectionCount` counts lectures and standalone sections (linked labs and recitations aren't counted separately). `503` if no catalog is configured. Module: Backend API (endpoint), Data (catalog content).
 
 **Purpose:** search the catalog for one term by code or title.
 
@@ -189,7 +191,7 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 ## 4. `GET /api/courses/{courseId}`
 
-**Status: ⬜ Planned, not implemented.** Module: Backend API (+ Data). Priority: high (needed to display sections and generated schedules).
+**Status: ✅ Implemented, verified (2026-10-16).** Sections are ordered by CRN and **also include `componentType`, `lectureLink` (the lecture's CRN for a lab/recitation, `null` for a lecture) and `credits`**, so the manual-mode calendar can pair lectures with labs. `instructors` is empty and `description` is `null` while the catalog has no such data. `503` if no catalog is configured. Module: Backend API (+ Data).
 
 **Query parameters:** `term` (required).
 
@@ -417,6 +419,7 @@ The solver owns blocked-time exclusion, conflict solving, linked-component selec
 | `schedules[].scoreBreakdown` | object | Engine-provided penalty values copied unchanged, e.g. `{ "earliestStart": 0, "daysOff": 4 }`; no missing entries are invented |
 | `diagnostics` | string[] | When results are empty or limited: why, e.g. which required courses conflict |
 | `searchLimitReached` | boolean | `true` if the engine stopped at its exploration cap. The results are still valid but might not be the global best. |
+| `electiveAdvice` | object[] | One entry per typed elective (`softPreferences.optionalCourseIds`): `{ courseId, status, summary, fixes[], alternativeCrns[] }`. `status` is `IN_TOP_SCHEDULE`, `IN_OTHER_SUGGESTION`, `FITS_WITH_CHANGES` or `CANNOT_FIT`; `fixes` are sentences such as "Take MATH-021 20001 instead of 20002." Empty when no electives were typed. |
 
 **Example**
 
@@ -477,10 +480,60 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 ---
 
+## 8. `POST /api/schedules/check`
+
+**Status: ✅ Implemented, verified (2026-10-16).** Module: Backend API (endpoint) + Scheduling Engine (`SelectionChecker`). Tests: `ManualModeEndpointsTest`.
+
+**Purpose:** manual mode. The student places sections on a calendar. This endpoint checks the placement against the hard rules and preferences, and tells the UI what to grey out and what to highlight. **There's no elective limit.** It checks placements instead of searching combinations.
+
+**Request**
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `term` | string | yes | Known term (else `422`) |
+| `preferences` | `SchedulePreferences` | yes | As for endpoint 6; `minCredits ≤ maxCredits` |
+| `courseIds` | string[] | no | Extra courses on the board (e.g. electives found by search), at most 30. Required and optional courses from `preferences` are always included. |
+| `crns` | string[] | yes | The placed sections, at most 60. An unknown CRN is reported as an issue, not rejected. |
+| `includeClosedSections` | boolean | no | Default `false` |
+
+**Response** (`200 OK`)
+
+| Field | Type | Description |
+|---|---|---|
+| `sections` | object[] | The placed sections, as in endpoint 6 |
+| `totalCredits`, `overload` | number, boolean | As in endpoint 6 |
+| `score`, `scoreBreakdown` | number, object | Same scoring as generated schedules |
+| `complete` | boolean | `true` when there are no issues: a usable schedule |
+| `issues` | object[] | `{ type, severity, crns[], message }`. `severity` `CONFLICT` (show red): `TIME_CONFLICT`, `BLOCKED_TIME`, `DUPLICATE_COURSE`, `DUPLICATE_COMPONENT`, `OVER_MAX_CREDITS`, `UNKNOWN_SECTION`. `INCOMPLETE` (show a prompt): `MISSING_LINKED_SECTION` (e.g. "CSE-007 lecture 12275 needs a LAB."), `LINKED_WITHOUT_LECTURE`, `REQUIRED_COURSE_MISSING`, `UNDER_MIN_CREDITS`. |
+| `candidates` | object[] | One per unplaced section of the courses in play: `{ crn, courseId, fits, completesLecture, reasons[] }`. Grey out where `fits` is `false` and show `reasons`. Highlight where `completesLecture` is `true` (the labs a placed lecture still needs). |
+
+**Status codes:** `200`; `400` for validation errors; `422` for an unknown term or course; `503` if no catalog is configured.
+
+---
+
+## 9. `POST /api/schedules/suggest-electives`
+
+**Status: ✅ Implemented, verified (2026-10-16).** Module: Backend API + Scheduling Engine (`ElectiveAdvisor`). Tests: `ManualModeEndpointsTest`.
+
+**Purpose:** "which electives fit my schedule?" It returns catalog courses that can be added to the schedule `crns` **as it is** (no conflicts, no blocked times, within the credit maximum), with the exact sections to add, best first.
+
+**Request:** `{ term, preferences, courseIds?, crns, q?, subject?, limit?, includeClosedSections? }`.
+- `crns` is the current schedule. Every CRN must belong to the required/optional courses or `courseIds`, else `422`.
+- `q` and `subject` narrow the catalog like endpoint 3.
+- `limit` is 1–20, default 5.
+- At most 50 catalog courses (by course ID) are considered per request.
+
+**Response** (`200 OK`): `{ term, suggestions: [ { courseId, title, sections[], totalCredits, overload, score, scoreBreakdown } ] }`. `sections` is a lecture plus one linked section per component. `score` and `scoreBreakdown` are the schedule's time-preference score after adding the elective.
+
+**Status codes:** `200` (empty `suggestions` if nothing fits); `400`; `422` for an unknown term, course or schedule CRN; `503` if no catalog is configured.
+
+---
+
 ## Change log
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-16 | Implemented endpoints 3 and 4 (sections also carry `componentType`, `lectureLink`, `credits`); added endpoints 8 (`/api/schedules/check`, manual mode) and 9 (`/api/schedules/suggest-electives`); added `electiveAdvice` to endpoint 6. The default `CATALOG_SOURCE=dummy` now includes demo sections, so endpoint 6 works with no database. All additive. **Backend API, frontend and Data owners: please review.** | Claude Code for Sunny (at the engine owner's request; Backend API and Data areas) |
 | 2026-10-16 | A blank or self-referencing `lectureLink` is now rejected as malformed catalog data (`500`) instead of being treated as a standalone section. Addresses the Backend API owner's integration review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Optional-course limit lowered from 10 to **8** (more than 8 → 400). Default `scheduling.node-cap` raised from 200,000 to **1,000,000**. Engine-owner decisions; **contract change**, so the Backend API and frontend owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Native scheduling engine integrated behind `SchedulingEngine`. `lectureLink` defined as the lecture's CRN (was opaque). With `includeClosedSections=false`, a lecture whose labs (or recitations) are all closed is now excluded as well. **Contract change:** the Backend API and Data owners must review. | Claude Code for Sunny, Scheduling Engine |
