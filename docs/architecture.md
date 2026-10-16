@@ -298,6 +298,7 @@ score  = 100 − Σ points               5 preferences × 20 = 100, so score is 
 **Ranking:**
 - By displayed points first, so a higher rank never shows a lower score.
 - Then by the exact weighted sum, which `ScheduleScorer` keeps as integers, so rounding ties are broken without floating point.
+- Then by **more of the student's electives included** (decided 2026-10-16). With an elective weight of 0, a schedule with a typed elective otherwise ties with the same schedule without it.
 - Then by the sorted list of CRNs.
 
 ### Manual mode: `SelectionChecker` (🟡 implemented 2026-10-16)
@@ -323,6 +324,26 @@ Tests check that every schedule the solver generates passes the checker with zer
 **Proposed endpoint (for the Backend API owner to add and own in api-contract.md):** `POST /api/schedules/check`, with request `{ term, preferences, crns: string[] }`. The response is the `SelectionReport` fields above plus `overload`, with `breakdown` as `scoreBreakdown` like `generate`. It also needs one adapter method on `SchedulingEngine`. The frontend loads section times for the calendar from `GET /api/courses/{courseId}` (endpoint 4, planned).
 
 **Not engine scope:** listing a major's required courses automatically. That needs degree-requirement data and the student's major and completed courses (see HANDOFF).
+
+### Electives: flow and recommendations (🟡 engine implemented 2026-10-16)
+
+**Flow** (owner, 2026-10-16):
+1. **Suggested mode** usually gets only the required courses and returns 4 schedules.
+2. The student picks one and **adds electives in manual mode**: search the catalog and drag sections in, checked by `SelectionChecker`. Manual mode has **no elective limit**. The 8-course limit applies only to the optional list in a `generate` request, because that is what multiplies the search.
+3. Students can also **type electives up front**. They're sent as optional courses, and the engine fits as many as it can.
+
+**Recommendations: `ElectiveAdvisor`** (both kinds were requested):
+
+| Method | Returns | For |
+|---|---|---|
+| `explainElectives(problem, result)` | One `ElectiveAdvice` per typed elective: `status` (`IN_TOP_SCHEDULE`, `IN_OTHER_SUGGESTION`, `FITS_WITH_CHANGES`, `CANNOT_FIT`), a `summary` sentence, `fixes` sentences, and `alternativeCrns` | Explaining why a typed elective is missing and how to get it in. Example fixes: "Take MATH-021 20001 instead of 20002.", "Free up your blocked time Tue/Thu 15:00–18:00.", "Raise your maximum credits to 12.", "Take CSE-007 in another semester; it blocks ECO-001." |
+| `suggestElectives(problem, scheduleCrns, candidates, limit)` | `ElectiveSuggestion`s (course, the sections to add, credits and time-preference score after adding), best first | "Other electives that fit": `candidates` come from a catalog search (endpoint 3, or the demo major's elective list). Only courses that fit the schedule as it is are returned |
+
+To stay fast, the fix checks re-solve only the required courses plus that one elective, relaxing one thing at a time. The student's minimum credits are ignored in those checks, because the other electives are left out. A "raise your maximum to N" fix can exceed the API's 21-credit cap; the API layer should drop or reword it.
+
+**Proposed API (for the Backend API owner):**
+- Add `electiveAdvice` to the `generate` response.
+- Add `POST /api/schedules/suggest-electives` with `{ term, preferences, crns, q?/subject? }`. It searches the catalog for candidates and returns the suggestions.
 
 **Determinism rules.** The same input and catalog snapshot always give the same output, and tests check that shuffling the input changes nothing:
 - No randomness and no wall-clock limits. A time limit would make results depend on machine speed.

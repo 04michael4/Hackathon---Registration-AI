@@ -129,7 +129,8 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 						+ " steps. These are the best schedules found, not necessarily the best possible.");
 			}
 			List<ScoredSchedule> schedules = top.stream()
-				.sorted(Comparator.comparingLong(Candidate::value).thenComparing(Search::sortedCrns, Search::compareLists))
+				.sorted(Comparator.comparingLong(Candidate::value).thenComparingInt(Candidate::skipped)
+					.thenComparing(Search::sortedCrns, Search::compareLists))
 				.map(this::toScoredSchedule)
 				.toList();
 			return new ScheduleResult(schedules, diagnostics, limitReached);
@@ -275,7 +276,7 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 			// Gaps can shrink as classes are added, so a partial schedule's bound counts them as 0.
 			long bound = scorer.rankKey(early + suffixRequiredEarly[depth], late + suffixRequiredLate[depth],
 					mask | suffixRequiredDayMask[depth], 0, skipped);
-			if (top.size() == problem.maxResults() && bound >= top.getLast().value()) {
+			if (top.size() == problem.maxResults() && rank(bound, skipped, top.getLast()) >= 0) {
 				return;
 			}
 			if (depth == slots.size()) {
@@ -309,24 +310,36 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 			return false;
 		}
 
-		/** Keeps the best {@code maxResults} by rank key; on equal keys the earlier-found one stays. */
+		/**
+		 * Keeps the best {@code maxResults} by rank key, then by fewer skipped electives (so on an equal score
+		 * the schedule with more of the student's electives wins); on a full tie the earlier-found one stays.
+		 */
 		private void offer(int credits, int early, int late, int mask, int skipped) {
 			if (chosen.isEmpty()) {
 				return;
 			}
 			int gaps = ScheduleScorer.gapMinutes(chosen.stream().flatMap(o -> o.bundle().meetings().stream()).toList());
 			long value = scorer.rankKey(early, late, mask, gaps, skipped);
-			if (top.size() == problem.maxResults() && value >= top.getLast().value()) {
+			if (top.size() == problem.maxResults() && rank(value, skipped, top.getLast()) >= 0) {
 				return;
 			}
 			int position = 0;
-			while (position < top.size() && top.get(position).value() <= value) {
+			while (position < top.size() && rank(value, skipped, top.get(position)) >= 0) {
 				position++;
 			}
 			top.add(position, new Candidate(value, List.copyOf(chosen), credits, early, late, mask, gaps, skipped));
 			if (top.size() > problem.maxResults()) {
 				top.removeLast();
 			}
+		}
+
+		/**
+		 * Orders (value, skipped) against a kept candidate: negative if better. Both parts only grow during
+		 * the search, so a partial schedule's pair is a valid lower bound in this order too.
+		 */
+		private static int rank(long value, int skipped, Candidate other) {
+			int byValue = Long.compare(value, other.value());
+			return byValue != 0 ? byValue : Integer.compare(skipped, other.skipped());
 		}
 
 		private void explainNoSchedule() {
