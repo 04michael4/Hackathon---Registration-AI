@@ -156,6 +156,18 @@ class BacktrackingScheduleSolverTest {
 	}
 
 	@Test
+	void onAnEqualScoreTheScheduleWithMoreElectivesRanksFirst() {
+		// Elective weight 0: with and without ECO-001 score the same, so the elective decides the tie.
+		CourseOption eco = optional("ECO-001", lecture("3", "ECO-001", 3, meeting("TR", "14:00", "15:15")));
+		ScheduleProblem problem = new ScheduleProblem(List.of(CSE_017, eco), ANY_CREDITS, SoftWeights.none(), 2);
+
+		ScheduleResult result = SOLVER.solve(problem);
+
+		assertEquals(List.of("10001", "3"), crns(result.schedules().get(0)));
+		assertEquals(List.of("10002", "3"), crns(result.schedules().get(1)));
+	}
+
+	@Test
 	void optionalCoursesAreUsedToReachMinCredits() {
 		CourseOption base = required("BASE-001", lecture("1", "BASE-001", 9, meeting("M", "08:00", "08:50")));
 		CourseOption extra = optional("OPT-A", lecture("2", "OPT-A", 3, meeting("T", "09:00", "09:50")));
