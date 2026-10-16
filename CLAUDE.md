@@ -30,7 +30,7 @@ AI-assisted course registration and schedule optimization for Lehigh University 
 | Backend | Java 21, **Spring Boot 4.1.1**, Maven via `./mvnw` | Pinned in `backend/pom.xml`; upgrade only deliberately |
 | Database | PostgreSQL | **Not added yet.** The backend must start without a DB until the persistence phase. |
 | Frontend | Next.js + TypeScript + Tailwind CSS | Not scaffolded yet |
-| AI | Anthropic Claude via the official Java SDK `com.anthropic:anthropic-java` | Not added yet; backend only |
+| AI | Anthropic Claude via the official Java SDK `com.anthropic:anthropic-java` **2.71.0** (pinned) | Added; used only in `ai/`. It brings its own Jackson 2.x (`com.fasterxml.jackson.*`), next to Boot's Jackson 3. Don't mix their mappers. |
 | Tests | JUnit 5, Spring Boot test slices, MockMvc | |
 
 Adding any other dependency or framework needs a reason tied to code in the same PR, and a mention in the PR description. Don't add dependencies speculatively.
@@ -105,8 +105,10 @@ Details: [architecture.md § 4](docs/architecture.md#4-backend-package-structure
 
 - Every endpoint has a `@WebMvcTest` slice test covering the success and the main error statuses.
 - The engine has plain JUnit tests, with no Spring. Include determinism (same input twice gives identical output) and "no returned schedule contains a conflict".
-- AI code is tested with fakes. **`./mvnw test` must never call the real Anthropic API** or need network access, a database, or secrets.
+- AI code is tested with fakes. **`./mvnw test` must never call the real Anthropic API** or need network access, a database, or secrets. Use `FakeAnthropicServer` (a local fake of the Anthropic API) or a fake `ClaudeGateway`. The only live test, `ClaudeLiveEval`, runs only when asked for explicitly (see README, Michael's section).
+- Never run a live Claude call, which costs money, unless the developer explicitly approves it in the current session.
 - Prefer slice tests to `@SpringBootTest` unless the full context is required.
+- `@WebMvcTest` skips `@Configuration` classes. Controller tests that check JSON formats (e.g. times as `"15:00"`) must `@Import(JsonConfiguration.class)`.
 - Bug fixes come with a test that fails without the fix.
 
 ## Documentation update requirements
