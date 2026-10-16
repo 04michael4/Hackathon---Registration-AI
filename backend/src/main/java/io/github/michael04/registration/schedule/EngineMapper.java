@@ -1,6 +1,8 @@
 package io.github.michael04.registration.schedule;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -13,9 +15,12 @@ import io.github.michael04.registration.common.preferences.CreditLimits;
 import io.github.michael04.registration.common.preferences.SoftPreferences;
 import io.github.michael04.registration.course.CatalogSection;
 import io.github.michael04.registration.course.CourseSummary;
+import io.github.michael04.registration.engine.CourseOption;
+import io.github.michael04.registration.engine.SectionOption;
 import io.github.michael04.registration.schedule.GenerateScheduleResponse.MeetingResponse;
 import io.github.michael04.registration.schedule.GenerateScheduleResponse.ScheduleResponse;
 import io.github.michael04.registration.schedule.GenerateScheduleResponse.SectionResponse;
+import io.github.michael04.registration.schedule.integration.NativeSchedulingEngine;
 import io.github.michael04.registration.schedule.integration.SchedulingEngine;
 
 @Component
@@ -28,9 +33,6 @@ public class EngineMapper {
 			if (!request.term().equals(section.term()) || !courses.containsKey(section.courseId())) {
 				continue;
 			}
-			if (!request.includeClosedSections() && section.status() == CatalogSection.Status.CLOSED) {
-				continue;
-			}
 			if (section.crn() == null || section.crn().isBlank()
 					|| section.componentType() == null || section.componentType().isBlank() || section.status() == null) {
 				throw new IllegalStateException("Incomplete catalog section metadata");
@@ -39,6 +41,9 @@ public class EngineMapper {
 			if (previous != null && !previous.equals(section)) {
 				throw new IllegalStateException("Conflicting catalog records for a section");
 			}
+		}
+		if (!request.includeClosedSections()) {
+			eligible.keySet().retainAll(usableWithoutClosed(eligible.values()));
 		}
 		var inputs = courses.keySet().stream().sorted()
 			.map(id -> new SchedulingEngine.Course(id, required.contains(id), eligible.values().stream()
@@ -85,6 +90,36 @@ public class EngineMapper {
 				Objects.requireNonNull(schedule.scoreBreakdown())));
 		}
 		return new GenerateScheduleResponse(term, schedules, result.diagnostics(), result.searchLimitReached());
+	}
+
+	/**
+	 * CRNs left once closed sections are removed, using the engine's own rule
+	 * ({@link CourseOption#excluding}): a lecture that loses every linked section of one component
+	 * type (e.g. all its labs are closed) goes too, since it can't be taken without one, and so do
+	 * the remaining linked sections of a removed lecture.
+	 */
+	private static Set<String> usableWithoutClosed(Collection<CatalogSection> sections) {
+		Map<String, List<SectionOption>> byCourse = new TreeMap<>();
+		Set<String> closed = new HashSet<>();
+		for (var section : sections) {
+			if (section.status() == CatalogSection.Status.CLOSED) {
+				closed.add(section.crn());
+			}
+			byCourse.computeIfAbsent(section.courseId(), id -> new ArrayList<>())
+				.add(new SectionOption(section.crn(), section.courseId(), section.componentType(),
+					NativeSchedulingEngine.parentCrn(section.crn(), section.lectureLink()), 0, List.of()));
+		}
+		// Used only for membership checks, never iterated.
+		Set<String> usable = new HashSet<>();
+		try {
+			byCourse.forEach((id, list) -> new CourseOption(id, true, list)
+				.excluding(section -> closed.contains(section.crn()))
+				.sections().forEach(section -> usable.add(section.crn())));
+		}
+		catch (IllegalArgumentException ex) {
+			throw new IllegalStateException("Invalid catalog lecture links", ex);
+		}
+		return usable;
 	}
 
 	private SchedulingEngine.Section toSection(CatalogSection section) {

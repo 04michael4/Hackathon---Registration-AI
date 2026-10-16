@@ -138,7 +138,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Scheduling Engine
 
-**Owner:** Sunny (per the [README team table](README.md#team-and-responsibilities)) · **Status:** 🟡 Solver implemented and unit-tested; not yet called by an endpoint. Committed and pushed on `feature/engine-core`.
+**Owner:** Sunny (per the [README team table](README.md#team-and-responsibilities)) · **Status:** 🟡 Solver implemented and unit-tested, and integrated into `/api/schedules/generate` on `integrate/engine-into-pre-main` (PR into `pre-main` pending review). The live endpoint still returns 503 until a production catalog exists.
 
 **Scope:** `engine/` only. Per the team-agreed README work plan, the `schedule/` package and `POST /api/schedules/generate` belong to the Backend API module (Marpu). See the discrepancy note below.
 
@@ -159,33 +159,37 @@ The engine **logic** can be built and unit-tested now, before the database or ca
   - `BacktrackingScheduleSolverTest` (25), which includes the README worked example, lecture/lab bundles, every diagnostic, determinism under shuffled input, and 200 seeded random catalogs. Each catalog is checked by an independent validity checker and against a **brute-force solver**: the returned schedules must be exactly the true top K.
   - Also: 7 × 10 sections solving in under 1 s (`assertTimeout`).
 
-**In progress:** Sunny, branch `feature/engine-core` (pushed to `origin/feature/engine-core`). The engine is functionally complete; team-agreement items are deferred to the merge, per the owner.
+**In progress:** Sunny. `feature/engine-core` is done. It has been merged into `integrate/engine-into-pre-main` (from `origin/pre-main` at `9cd9cdf`), following the integration process in development-guide.md. That branch is waiting for a PR review.
 
-**Merge notes: wiring into Marpu's `schedule` layer on `origin/pre-main`** (checked 2026-10-16 against `9cd9cdf`; not edited, since it's outside this module)
-- `pre-main` defines `schedule/integration/SchedulingEngine` and has **no implementation registered**. An adapter `@Bean` must implement it by calling `new BacktrackingScheduleSolver(nodeCap).solve(...)`. Constructing one per call is cheap, and the solver is stateless.
-- Field mapping, adapter → engine:
-  - `Section.componentType` → `SectionOption.component`.
-  - `Section.lectureLink` → `SectionOption.parentCrn`. This must be **`null` for a lecture** and the **lecture's CRN** for a lab or recitation; confirm that's what `lectureLink` holds.
-  - `Meeting.days` (a List) → a `Set`.
-  - `SoftWeights` field order differs.
-  - Result: `sectionCrns` = the CRNs of `ScoredSchedule.sections()`; `score` = `BigDecimal.valueOf(score)`; `scoreBreakdown` = the `breakdown` values as `BigDecimal`.
-- ⚠️ **Closed sections:** `EngineMapper.prepare` drops `CLOSED` sections one by one. If every lab of a lecture is closed, the lecture would reach the engine with no labs and be treated as standalone, which breaks the "lecture must have its lab" rule. Fix at merge: pass all sections and drop closed ones with `CourseOption.excluding(...)` in the adapter (architecture.md § 7, rule 4).
-- **Node cap:** `pre-main` defaults `scheduling.node-cap` to 200,000, but the engine's default is 1,000,000 (see the § 7 "Search size" table). Pick one.
-- **Optional-course limit:** `pre-main` enforces 10 (matches § 7 rule 2).
+**Integration (2026-10-16, `integrate/engine-into-pre-main`)**
+- Merged the engine into the latest `pre-main`. Doc conflicts were resolved by keeping both sides.
+- **Adapter:** `schedule/integration/NativeSchedulingEngine` (`@Component`) implements Marpu's `SchedulingEngine` with `BacktrackingScheduleSolver(nodeCap)`. It's translation only. Catalog data the engine rejects becomes a safe 500.
+- **`lectureLink` defined** as the lecture's CRN (`null` for lectures), matching David's `section_link`. Updated the `CatalogSection` Javadoc and api-contract.md (rule 6 and the change log). Marpu's test fixtures used `"lecture-crn:1"`; they now use real CRNs.
+- **Closed-section fix:** `EngineMapper` now removes closed sections with the engine's `CourseOption.excluding`, so a lecture whose labs are all closed is removed too. New `EngineMapperTest` cases fail without the fix. One existing test expected the old behavior and was split and updated.
+- **Tests:**
+  - `NativeSchedulingEngineTest` (5);
+  - `ScheduleEngineIntegrationTest` (4): the full app with a test catalog built from David's CSE-007 snapshot plus one synthetic course. It covers lecture + exactly one lab, ranking by score (98, then 95), a lecture whose only lab is closed, `includeClosedSections`, and a blocked-time diagnostic.
+  - `./mvnw -B test` → `Tests run: 221, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS.
+- **Live:** `spring-boot:run`, then `curl`: health 200. `generate` 503, as designed, because no production `CourseCatalog`/`SectionCatalog` exists on `pre-main`.
+
+**Merge notes for `pre-main`** (kept for history)
+- ~~No `SchedulingEngine` implementation registered~~ Resolved 2026-10-16: `NativeSchedulingEngine`.
+- ~~`lectureLink` meaning unconfirmed~~ Resolved 2026-10-16: the lecture's CRN; needs review by Marpu and David.
+- ~~Closed labs could leave a lecture without its lab~~ Resolved 2026-10-16 in `EngineMapper`.
+- **Node cap:** `pre-main` defaults `scheduling.node-cap` to 200,000, but the engine's default is 1,000,000 (§ 7 "Search size"). Still open; left at 200,000.
+- **Optional-course limit:** 10 is enforced by the API (matches § 7 rule 2).
 
 **Needs team agreement** (details in architecture.md § 7)
-1. **Marpu:** the 8 caller rules in § 7, especially rule 4 (`excluding` for closed sections), rule 7 (copy `diagnostics` through) and rule 8 (`@Bean` + node-cap config key).
-2. **Marpu:** add "at most N optional courses → `400`" to api-contract.md. The engine owner has to choose N: optional courses drive search cost (see the § 7 "Search size" table).
-3. **Marpu:** the scoring formula (0–20 points per preference, `score = 100 − Σ`), and the per-preference `breakdown` keys, which equal the contract's `softPreferences` field names.
-4. **David:** the catalog must give each section a component type and the CRN of its lecture, so the "lecture must have its lab" rule works. The credits convention is course credits on the lecture and 0 on its labs, unless the catalog says otherwise.
-5. **Michael:** nothing engine-specific. AI output reaches the engine only through `SchedulePreferences`.
+1. **Marpu:** review the adapter, the `EngineMapper` closed-section change and the `lectureLink` definition (contract change); also the scoring formula and the node-cap default.
+2. **David:** the production `SectionCatalog` must set `lectureLink` = the lecture's CRN for each lab or recitation (from `section_link`), and `null` for lectures. Labs carry 0 credits, the lecture carries the course credits. Note: earliest start and days off are **soft** preferences. The data README's "no classes before 10 yields no complete pair" holds only if the team wants those as hard filters; the engine ranks such schedules lower instead.
+3. **Michael:** `integrate/ai-into-pre-main` is based on the older `pre-main` (`533633d`). Whichever PR lands second has to merge the other; see the trial-merge notes in the PR.
 
 **Next recommended**
-1. At merge: write the `SchedulingEngine` adapter and resolve the merge notes above, together with Marpu.
-2. After the team agrees: tune the score caps (300/600 min) against real-looking schedules, and decide the optional-course limit.
-3. Optional: merge bundles of one course that have identical times and credits, if the node cap is hit on real data.
+1. Review and merge `integrate/engine-into-pre-main` → `pre-main`.
+2. A production `CourseCatalog`/`SectionCatalog` (David/Marpu). After that, `generate` returns real schedules with no engine changes.
+3. After the team agrees: tune the score caps (300/600 min), choose the node-cap default, and decide the optional-course limit.
 
-**Blockers:** none for the engine itself. Integration needs Marpu's `schedule` layer.
+**Blockers:** none for the engine. A live demo needs a production catalog.
 
 **Discrepancies found 2026-10-15** (flagged, not edited, because they're outside this module):
 - CLAUDE.md (module table) and architecture.md § 4 list `schedule` under the Scheduling Engine module, but the README team plan gives it to Backend API (Marpu). The owners should pick one and fix the other docs.
@@ -251,6 +255,7 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 12:55 EDT | Claude Code for Sunny | Scheduling Engine | Created `integrate/engine-into-pre-main` from `origin/pre-main` (`9cd9cdf`) and merged `feature/engine-core`. Added the `NativeSchedulingEngine` adapter, defined `lectureLink` as the lecture's CRN, and fixed the closed-lab case in `EngineMapper` using `CourseOption.excluding`. Added adapter tests and a full-app integration test with CSE-007 data. `cd backend && ./mvnw -B test` → `Tests run: 221, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Live: health 200; generate 503 (no production catalog yet). |
 | 2026-10-16 12:44 EDT | Claude Code for Sunny | Scheduling Engine | Owner asked to commit and push `feature/engine-core`. Added merge notes for `origin/pre-main`'s `SchedulingEngine` boundary (adapter mapping, closed-section risk, node-cap mismatch). Test run before commit: 55/55 pass (see 22:44 entry); no code changed since. |
 | 2026-10-16 11:34 EDT | Codex | Backend API | User authorized commit/push of all pending Schedule API changes to `pre-main`. Fetched target and confirmed matching base `533633d`. Pre-push `./mvnw -B test` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`. Prepared normal fast-forward push with explicit `HEAD:refs/heads/pre-main`; production adapters remain pending. |
 | 2026-10-15 23:51 EDT | Codex | Backend API | Created and verified `feature/backend-schedule` from testing base `origin/pre-main` (`533633d`) before edits. Implemented Schedule API validation/preparation/response mapping, node-cap config and docs; reused AI-branch shared type shapes. Final `./mvnw -B verify` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`; JAR packaged, live curl 400/503 checks passed. Native solver/section catalog absent; successful real integration remains blocked and documented. Changes uncommitted; no push/merge/PR. |

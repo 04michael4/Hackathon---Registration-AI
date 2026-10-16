@@ -19,7 +19,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
 | 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
 | 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ⬜ Planned | AI Integration |
-| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | 🟡 API implemented; catalog/solver integration pending | Backend API + Scheduling Engine |
+| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | 🟡 API and engine integrated; production catalog pending | Backend API + Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
 
 ---
@@ -337,7 +337,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 
 ## 6. `POST /api/schedules/generate`
 
-**Status: 🟡 API implemented; production integration pending.** Module: Backend API (controller, validation, preparation and mapping), Scheduling Engine (solver). No engine implementation or section catalog exists in the fetched base. Automated success tests use explicit doubles; the running app returns a safe 503 until catalog and solver adapters are registered. No successful schedule results are fabricated.
+**Status: 🟡 API and engine integrated; production catalog pending.** Module: Backend API (controller, validation, preparation and mapping), Scheduling Engine (solver). The native engine is registered through `schedule.integration.NativeSchedulingEngine` (2026-10-16). `ScheduleEngineIntegrationTest` runs the full app with a test catalog and the real engine. No production `CourseCatalog`/`SectionCatalog` is registered yet, so the running app still returns a safe 503. No successful schedule results are fabricated.
 
 **Purpose:** run the deterministic scheduling engine and return up to `maxResults` conflict-free schedules, ranked by how well they satisfy the soft preferences. **This endpoint never calls the AI.** The same request against the same catalog snapshot always returns the same response.
 
@@ -357,7 +357,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 3. Every supplied preference must include its value (except `minimizeGaps`) and an integer weight in **0–5**, including 0. Omitted preferences are inactive. Missing/null weights and invalid days/times return 400. Blocked times require nonempty valid days and `start < end`; times use `HH:mm`.
 4. **Requests containing more than 10 optional courses receive HTTP 400.** This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
 5. De-duplicate by stable course ID. A course in both lists remains required and is removed from optional selections. Prepare courses sorted by ID and sections sorted by CRN. Unknown terms or selected course IDs return 422.
-6. Exclude sections outside the requested term or selected courses. With `includeClosedSections=false` (also the default when null), exclude **every CLOSED component**, including lectures, labs, and recitations. OPEN and UNKNOWN remain eligible. With `true`, closed status alone does not exclude a section. Preserve component types and opaque lecture associations; never infer links. TBA/online sections without scheduled times have empty meetings lists. A course with no eligible sections is passed to the engine for normal infeasibility diagnostics.
+6. Exclude sections outside the requested term or selected courses. With `includeClosedSections=false` (also the default when null), exclude **every CLOSED component**, including lectures, labs, and recitations. OPEN and UNKNOWN remain eligible. With `true`, closed status alone does not exclude a section. **A lecture that loses every section of one linked component type** (e.g. all its labs are closed) **is excluded too**, along with its remaining linked sections, because it can't be taken alone. This uses the engine's own rule, `CourseOption.excluding`. Preserve component types and lecture links; never infer links. **`lectureLink` is the CRN of the lecture a lab or recitation must be taken with, and `null` for a lecture or standalone section.** A lecture with linked sections is always scheduled with exactly one of them per component type. TBA/online sections without scheduled times have empty meetings lists. A course with no eligible sections is passed to the engine for normal infeasibility diagnostics.
 
 The solver owns blocked-time exclusion, conflict solving, linked-component selection, credit feasibility and scoring. The API supplies validated constraints; it does not duplicate that logic. Omitted/null `blockedTimes` becomes an empty list; omitted/null `softPreferences` means no soft preferences. Explicit null for `maxResults` uses its default.
 
@@ -439,6 +439,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-16 | Native scheduling engine integrated behind `SchedulingEngine`. `lectureLink` defined as the lecture's CRN (was opaque). With `includeClosedSections=false`, a lecture whose labs (or recitations) are all closed is now excluded as well. **Contract change:** the Backend API and Data owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-15 | Implement Schedule API validation and mapping with test doubles; require HTTP 400 for more than 10 original optional selections and reversed credit bounds; document normalization, closed-component filtering, exact score pass-through, overload, configurable node cap, and 503 while production adapters are absent. Shared preference record shapes retained from AI branch; consuming-owner review required. | Codex, Backend API task |
 | 2026-10-15 | Implement the agreed Problem Details error format in `common`; add request IDs, sorted validation errors, safe fallback errors, and configurable CORS. Frontend consumers must migrate from the old default error JSON; consuming-module review required before merge. | Codex, Backend API task |
 | 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
