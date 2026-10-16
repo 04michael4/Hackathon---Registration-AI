@@ -9,7 +9,7 @@ import java.util.List;
  *
  * <p>{@code lectureLink} is the CRN of the lecture a lab or recitation must be taken with, and
  * {@code null} for a lecture or standalone section. It comes from the catalog's lecture-lab relation
- * and is never inferred. A lecture with linked sections is always scheduled with exactly one of them
+ * and is never inferred. A blank or self-referencing link is malformed and fails the request. A lecture with linked sections is always scheduled with exactly one of them
  * per {@code componentType}.
  */
 public record CatalogSection(String term, String courseId, String crn, String sectionCode,

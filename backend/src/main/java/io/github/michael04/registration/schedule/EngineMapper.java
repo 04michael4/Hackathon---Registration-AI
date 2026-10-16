@@ -37,6 +37,8 @@ public class EngineMapper {
 					|| section.componentType() == null || section.componentType().isBlank() || section.status() == null) {
 				throw new IllegalStateException("Incomplete catalog section metadata");
 			}
+			// lectureLink is the lecture's CRN, or null for a lecture; blank or self links are malformed.
+			NativeSchedulingEngine.parentCrn(section.crn(), section.lectureLink());
 			var previous = eligible.putIfAbsent(section.crn(), section);
 			if (previous != null && !previous.equals(section)) {
 				throw new IllegalStateException("Conflicting catalog records for a section");

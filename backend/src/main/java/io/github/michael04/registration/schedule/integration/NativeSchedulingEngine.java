@@ -20,8 +20,9 @@ import io.github.michael04.registration.engine.SectionOption;
  * ({@link BacktrackingScheduleSolver}). Pure translation: no search, scoring or filtering here.
  *
  * <p>{@code Section.lectureLink} is the CRN of the lecture a lab or recitation must be taken with,
- * and {@code null} for a lecture or standalone section. A link to a CRN that isn't in the input
- * (e.g. a closed lecture) makes that section unusable; the engine never picks it.
+ * and {@code null} for a lecture or standalone section. A blank link, or one pointing at the section
+ * itself, is malformed catalog data and is rejected rather than read as "standalone". A link to a CRN
+ * that isn't in the input (e.g. a closed lecture) makes that section unusable; the engine never picks it.
  *
  * <p>Catalog data the engine rejects (e.g. duplicate CRNs, a lab linked to another lab) throws
  * {@link IllegalStateException}, which the shared advice renders as a safe 500.
@@ -44,9 +45,16 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 		return fromNative(new BacktrackingScheduleSolver(nodeCap).solve(nativeProblem));
 	}
 
-	/** The engine's parent CRN for a catalog lecture link: {@code null} means lecture or standalone. */
+	/**
+	 * The engine's parent CRN for a catalog lecture link: {@code null} stays {@code null} (a lecture or
+	 * standalone section). A blank or self-referencing link is malformed and throws
+	 * {@link IllegalStateException}, so it can't silently turn a lab into a standalone section.
+	 */
 	public static String parentCrn(String crn, String lectureLink) {
-		return lectureLink == null || lectureLink.isBlank() || lectureLink.equals(crn) ? null : lectureLink;
+		if (lectureLink != null && (lectureLink.isBlank() || lectureLink.equals(crn))) {
+			throw new IllegalStateException("Invalid catalog lecture link");
+		}
+		return lectureLink;
 	}
 
 	private static ScheduleProblem toNative(Problem problem) {

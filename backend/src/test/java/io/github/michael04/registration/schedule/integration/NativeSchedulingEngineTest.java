@@ -79,11 +79,22 @@ class NativeSchedulingEngineTest {
 	}
 
 	@Test
-	void parentCrnTreatsMissingBlankAndSelfLinksAsLectures() {
+	void parentCrnKeepsNullAndLectureCrnsButRejectsBlankAndSelfLinks() {
 		assertThat(NativeSchedulingEngine.parentCrn("1", null)).isNull();
-		assertThat(NativeSchedulingEngine.parentCrn("1", " ")).isNull();
-		assertThat(NativeSchedulingEngine.parentCrn("1", "1")).isNull();
 		assertThat(NativeSchedulingEngine.parentCrn("2", "1")).isEqualTo("1");
+		assertThatThrownBy(() -> NativeSchedulingEngine.parentCrn("1", " ")).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> NativeSchedulingEngine.parentCrn("1", "")).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> NativeSchedulingEngine.parentCrn("1", "1")).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void labWithABlankLectureLinkIsRejectedNotScheduledAlone() {
+		var malformed = new Course("CSE-007", true, List.of(
+				new Section("13132", "CSE-007", 0, "LAB", " ",
+						List.of(meeting("09:20", "10:35", DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)))));
+
+		assertThatThrownBy(() -> engine.solve(new Problem(List.of(malformed), ANY, START_AT_10, 5), 1000))
+			.isInstanceOf(IllegalStateException.class);
 	}
 
 }

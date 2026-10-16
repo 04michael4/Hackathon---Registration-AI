@@ -72,6 +72,18 @@ class EngineMapperTest {
 			.containsExactly("1", "3");
 	}
 
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void blankOrSelfLectureLinksAreIntegrationFailures(boolean includeClosed) {
+		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
+		var blankLink = section("2", "LAB", " ", CatalogSection.Status.OPEN, List.of());
+		var selfLink = section("3", "LAB", "3", CatalogSection.Status.OPEN, List.of());
+		assertThatThrownBy(() -> mapper.prepare(request(includeClosed), Set.of("CSE-017"), courses, List.of(lecture, blankLink)))
+			.isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> mapper.prepare(request(includeClosed), Set.of("CSE-017"), courses, List.of(lecture, selfLink)))
+			.isInstanceOf(IllegalStateException.class);
+	}
+
 	@Test
 	void labLinkedToAnotherLabIsAnIntegrationFailure() {
 		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
