@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import io.github.michael04.registration.common.AiUnavailableException;
+
 /** Provider selection. None of these contexts makes a network call (building the SDK client is offline). */
 class AiConfigurationTest {
 

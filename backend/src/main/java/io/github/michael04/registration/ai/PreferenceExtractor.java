@@ -1,5 +1,7 @@
 package io.github.michael04.registration.ai;
 
+import io.github.michael04.registration.common.AiUnavailableException;
+
 /**
  * Turns a student's free text into {@link RawPreferences}. Implementations only interpret
  * language; resolving course names and validating values happens afterwards in Java.

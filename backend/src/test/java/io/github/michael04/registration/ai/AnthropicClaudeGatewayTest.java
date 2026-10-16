@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import io.github.michael04.registration.common.AiUnavailableException;
 import io.github.michael04.registration.ai.ClaudeGateway.Outcome;
 import io.github.michael04.registration.ai.ClaudeGateway.Reply;
 import tools.jackson.databind.JsonNode;

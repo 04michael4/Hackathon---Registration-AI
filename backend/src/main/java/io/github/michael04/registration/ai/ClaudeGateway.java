@@ -1,5 +1,7 @@
 package io.github.michael04.registration.ai;
 
+import io.github.michael04.registration.common.AiUnavailableException;
+
 /**
  * The single place that talks to the Anthropic SDK. Keeps SDK types out of the extraction logic,
  * so {@link ClaudePreferenceExtractor} can be tested with a simple fake.

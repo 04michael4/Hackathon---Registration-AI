@@ -1,0 +1,138 @@
+package io.github.michael04.registration.ai;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+
+/**
+ * The real {@code AI_PROVIDER=claude} path (SDK, gateway, extractor, assembler, shared error handler)
+ * against {@link FakeAnthropicServer} on localhost. A fake key; no external call; no cost.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+class ClaudeEndpointFakeServerIntegrationTest {
+
+	private static final FakeAnthropicServer SERVER = new FakeAnthropicServer();
+
+	private static final String SENSITIVE = "sensitive-test-input";
+
+	private static final String VALID_JSON = """
+			{"requiredCourses":["CSE 17","Calc 1"],"optionalCourses":[],"optionalCoursesWeight":null,
+			 "minCredits":null,"maxCredits":null,
+			 "blockedTimes":[{"days":["TUESDAY","THURSDAY"],"start":"15:00","end":"18:00"}],
+			 "earliestStart":"10:00","earliestStartWeight":3,"latestEnd":null,"latestEndWeight":null,
+			 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+			""";
+
+	@DynamicPropertySource
+	static void claudeAgainstFakeServer(DynamicPropertyRegistry registry) {
+		registry.add("app.ai.provider", () -> "claude");
+		registry.add("app.ai.anthropic.api-key", () -> "test-key-not-real");
+		registry.add("app.ai.anthropic.base-url", SERVER::baseUrl);
+		registry.add("app.ai.anthropic.max-retries", () -> "0");
+		registry.add("app.ai.anthropic.timeout", () -> "5s");
+	}
+
+	@AfterAll
+	static void stopServer() {
+		SERVER.close();
+	}
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Test
+	void successfulExtractionThroughTheRealPipeline() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", VALID_JSON));
+
+		perform().andExpect(status().isOk())
+			.andExpect(jsonPath("$.preferences.hardConstraints.requiredCourseIds[0]").value("CSE-017"))
+			.andExpect(jsonPath("$.preferences.hardConstraints.requiredCourseIds[1]").value("MATH-021"))
+			.andExpect(jsonPath("$.preferences.hardConstraints.blockedTimes[0].start").value("15:00"))
+			.andExpect(jsonPath("$.preferences.softPreferences.earliestStart.value").value("10:00"));
+	}
+
+	@Test
+	void providerRateLimitBecomes429() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.error(429, "rate_limit_error", SENSITIVE));
+
+		assertSafeProblem(perform(), 429, "Too many requests");
+	}
+
+	@Test
+	void providerOverloadBecomes503() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.error(529, "overloaded_error", SENSITIVE));
+
+		assertSafeProblem(perform(), 503, "AI service is unavailable");
+	}
+
+	@Test
+	void rejectedCredentialsBecome503() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.error(401, "authentication_error", SENSITIVE));
+
+		assertSafeProblem(perform(), 503, "AI service is unavailable");
+	}
+
+	@Test
+	void providerInternalErrorBecomes502() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.error(500, "api_error", SENSITIVE));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+	}
+
+	@Test
+	void refusalBecomes502() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.refusal());
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+	}
+
+	@Test
+	void malformedOutputIsRetriedOnceThenBecomes502() throws Exception {
+		int before = SERVER.requests().size();
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", "not json " + SENSITIVE),
+				FakeAnthropicServer.message("end_turn", "still not json " + SENSITIVE));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	@Test
+	void theFakeKeyIsSentOnlyToTheFakeServerAndNeverReturned() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.error(500, "api_error", "boom"));
+
+		perform().andExpect(content().string(not(containsString("test-key-not-real"))));
+		assertThat(SERVER.requests().get(SERVER.requests().size() - 1).header("x-api-key")).isEqualTo("test-key-not-real");
+	}
+
+	private ResultActions perform() throws Exception {
+		return mockMvc.perform(post("/api/preferences/extract").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17 and Calc 1\"}"));
+	}
+
+	private static void assertSafeProblem(ResultActions result, int code, String detail) throws Exception {
+		result.andExpect(status().is(code))
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.detail").value(detail))
+			.andExpect(jsonPath("$.requestId").isString())
+			.andExpect(header().exists("X-Request-Id"))
+			.andExpect(content().string(not(containsString(SENSITIVE))));
+	}
+
+}

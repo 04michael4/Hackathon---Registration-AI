@@ -22,6 +22,8 @@ import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.anthropic.models.messages.StructuredOutputConfig;
 import com.anthropic.models.messages.StructuredTextBlock;
 
+import io.github.michael04.registration.common.AiUnavailableException;
+
 /**
  * {@link ClaudeGateway} backed by the official Anthropic Java SDK, using structured output so the
  * response matches {@link ClaudeExtraction}'s JSON schema.
@@ -86,11 +88,11 @@ final class AnthropicClaudeGateway implements ClaudeGateway {
 		}
 		catch (AnthropicIoException | AnthropicRetryableException ex) {
 			log.warn("Claude request failed: {} (connection or timeout)", ex.getClass().getSimpleName());
-			throw new AiUnavailableException("AI provider is temporarily unreachable");
+			throw new AiUnavailableException(ex);
 		}
 		catch (NoCredentialsException | CredentialResolutionException ex) {
 			log.warn("Claude request failed: credentials unavailable");
-			throw new AiUnavailableException("AI provider credentials are unavailable");
+			throw new AiUnavailableException(ex);
 		}
 		catch (AnthropicInvalidDataException ex) {
 			log.warn("Claude response could not be read");
@@ -142,10 +144,10 @@ final class AnthropicClaudeGateway implements ClaudeGateway {
 			return new AiRateLimitedException("AI provider rate limit reached");
 		}
 		if (status == 401 || status == 403) {
-			return new AiUnavailableException("AI provider rejected the configured credentials");
+			return new AiUnavailableException(ex);
 		}
 		if (status == 503 || status == 529) {
-			return new AiUnavailableException("AI provider is temporarily unavailable");
+			return new AiUnavailableException(ex);
 		}
 		return new AiProviderException("AI provider error");
 	}

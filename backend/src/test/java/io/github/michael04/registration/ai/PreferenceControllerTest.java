@@ -1,9 +1,13 @@
 package io.github.michael04.registration.ai;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,14 +18,28 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import io.github.michael04.registration.common.AiUnavailableException;
 import io.github.michael04.registration.common.json.JsonConfiguration;
 import io.github.michael04.registration.course.DummyCourseCatalog;
 
+/**
+ * The extract endpoint through the shared {@code common.GlobalExceptionHandler}, which {@code @WebMvcTest}
+ * loads automatically as controller advice: every error is an RFC 9457 Problem Details body with a
+ * request ID, and nothing sensitive is echoed.
+ */
 // Slice tests skip @Configuration classes, so import the app's JSON formats explicitly.
 @WebMvcTest(PreferenceController.class)
 @Import(JsonConfiguration.class)
 class PreferenceControllerTest {
+
+	/** Planted in every exception and request; must never appear in a response. */
+	private static final String SENSITIVE = "sensitive-test-input";
+
+	private static final String INSTANCE = "/api/preferences/extract";
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -58,65 +76,87 @@ class PreferenceControllerTest {
 
 	@Test
 	void blankTextIsRejected() throws Exception {
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"   \"}"))
-			.andExpect(status().isBadRequest());
+		assertProblem(mockMvc.perform(extract("{\"term\":\"" + SENSITIVE + "\",\"text\":\"   \"}")), 400,
+				"Request validation failed")
+			.andExpect(jsonPath("$.errors[0].field").value("text"));
 	}
 
 	@Test
 	void textOver2000CharactersIsRejected() throws Exception {
-		String longText = "a".repeat(2001);
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + longText + "\"}"))
-			.andExpect(status().isBadRequest());
+		String longText = SENSITIVE + "a".repeat(2001);
+		assertProblem(mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + longText + "\"}")), 400,
+				"Request validation failed")
+			.andExpect(jsonPath("$.errors[0].field").value("text"))
+			.andExpect(content().string(not(containsString("aaaaaaaaaa"))));
 	}
 
 	@Test
 	void missingTermIsRejected() throws Exception {
-		mockMvc.perform(extract("{\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isBadRequest());
+		assertProblem(mockMvc.perform(extract("{\"text\":\"" + SENSITIVE + "\"}")), 400, "Request validation failed")
+			.andExpect(jsonPath("$.errors[0].field").value("term"));
 	}
 
 	@Test
 	void unknownTermReturns422() throws Exception {
-		given(service.extract(anyString(), anyString())).willThrow(new UnknownTermException("1999-FALL"));
+		given(service.extract(anyString(), anyString())).willThrow(new UnknownTermException(SENSITIVE));
 
-		mockMvc.perform(extract("{\"term\":\"1999-FALL\",\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isUnprocessableContent());
+		// The fixed public message; the submitted term is never echoed.
+		assertProblem(mockMvc.perform(extract("{\"term\":\"" + SENSITIVE + "\",\"text\":\"I need CSE 17\"}")), 422,
+				"Term is not available");
 	}
 
 	@Test
 	void unavailableAiReturns503() throws Exception {
-		given(service.extract(anyString(), anyString())).willThrow(new AiUnavailableException("not configured"));
+		given(service.extract(anyString(), anyString()))
+			.willThrow(new AiUnavailableException(new RuntimeException(SENSITIVE)));
 
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isServiceUnavailable());
+		assertProblem(mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + SENSITIVE + "\"}")), 503,
+				"AI service is unavailable");
 	}
 
 	@Test
 	void rateLimitedAiReturns429() throws Exception {
-		given(service.extract(anyString(), anyString())).willThrow(new AiRateLimitedException("rate limited"));
+		given(service.extract(anyString(), anyString())).willThrow(new AiRateLimitedException(SENSITIVE));
 
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isTooManyRequests());
+		assertProblem(mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + SENSITIVE + "\"}")), 429,
+				"Too many requests");
 	}
 
 	@Test
 	void providerErrorReturns502() throws Exception {
-		given(service.extract(anyString(), anyString())).willThrow(new AiProviderException("provider error"));
+		given(service.extract(anyString(), anyString())).willThrow(new AiProviderException(SENSITIVE));
 
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isBadGateway());
+		assertProblem(mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + SENSITIVE + "\"}")), 502,
+				"Upstream service returned an invalid response");
 	}
 
 	@Test
 	void invalidAiOutputReturns502() throws Exception {
-		given(service.extract(anyString(), anyString())).willThrow(new AiOutputInvalidException("bad output"));
+		given(service.extract(anyString(), anyString())).willThrow(new AiOutputInvalidException(SENSITIVE));
 
-		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
-			.andExpect(status().isBadGateway());
+		assertProblem(mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"" + SENSITIVE + "\"}")), 502,
+				"Upstream service returned an invalid response");
 	}
 
-	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder extract(String json) {
-		return post("/api/preferences/extract").contentType(MediaType.APPLICATION_JSON).content(json);
+	/** Problem Details shape shared with common.GlobalExceptionHandlerTest. */
+	private static ResultActions assertProblem(ResultActions result, int code, String detail) throws Exception {
+		result.andExpect(status().is(code))
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.status").value(code))
+			.andExpect(jsonPath("$.detail").value(detail))
+			.andExpect(jsonPath("$.instance").value(INSTANCE))
+			.andExpect(jsonPath("$.requestId").isString())
+			.andExpect(header().exists("X-Request-Id"))
+			.andExpect(content().string(not(containsString(SENSITIVE))));
+		MvcResult mvc = result.andReturn();
+		assertThat(mvc.getResponse().getContentAsString())
+			.contains("\"requestId\":\"" + mvc.getResponse().getHeader("X-Request-Id") + "\"");
+		return result;
+	}
+
+	private static MockHttpServletRequestBuilder extract(String json) {
+		return post(INSTANCE).contentType(MediaType.APPLICATION_JSON).content(json);
 	}
 
 }
