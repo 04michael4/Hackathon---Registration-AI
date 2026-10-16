@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-15):** Phase 1 (backend foundation) is implemented. Only `GET /api/health` exists. Everything else in this document is **planned design**, labeled ⬜. Implemented parts are labeled ✅. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
+> **Status at a glance (2026-10-15):** The backend foundation and the `common` error/CORS infrastructure are implemented and verified locally. The only implemented `/api` endpoint is `GET /api/health`; `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -114,7 +114,7 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 |---|---|---|---|
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
-| `common` | ⬜ | Global error handling (`@RestControllerAdvice`), web config such as CORS | Backend API |
+| `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
 | `course` | ⬜ | Course/section entities, repositories, search service, `CourseController` | Backend API |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | ⬜ | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. | Scheduling Engine |
@@ -288,9 +288,11 @@ flowchart LR
 
 ## 10. Error handling
 
-- **Implemented ✅:** Spring Boot's default error JSON (`timestamp`, `status`, `error`, `path`). Verified for 404 and 405; see [api-contract.md § Error responses](api-contract.md#error-responses).
-- **Planned ⬜:** a single `@RestControllerAdvice` in `common` that produces RFC 9457 **Problem Details** for every error, with a consistent mapping: validation → 400, semantic → 422, upstream AI → 502/503, unknown → 500.
-- **Rules:** never leak stack traces or provider error messages to clients. Log them server-side with a request ID. Infeasible schedules are a **normal 200 result** with `diagnostics`, not an error.
+- **Implemented and verified ✅:** `common.GlobalExceptionHandler` extends Spring's `ResponseEntityExceptionHandler` and emits RFC 9457 **Problem Details**. It handles body and method-parameter validation (400), semantic errors (422), missing resources (404), unavailable AI (503), framework HTTP errors, and unknown failures (500). Spring error-response exceptions preserve their status and headers, including future 429/502 mappings. `spring-boot-starter-validation` supplies the validator used at controller boundaries; `spring.mvc.problemdetails.enabled=true` enables framework support.
+- **Shared rendering:** `ApiProblems` creates safe bodies with a generated request ID. `ApiErrorController` uses it for servlet error dispatches; `ProblemDetailCorsProcessor` uses it for rejected CORS requests. The same ID appears in `requestId` and `X-Request-Id`. `ValidationErrorResponse` is a record; the enclosing problem uses Spring's native `ProblemDetail` type and Jackson support rather than a separate error envelope.
+- **Rules:** never return stack traces, rejected values, or provider messages. Application messages for `NotFoundException` and `UnprocessableException` must be safe to display. Server-error logs from the advice contain the request ID, status, and exception class, avoiding exception messages/causes that might contain secrets or student text. Return-value validation errors remain 500. Infeasible schedules remain a **normal 200 result** with `diagnostics`.
+
+`common.WebConfig` registers a `CorsFilter` for `/api/**`: exact configured origins only, GET/HEAD/POST/OPTIONS, Accept/Content-Type headers, no credentials, and a 3600-second preflight cache. Configuration is `app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:3000}`. An empty value disables cross-origin access. The filter also supplies CORS headers on errors for allowed origins. This implements the assigned CORS feature; the frontend may still use the proposed same-origin Next.js proxy. See [API contract](api-contract.md#cors).
 
 ## 11. Security
 
@@ -300,7 +302,7 @@ flowchart LR
 | Anthropic API key | Backend only. Never in frontend code, `NEXT_PUBLIC_*` variables, logs, or error bodies. | ⬜ |
 | Authentication | None in the MVP: no accounts, no stored personal data. Revisit if we add saved schedules. | Decision |
 | Input limits | Bean Validation on all request DTOs; text ≤ 2000 chars; page size ≤ 100 | ⬜ |
-| CORS | Allow only the known frontend origin(s), or avoid CORS entirely by proxying through Next.js. _TBD._ | ⬜ |
+| CORS | Exact origin allowlist from `CORS_ALLOWED_ORIGINS`, default `http://localhost:3000`; no credentials. Empty list supports same-origin/proxy use. | ✅ |
 | AI abuse and cost | Rate-limit AI endpoints (mechanism _TBD_); cap request size and `max_tokens` | ⬜ |
 | Data | Commit only public or synthetic data; no student records | Policy ✅ |
 | Dependencies | Minimal set; Spring Boot version pinned and upgraded deliberately | ✅ |
@@ -309,7 +311,7 @@ flowchart LR
 
 | Layer | Tool | What it proves | Status |
 |---|---|---|---|
-| Controller slice | `@WebMvcTest` + MockMvc | HTTP contract: status codes, JSON shape, validation | ✅ health |
+| Controller slice | `@WebMvcTest` + MockMvc | Health, Problem Details, validation, sanitized failures, protocol headers, and default/custom/disabled CORS | ✅ health and common |
 | Application context | `@SpringBootTest` | Configuration and wiring load | ✅ |
 | Engine unit tests | Plain JUnit 5, no Spring | Correctness, infeasibility diagnostics, **determinism** (run twice, compare), "no returned schedule has a conflict" checks | ⬜ |
 | AI layer | JUnit with a fake `PreferenceExtractor` / recorded responses | Validation pipeline, error mapping. **No real API calls in `./mvnw test`.** | ⬜ |
@@ -360,6 +362,6 @@ The expected load is a demo with a handful of users, so these points are about n
 - **Course data source** for Lehigh (public catalog export, manual snapshot, or something else) and its terms of use. This blocks the Data module.
 - Exact formats for terms, CRNs, linked sections, and variable credits. These depend on the data source.
 - Migration tool (Flyway vs. Liquibase); local Postgres setup (Docker Compose vs. Testcontainers only).
-- CORS policy vs. a Next.js proxy.
+- Frontend choice of direct API access using the implemented CORS allowlist vs. a Next.js proxy.
 - AI rate-limiting mechanism, and the final model choice.
 - Hosting provider and CI.

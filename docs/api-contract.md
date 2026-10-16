@@ -32,7 +32,7 @@ These apply to every endpoint unless the endpoint says otherwise.
 |---|---|---|
 | Base URL | Local: `http://localhost:8080`. Deployed: _TBD_ | Local ✅ |
 | Prefix | All endpoints live under `/api` | ✅ |
-| Format | JSON request and response bodies, `Content-Type: application/json` | ✅ |
+| Format | JSON success bodies (`application/json`); errors use `application/problem+json` | ✅ |
 | Field names | `camelCase` | ✅ (health) |
 | Days of week | `MONDAY` … `SUNDAY`, matching `java.time.DayOfWeek` names so they map to Java with no translation | ⬜ |
 | Times | `"HH:mm"`, 24-hour, Lehigh local time (America/New_York); no time zone in the payload | ⬜ |
@@ -46,15 +46,9 @@ These apply to every endpoint unless the endpoint says otherwise.
 
 ### Error responses
 
-**Current behavior (implemented, verified 2026-10-15).** Errors use Spring Boot's default error body:
+**Status: ✅ Implemented and verified locally, 2026-10-15.** The `common` package uses [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457), with `Content-Type: application/problem+json`, for controller exceptions, Spring MVC errors, servlet error dispatches, and CORS rejections. This replaces the former `{ timestamp, status, error, path }` body and is a **contract change** for frontend consumers.
 
-```json
-{ "timestamp": "2026-10-15T20:33:37.726Z", "status": 404, "error": "Not Found", "path": "/api/nope" }
-```
-
-Observed: unknown path → `404`; wrong method (e.g. `POST /api/health`) → `405` with an `Allow: GET` header.
-
-**Planned (not implemented).** Switch to [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457) (`Content-Type: application/problem+json`), which Spring supports natively. This switch is itself a contract change: update this section in the same PR and tell the frontend owner.
+Every problem includes `type` (`about:blank`), the HTTP status phrase as `title`, numeric `status`, a safe `detail`, the request path as `instance` (without its query string), and a generated UUID `requestId`. The response header `X-Request-Id` matches that UUID. Incoming request IDs are not trusted or echoed. Validation failures additionally include `errors`, sorted by `field`, then `message`; other errors omit that array.
 
 ```json
 {
@@ -63,21 +57,36 @@ Observed: unknown path → `404`; wrong method (e.g. `POST /api/health`) → `40
   "status": 400,
   "detail": "Request validation failed",
   "instance": "/api/schedules/generate",
+  "requestId": "123e4567-e89b-42d3-a456-426614174000",
   "errors": [ { "field": "hardConstraints.maxCredits", "message": "must be between 1 and 21" } ]
 }
 ```
 
-Planned status code usage:
+The example is illustrative; schedule generation is still planned. Validation fields use property paths such as `hardConstraints.maxCredits`, or a method parameter name for parameter constraints. Object-level/cross-parameter errors use `$`. Messages must be safe for public display; rejected values are never serialized. Unexpected failures and upstream errors use fixed messages, without exception messages, stack traces, provider responses, or request contents.
+
+Status code usage:
 
 | Code | When |
 |---|---|
 | 400 | Malformed JSON, missing required fields, values out of range |
+| 403 | CORS origin, method, or requested header is not allowed |
 | 404 | Unknown resource (e.g. course ID) in a path |
+| 405 | Unsupported HTTP method; preserves the `Allow` header |
+| 406 | Requested response media type is not supported |
+| 415 | Request content type is not supported |
 | 422 | Well-formed request that can't be processed, e.g. unknown course IDs in a body, or `minCredits > maxCredits` |
 | 429 | Rate limit exceeded (AI endpoints; mechanism TBD) |
 | 500 | Unexpected server error. Never includes stack traces. |
 | 502 | The AI provider returned an error or output that failed validation |
 | 503 | AI features are not configured (no API key) or the provider is unavailable |
+
+Backend consumers can throw `common.NotFoundException` (404) and `common.UnprocessableException` (422) with a **public, sanitized message**, or `common.AiUnavailableException` (503, fixed message). Spring `ResponseStatusException`/`ErrorResponseException` statuses and protocol headers are preserved, with sanitized problem bodies; these support future 429/502 mappings without coupling `common` to the AI SDK. Unknown exceptions, including unexpected `IllegalArgumentException`, and return-value validation failures are 500. This infrastructure does not implement AI calls or rate limiting.
+
+### CORS
+
+**Status: ✅ Implemented and verified locally, 2026-10-15.** Cross-origin access is configured for `/api/**` through `CORS_ALLOWED_ORIGINS` (`app.cors.allowed-origins`), a comma-separated list of exact HTTP(S) origins. The default is `http://localhost:3000`. Whitespace around entries is trimmed; wildcards, paths, credentials, queries, and fragments in configured origins are rejected at startup. An empty list disables cross-origin access; same-origin and requests without an `Origin` header still work.
+
+Allowed methods: `GET`, `HEAD`, `POST`, `OPTIONS`. Allowed request headers: `Accept`, `Content-Type`. Credentials are disabled. `X-Request-Id` is exposed to allowed browser origins. Successful preflights are cached for 3600 seconds. The CORS method list does not add methods to individual endpoints. Rejected requests receive a 403 Problem Details body without an allow-origin header; browsers consequently cannot read that body. A future Next.js same-origin proxy can use an empty origin list.
 
 ---
 
@@ -109,7 +118,7 @@ Content-Type: application/json
 {"status":"UP","service":"registration-backend"}
 ```
 
-**Status codes:** `200` OK; `405` for any method other than GET.
+**Status codes:** `200` OK for GET (and implicit HEAD); standard OPTIONS/preflight handling; `405` Problem Details for unsupported methods such as POST. CORS restrictions apply to cross-origin requests.
 
 ---
 
@@ -415,6 +424,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-15 | Implement the agreed Problem Details error format in `common`; add request IDs, sorted validation errors, safe fallback errors, and configurable CORS. Frontend consumers must migrate from the old default error JSON; consuming-module review required before merge. | Codex, Backend API task |
 | 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
 | 2026-10-15 | Team agreed the whole contract as written; provisional status removed | Michael, David, Marpu, Sunny |
 | 2026-10-15 | Initial contract: health implemented; endpoints 2–7 proposed | Claude Code session for @04michael4 |

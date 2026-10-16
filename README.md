@@ -8,8 +8,8 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Phase 1, backend foundation: ✅ implemented and verified locally; committed on `feature/backend-foundation`, not yet merged to `main` |
-| **What works today** | Spring Boot backend with `GET /api/health`, 3 passing automated tests |
+| **Current phase** | Backend foundation merged to `main`; `common` error handling and CORS implemented and verified on `feature/backend-common`; integration target: `pre-main` for testing |
+| **What works today** | Spring Boot health endpoint, standardized Problem Details errors, validation infrastructure, configurable CORS; 48 automated tests passed |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -40,6 +40,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Feature | In MVP | Status |
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
+| Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
 | Course search by code/title for a term | ✔ | ⬜ Planned |
 | AI preference extraction from free text | ✔ | ⬜ Planned |
 | Editable preference form (works without AI too) | ✔ | ⬜ Planned |
@@ -81,7 +82,8 @@ Only the backend talks to Claude and holds secrets. The frontend is a thin clien
 │   └── src/
 │       ├── main/java/io/github/michael04/registration/
 │       │   ├── RegistrationBackendApplication.java
-│       │   └── health/      GET /api/health
+│       │   ├── health/      GET /api/health
+│       │   └── common/      Problem Details, validation errors, CORS
 │       ├── main/resources/application.properties
 │       └── test/java/...    Automated tests
 ├── frontend/                Next.js app (placeholder)
@@ -143,11 +145,14 @@ cp .env.example .env    # optional right now; nothing is required yet
 | Variable | Used by | Required now? | Default |
 |---|---|---|---|
 | `PORT` | Backend | No | `8080` |
+| `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Backend *(planned)* | No | — |
 | `NEXT_PUBLIC_API_BASE_URL` | Frontend *(planned)* | No | `http://localhost:8080` |
 
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
+
+`CORS_ALLOWED_ORIGINS` accepts comma-separated exact frontend origins, for example `http://localhost:3000,https://planner.example`. Do not include trailing slashes, paths, or wildcards. The allowlist replaces the localhost default. An empty value disables cross-origin access when using a same-origin frontend proxy. CORS covers `/api/**`, allows GET/HEAD/POST/OPTIONS with Accept/Content-Type headers, and disables credentials. Error responses use Problem Details with a `requestId` and matching `X-Request-Id` header; see the [API contract](docs/api-contract.md#error-responses).
 
 ### 4. Run the automated tests
 
@@ -159,7 +164,7 @@ cd backend
 The first run downloads Maven and dependencies (a minute or two). Expected output ends with:
 
 ```
-[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: <count>, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
@@ -199,6 +204,7 @@ npm run dev        # http://localhost:3000, talks to the backend at NEXT_PUBLIC_
 | `Port 8080 was already in use` | `lsof -i :8080` to find the process, or `PORT=9090 ./mvnw spring-boot:run` |
 | `release version 21 not supported` | Your shell is on an older JDK; set `JAVA_HOME` (step 1) |
 | Mockito "dynamic agent" warnings during tests | Harmless JDK 21 notices; they don't affect results |
+| Windows `mvnw.cmd`: `Cannot index into a null array` before Maven starts | Use the repository's Unix wrapper from Git Bash with JDK 21: `JAVA_HOME='/c/Program Files/Java/jdk-21' ./mvnw -B test` from `backend/` (adjust the JDK path). The wrapper files are unchanged. |
 
 ## Team and responsibilities
 
@@ -226,7 +232,8 @@ Full workflow, including conflicts, AI agents and onboarding: **[docs/developmen
 
 | Component | Status |
 |---|---|
-| Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented and verified locally on 2026-10-15; on `feature/backend-foundation`, **not yet merged to `main`** |
+| Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented; merged to `main` in `76a8310` |
+| Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
 | Course catalog, PostgreSQL | ⬜ Planned |
 | Scheduling engine | ⬜ Planned |
 | AI integration | ⬜ Planned |
@@ -249,7 +256,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 ## Known limitations and future work
 
 **Current limitations**
-- Only the health endpoint exists. No catalog data, database, AI or frontend yet.
+- Health is the only implemented `/api` endpoint; shared errors and CORS are available. No catalog data, database, AI or frontend yet.
 - **The source for Lehigh course data hasn't been chosen.** This blocks course search and scheduling against real data.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.
