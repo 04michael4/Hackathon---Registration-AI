@@ -19,30 +19,33 @@ Editor tips:
 ```mermaid
 gitGraph
     commit id: "main"
-    branch feature/backend-foundation
-    commit id: "foundation"
-    checkout main
-    merge feature/backend-foundation
-    branch feature/engine-backtracking
-    commit id: "engine"
-    checkout main
-    branch feature/ai-preference-extract
+    branch pre-main
+    commit id: "integration"
+    branch feature/backend-common
+    commit id: "common"
+    checkout pre-main
+    merge feature/backend-common
+    branch feature/ai-preference-extractor
     commit id: "ai"
+    checkout pre-main
+    merge feature/ai-preference-extractor
     checkout main
-    merge feature/engine-backtracking
-    merge feature/ai-preference-extract
+    merge pre-main id: "team promotes"
 ```
 
 | Rule | Detail |
 |---|---|
-| `main` is always working | Tests pass and the app starts. Nobody pushes directly to `main`. |
+| **`pre-main` is the shared integration branch** | Every feature PR targets `pre-main`. Integrate and test there first. |
+| **`main` stays untouched** | Nobody pushes or merges into `main`. It changes only when the team explicitly decides to promote `pre-main`. |
+| `pre-main` is always working | Tests pass and the app starts. Nobody pushes directly to `pre-main`; changes arrive through reviewed PRs. Never force-push. |
 | One branch per task | `<type>/<module>-<short-desc>`, e.g. `feature/engine-backtracking`, `fix/backend-health-content-type`, `docs/api-contract-courses` |
 | Types | `feature/`, `fix/`, `docs/`, `chore/`, `test/` |
 | Module names | `backend`, `engine`, `ai`, `data`, `frontend`, `docs` |
 | Keep branches short-lived | Aim to merge within a day or two. Long branches cause painful conflicts. |
-| Stay current | `git fetch origin && git merge origin/main` at least daily. Rebase only branches nobody else has pulled. |
+| Stay current | `git fetch origin && git merge origin/pre-main` at least daily. Rebase only branches nobody else has pulled. |
+| Integrating a finished feature | Merge it into a temporary branch made from the latest `pre-main` (e.g. `integrate/<module>-into-pre-main`), fix and test there, then open the PR into `pre-main`. The feature branch itself is left unchanged. |
 
-Recommended GitHub setting (repo owner): protect `main` and require a PR with one approval.
+Recommended GitHub settings (repo owner): protect **both** `main` and `pre-main`; require a PR with one approval for `pre-main`; restrict who can merge into `main`.
 
 ## 3. Commit conventions
 
@@ -73,7 +76,7 @@ Keep commits focused. If an AI agent wrote a substantial part, keep the `Co-Auth
 ## 4. Pull request and review workflow
 
 1. **Before opening:** run `./mvnw test` in `backend/`, update docs (see the Definition of Done in [CLAUDE.md](../CLAUDE.md#definition-of-done)), and update your section of [HANDOFF.md](../HANDOFF.md).
-2. **Open a PR** into `main`. Use this description outline:
+2. **Open a PR** into **`pre-main`** (never into `main`). Use this description outline:
    ```markdown
    ## What & why
    ## Modules touched
@@ -96,7 +99,7 @@ Keep commits focused. If an AI agent wrote a substantial part, keep the `Co-Auth
 
 ```bash
 git fetch origin
-git merge origin/main          # resolve conflicts in your editor
+git merge origin/pre-main      # resolve conflicts in your editor
 cd backend && ./mvnw test      # always re-run tests after resolving
 git add -A && git commit       # commit the merge
 ```
@@ -155,7 +158,7 @@ Both agents read project instructions automatically: **Claude Code** reads [`CLA
 
 - **When:** at the end of every meaningful session, and in the same PR as the work.
 - **Where:** your module's section, plus one new line at the top of the *Session log*.
-- **Pull first** (`git merge origin/main`) so you're editing the latest version.
+- **Pull first** (`git merge origin/pre-main`) so you're editing the latest version.
 - **Never overwrite or delete** someone else's entries. Mark resolved items as `~~item~~ Resolved YYYY-MM-DD`, rather than removing them.
 - **Only real results.** Paste the actual test summary line, with date and command. If you didn't run tests, write "not run". Never write "should pass".
 - **Timestamps:** use `YYYY-MM-DD HH:MM` plus a time zone, e.g. `2026-10-15 16:45 EDT`.

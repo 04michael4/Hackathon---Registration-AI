@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-15):** The backend foundation and `common` error/CORS infrastructure are implemented. `POST /api/schedules/generate` has validation, preparation and mapping with automated test doubles; production engine and catalog integration remain pending (503 until available). `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
+> **Status at a glance (2026-10-15):** The backend foundation and `common` error/CORS infrastructure are implemented. `POST /api/preferences/extract` (AI preference extraction) is implemented and live-verified (eval 19/20 = 95%). `POST /api/schedules/generate` has validation, preparation and mapping with automated test doubles; production engine and catalog integration remain pending (503 until available). `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -69,7 +69,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 3. Component interaction and data flow
 
-Main user flow (all ⬜ planned):
+Main user flow (status per package in [§4](#4-backend-package-structure)):
 
 ```mermaid
 sequenceDiagram
@@ -115,11 +115,11 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; persistence, providers and course endpoints pending | Backend API (+ Data) |
+| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); persistence, production providers and course endpoints pending | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
 | `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine (2026-10-16). Production catalogs pending. | Backend API |
-| `ai` | ⬜ | Claude client wrapper, prompts, output validation, `PreferenceController` | AI Integration |
+| `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
 
@@ -226,7 +226,7 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 `ScheduleEngineIntegrationTest` covers the whole path with the real engine. Only production catalogs are missing.
 
-`CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. No AI implementation is imported. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
+`CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. The `ai` package uses these shared records and `CourseCatalog`; `engine` and `schedule` never depend on `ai`. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
 
 **Problem:** for each required course, pick exactly one section (a lecture plus its linked labs or recitations) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty. The engine plans **one semester**. Choosing *which* courses to take is degree planning, which is out of MVP scope.
 
@@ -377,18 +377,39 @@ Tests check that every schedule the solver generates passes the checker with zer
 
 ## 9. AI integration and validation
 
-**Status: ⬜ planned.** Module: AI Integration. Package: `ai`.
+**Status: ✅ preference extraction implemented and live-verified** (2026-10-15: one request passed 16/16 checks; 20-case eval 19/20 = 95%, failure `vague-time` documented in api-contract.md). Automated tests run offline against a fake Anthropic API. Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
 2. Schedule explanation (`POST /api/schedules/explain`): stretch goal.
 
-**Integration plan:**
-- Use the **official Anthropic Java SDK**, `com.anthropic:anthropic-java`. The version will be pinned when the AI phase starts. Use the SDK rather than hand-rolled HTTP; the SDK brings typed requests and errors, retries and timeouts.
-- **Structured outputs.** Request JSON constrained to a schema derived from a Java record (the SDK's `outputConfig(Class)` support), so responses parse straight into typed objects.
-- **Model** comes from configuration (`ANTHROPIC_MODEL`), never hard-coded. Current candidate: `claude-opus-5-5`; the team will make the final choice based on cost and latency.
-- Hide the SDK behind our own interface, e.g. `PreferenceExtractor`. Tests then use a fake and never call the real API, and the provider can be swapped without touching controllers.
-- To verify when the SDK is added: Spring Boot 4 uses Jackson 3 (`tools.jackson.*`), and the SDK may bring its own Jackson version. Check for dependency conflicts with `./mvnw dependency:tree`.
+**How it's built:**
+
+```mermaid
+flowchart LR
+    PC[PreferenceController] --> PS[PreferenceExtractionService]
+    PS --> PE{{PreferenceExtractor}}
+    PE -.->|AI_PROVIDER=none| UN[Unavailable → 503]
+    PE -.->|dummy| DU[DummyPreferenceExtractor]
+    PE -.->|claude| CL[ClaudePreferenceExtractor<br/>prompt + retry-once]
+    CL --> GW{{ClaudeGateway}}
+    GW --> AG[AnthropicClaudeGateway<br/>SDK, structured output,<br/>error mapping]
+    PS --> PA[PreferenceAssembler<br/>+ CourseMentionResolver]
+```
+
+- **Official Anthropic Java SDK**, `com.anthropic:anthropic-java` **2.71.0**, pinned. It brings Jackson **2.21** (`com.fasterxml.jackson.*`), separate from Spring Boot 4's Jackson **3.1** (`tools.jackson.*`). The two use different packages and coexist; `dependency:tree` shows no conflicts. The SDK uses its own mapper internally, and our REST API uses Boot's.
+- **Structured outputs.** `StructuredOutputConfig.format(ClaudeExtraction.class)` derives a JSON schema from an AI-internal record.
+  - Scalar fields are `Optional`, which becomes nullable in the schema, so the model answers `null` for anything not mentioned instead of inventing a value.
+  - Days are restricted to `MONDAY`…`SUNDAY`.
+  - Course mentions stay raw strings. Java resolves them through `CourseCatalog`, so the model never supplies course IDs.
+- **Model** from `ANTHROPIC_MODEL`. Default: **`claude-haiku-5-5`**, Anthropic's fast, low-cost model recommended for extraction; it's set in `application.properties`, not in code. Effort `low` keeps latency and cost down. Thinking is adaptive, and thinking blocks are skipped when reading the reply.
+- **`ClaudeGateway`** is the only class that touches the SDK. That keeps the extraction logic testable with a simple fake, and SDK upgrades contained in one place.
+- **Retries are bounded and not doubled:**
+  - The SDK retries transient HTTP failures (429, 5xx, connection) once (`max-retries=1`, `timeout=20s` per attempt).
+  - The application re-asks once only for truncated or malformed output.
+  - A refusal is final.
+- **Secrets and privacy:** the key is read only from `ANTHROPIC_API_KEY`. Logs contain outcomes, status codes and token counts, never the key, the prompt or the student's text.
+- **Prompt:** `backend/src/main/resources/ai/preference-extraction-system-prompt.md`. It covers hard vs. soft rules, the weight scale, formats, assumptions, and injection resistance. The student's text is wrapped in `<student_text>`, and an embedded closing tag is neutralized.
 
 **Validation pipeline:**
 
@@ -408,7 +429,7 @@ flowchart LR
 ```
 
 - Matching the schema doesn't make the output correct, so semantic validation is always done in Java.
-- Handle the SDK's non-success outcomes explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. Map them to the `502`/`503`/`429` codes defined in the contract.
+- The SDK's non-success outcomes are handled explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. They map to the `502`/`503`/`429` codes in [api-contract.md, endpoint 5](api-contract.md#5-post-apipreferencesextract). Implemented and tested offline.
 - **Prompt injection.** Student text is untrusted. The model has **no tools** and no database access. Its only output is a preferences object that is validated and then shown to the student. The worst a malicious prompt can do is produce odd preferences, which the student sees.
 - **If AI is unavailable** (no key, outage), the extract endpoint returns `503`, and the frontend falls back to the manual preference form. Schedule generation still works.
 

@@ -18,7 +18,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | ⬜ Planned | Backend API (+ Data) |
 | 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
 | 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
-| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ⬜ Planned | AI Integration |
+| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ✅ Implemented, live-verified (eval 19/20 = 95%); PR #2 into `pre-main` pending review | AI Integration |
 | 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | 🟡 API and engine integrated; production catalog pending | Backend API + Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
 
@@ -74,8 +74,8 @@ Status code usage:
 | 405 | Unsupported HTTP method; preserves the `Allow` header |
 | 406 | Requested response media type is not supported |
 | 415 | Request content type is not supported |
-| 422 | Unknown course IDs or term in a scheduling request body |
-| 429 | Rate limit exceeded (AI endpoints; mechanism TBD) |
+| 422 | Well-formed request that can't be processed: an unknown term (endpoints 5 and 6) or unknown course IDs in a scheduling request body |
+| 429 | Rate limit exceeded. AI endpoints: provider rate limit via `ai.AiRateLimitedException` (a `ResponseStatusException`); see endpoint 5 |
 | 500 | Unexpected server error. Never includes stack traces. |
 | 502 | The AI provider returned an error or output that failed validation |
 | 503 | A required service is unavailable, including missing scheduling catalog/engine adapters or an unconfigured AI provider |
@@ -225,7 +225,46 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 ## 5. `POST /api/preferences/extract`
 
-**Status: ⬜ Planned, not implemented.** Module: AI Integration. **Priority: high.**
+**Status: ✅ Implemented and live-verified.** Developed on `feature/ai-preference-extractor`; combined with `common` error handling and CORS, then with `pre-main`'s Schedule API (PR #2 into `pre-main` pending review). Module: AI Integration. **Priority: high.** Code: [`ai/PreferenceController`](../backend/src/main/java/io/github/michael04/registration/ai/PreferenceController.java).
+
+**Live verification (2026-10-15, model `claude-haiku-5-5`, SDK 2.71.0):**
+
+| Check | Result |
+|---|---|
+| Single request, "I need CSE 17 and Calc 1. I prefer no classes before 10 AM, and I work Tuesday and Thursday from 3 PM to 6 PM." | 200, **16/16 checks** passed; 3.9 s (first request after startup); 3,542 input / 197 output tokens |
+| 20-case evaluation (`ClaudeLiveEval`, cases in `backend/src/test/resources/ai-eval/cases.json`) | **19/20 = 95%**; 0 re-asks, 0 refusals, 0 provider errors; about 1.6 s per case; 70,713 / 3,787 tokens; about $0.009 in total |
+| Failed case | `vague-time`: "I'm not a morning person. CSE 140 and ECO 1." Courses and blocked times were correct, but no `earliestStart` was produced. A soft preference was omitted; nothing was invented. |
+| Invented required courses / wrong hard constraints / wrong times / prompt-injection successes | **None observed** |
+
+**Known limits of this verification:**
+- It was one run, so variation between runs is unmeasured.
+- Full responses weren't saved, only failure reasons.
+- About 12 of the 20 cases don't check for invented soft preferences.
+- For the injection cases, only the final result is visible: whether "CSE 999" was ignored by the model or set aside by Java can't be told apart.
+- It ran against the dummy catalog, not real Lehigh data.
+
+The endpoint, validation, course-name resolution and error codes all work, and the error mapping was also tested offline against a local fake of the Anthropic API. The AI step is chosen with `AI_PROVIDER`:
+
+| `AI_PROVIDER` | Behavior |
+|---|---|
+| `none` (default) | Returns `503`, so the frontend shows the manual form |
+| `dummy` | Ignores the text and returns the example below, so you can build the frontend without an API key |
+| `claude` | Real extraction with Claude (model from `ANTHROPIC_MODEL`, default `claude-haiku-5-5`). Without `ANTHROPIC_API_KEY`, returns `503`; it never falls back to dummy output. |
+
+**Errors** are RFC 9457 Problem Details from the shared `common.GlobalExceptionHandler` (see [Error responses](#error-responses)). They use `application/problem+json`, `type`/`status`/`detail`/`instance`, and a `requestId` that matches the `X-Request-Id` header. This was verified by full-application integration tests on `integrate/ai-into-pre-main`, using fake providers only.
+
+| Situation | Status | `detail` (exact) | AI exception → shared type |
+|---|---|---|---|
+| Blank text, text over 2,000 characters, or missing term | `400` | `Request validation failed`, plus `errors[].field` | Bean Validation |
+| Unknown term (checked before any AI call) | `422` | `Term is not available` (the term is never echoed) | `UnknownTermException` extends `common.UnprocessableException` |
+| Rate limited (after the SDK's one automatic retry) | `429` | `Too many requests` | `AiRateLimitedException` extends `ResponseStatusException` |
+| Model refused, or output truncated or malformed twice | `502` | `Upstream service returned an invalid response` | `AiOutputInvalidException` extends `ResponseStatusException` |
+| Other provider errors (e.g. bad request, unknown model, HTTP 500) | `502` | same as above | `AiProviderException` extends `ResponseStatusException` |
+| AI off (`none`), missing or rejected key, provider overloaded (503/529), connection failure, timeout | `503` | `AI service is unavailable` | `common.AiUnavailableException` (the AI module's duplicate class was removed) |
+
+Error responses never include provider messages, student text, keys, exception names or stack traces. Integration tests plant a marker in every exception and request and assert it never appears.
+
+Course data currently comes from a temporary dummy catalog with one term, `2027-SPRING`.
 
 **Purpose:** turn a student's free-text description of what they want into a structured `SchedulePreferences` object (the same shape that [`/api/schedules/generate`](#6-post-apischedulesgenerate) accepts). The frontend shows the result to the student for **review and editing before** they generate schedules. The AI proposes; the student confirms.
 
@@ -331,7 +370,10 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 **Error handling rules**
 - The response **never** contains unvalidated model output. The AI's JSON is schema-constrained, then validated server-side (ranges, `minCredits <= maxCredits`, `maxCredits <= 21`, `start < end`, course IDs exist in the term). Credit warnings follow [Credit limits](#credit-limits).
 - Course IDs that don't exist go to `unresolved`. They are never silently dropped and never invented.
+- `requiredCourseIds` may be **empty** when no course could be identified. That is still `200`, with a warning ("No required courses were identified; add them before generating schedules."). Endpoint 6 rejects an empty list with `400`, so the student adds a course first.
 - The student's `text` is treated as data, not instructions.
+- **Times** in the model's output must be real times of day written `H:mm` or `HH:mm` (`00:00`–`23:59`). `24:00`, other out-of-range values and other shapes (for example `009:30`, `10:00:30`, `3pm`) are rejected with a warning, never converted: an invalid `earliestStart` or `latestEnd` is dropped, and a blocked time with an invalid start or end is dropped whole.
+- **The model's reply must contain every property** of the structured-output contract (all top-level properties, and `days`, `start` and `end` in every blocked time), with the right JSON types. An explicit `null` is a valid answer for the nullable fields and `[]` for the lists, but an absent property is not: `{}` or a partial reply counts as malformed output. Malformed output is retried once, then returns `502`. Refusals and provider errors are not retried.
 
 ---
 
@@ -407,7 +449,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 }
 ```
 
-**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for the validation rules above, including reversed credit bounds and more than 10 optional courses. `422` for unknown course IDs or term. `503` while catalog/engine adapters are unavailable. `500` for unexpected internal failures, using the safe shared error body.
+**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for the validation rules above, including reversed credit bounds and more than 8 optional courses. `422` for unknown course IDs or term. `503` while catalog/engine adapters are unavailable. `500` for unexpected internal failures, using the safe shared error body.
 
 **Error handling:** infeasibility is a normal result, not an error. Validation runs before the engine, so the engine only ever receives well-formed input.
 
@@ -441,7 +483,13 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 |---|---|---|
 | 2026-10-16 | Optional-course limit lowered from 10 to **8** (more than 8 → 400). Default `scheduling.node-cap` raised from 200,000 to **1,000,000**. Engine-owner decisions; **contract change**, so the Backend API and frontend owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Native scheduling engine integrated behind `SchedulingEngine`. `lectureLink` defined as the lecture's CRN (was opaque). With `includeClosedSections=false`, a lecture whose labs (or recitations) are all closed is now excluded as well. **Contract change:** the Backend API and Data owners must review. | Claude Code for Sunny, Scheduling Engine |
+| 2026-10-16 | Endpoint 5 review fixes (Marpu, PR #2): `24:00` and other malformed times are rejected instead of being read as `00:00`; a model reply missing any required property is treated as malformed (retry once, then `502`). No request or response shape changed. **Consuming-module review requested.** | Michael |
+| 2026-10-16 | AI integration merged with `pre-main`'s Schedule API. Shared preference records use the Backend API's strict JSON and validation; endpoint 5 behavior is unchanged (a request that names no course still returns `200` with a warning). Clarified the 422 row and that endpoint 5 may return an empty `requiredCourseIds`. **Consuming-module review required.** | Michael |
 | 2026-10-15 | Implement Schedule API validation and mapping with test doubles; require HTTP 400 for more than 10 original optional selections and reversed credit bounds; document normalization, closed-component filtering, exact score pass-through, overload, configurable node cap, and 503 while production adapters are absent. Shared preference record shapes retained from AI branch; consuming-owner review required. | Codex, Backend API task |
+| 2026-10-15 | Endpoint 5 integrated with `common` Problem Details: AI errors mapped onto shared types (422/429/502/503 with fixed `detail` texts); duplicate `ai.AiUnavailableException` removed | Michael |
+| 2026-10-15 | Endpoint 5 live-verified: 1 request 16/16 checks; 20-case eval 19/20 (95%); failed case `vague-time` documented | Michael |
+| 2026-10-15 | Endpoint 5: Claude provider added (`AI_PROVIDER=claude`), tested offline only; Claude error codes 429/502/503 specified | Michael |
+| 2026-10-15 | Endpoint 5 implemented without Claude (`AI_PROVIDER` = `none` / `dummy`); times are serialized as `"HH:mm"` | Michael |
 | 2026-10-15 | Implement the agreed Problem Details error format in `common`; add request IDs, sorted validation errors, safe fallback errors, and configurable CORS. Frontend consumers must migrate from the old default error JSON; consuming-module review required before merge. | Codex, Backend API task |
 | 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
 | 2026-10-15 | Team agreed the whole contract as written; provisional status removed | Michael, David, Marpu, Sunny |
