@@ -365,6 +365,7 @@ flowchart LR
    - This makes it impossible for the AI to invent a course ID.
 6. **Validate**, then build `SchedulePreferences`. Check:
    - values are in range, and `minCredits ≤ maxCredits`;
+   - `maxCredits` is never above **21**. If the student asks for more, set it to 21 and add a warning. If they ask for more than 18, add an overload warning ([Credit limits](docs/api-contract.md#credit-limits));
    - every start time is before its end time;
    - day names are valid.
 
@@ -551,7 +552,9 @@ flowchart LR
    3. Load sections with `catalog.sectionsFor(...)`.
    4. Convert to engine input with `EngineMapper.toProblem(prefs, sections)`.
    5. Run `solver.solve(problem)`.
-   6. Convert the result to the response DTO.
+   6. Convert the result to the response DTO, and set `overload: true` on any schedule over 18 credits.
+
+   Reject `maxCredits > 21` with a 400 error ([Credit limits](docs/api-contract.md#credit-limits)).
 
    The engine has no Spring annotations, so register Sunny's solver as a `@Bean` in a `@Configuration` class inside `schedule/`.
 6. **Tests:**

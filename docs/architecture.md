@@ -237,7 +237,7 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 |---|---|---|---|
 | No two chosen sections overlap in time | **Hard** | Core guarantee | ⬜ |
 | Every required course is scheduled exactly once | **Hard** | Linked components (lab/recitation) must be included too, if the data models them | ⬜ |
-| Total credits within `[minCredits, maxCredits]` | **Hard** | **Provisional:** defaults 12–18 and bounds 1–24 are placeholders, not yet checked against Lehigh policy | ⬜ |
+| Total credits within `[minCredits, maxCredits]` | **Hard** | **Hard cap 21 credits** (team rule); default range 12–18. Above 18 (above 17 for first-semester students) is an overload that needs approval under Lehigh policy, so those schedules are flagged `overload: true`. See [api-contract.md § Credit limits](api-contract.md#credit-limits). | ⬜ |
 | No class during `blockedTimes` | **Hard** | Work, practice, etc. | ⬜ |
 | Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | Depends on enrollment data being available | ⬜ |
 | Prerequisites satisfied | Out of MVP scope | Needs reliable prerequisite data and the student's history. The UI should say we don't check this. | — |

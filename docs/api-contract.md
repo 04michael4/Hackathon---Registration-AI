@@ -2,7 +2,7 @@
 
 This file is the **source of truth** for the HTTP interface between the frontend and the backend. Change it in the same PR as the code that changes the contract (see [CLAUDE.md § Shared interfaces](../CLAUDE.md#shared-interfaces)).
 
-> ⚠️ **Provisional.** Only endpoint 1 (`GET /api/health`) is implemented. Endpoints 2–7, the `SchedulePreferences` shape, the credit limits, and the planned error format are **draft proposals that the team hasn't agreed yet**. The owning module confirms each one before building it, and marks the row 🟡/✅ once implemented.
+> ✅ **Agreed by the team (2026-10-15).** Michael, David, Marpu and Sunny agreed on this contract, including the `SchedulePreferences` shape, the formats, the 0–5 weights, the credit limits, and the planned error format. Only endpoint 1 (`GET /api/health`) is implemented so far; endpoints 2–7 are agreed designs that haven't been built yet (⬜). From now on, changes follow the [shared-interface rules](../CLAUDE.md#shared-interfaces).
 
 **Status legend**
 
@@ -10,7 +10,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 |---|---|
 | ✅ **Implemented, verified** | Code exists, has automated tests, and was checked against a running app |
 | 🟡 **Implemented** | Code exists but hasn't been fully verified |
-| ⬜ **Planned, not implemented** | Proposed design only. Field names and shapes may still change before implementation. |
+| ⬜ **Planned, not implemented** | Agreed design, not yet built. Changes need the owners' approval (see the shared-interface rules). |
 
 | # | Method | Path | Purpose | Status | Responsible module |
 |---|---|---|---|---|---|
@@ -63,7 +63,7 @@ Observed: unknown path → `404`; wrong method (e.g. `POST /api/health`) → `40
   "status": 400,
   "detail": "Request validation failed",
   "instance": "/api/schedules/generate",
-  "errors": [ { "field": "hardConstraints.maxCredits", "message": "must be between 1 and 24" } ]
+  "errors": [ { "field": "hardConstraints.maxCredits", "message": "must be between 1 and 21" } ]
 }
 ```
 
@@ -241,8 +241,8 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 {
   "hardConstraints": {
     "requiredCourseIds": ["CSE-017", "MATH-021"],   // must all be scheduled
-    "minCredits": 12,                               // PROVISIONAL: 1–24, default 12
-    "maxCredits": 18,                               // PROVISIONAL: 1–24, default 18; >= minCredits
+    "minCredits": 12,                               // 1–21, default 12
+    "maxCredits": 18,                               // 1–21 (21 = hard cap), default 18; >= minCredits
     "blockedTimes": [                               // no class may overlap these
       { "days": ["TUESDAY", "THURSDAY"], "start": "15:00", "end": "18:00" }
     ]
@@ -257,7 +257,39 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 }
 ```
 
-> **Provisional credit limits.** The 1–24 bounds and the 12–18 defaults are placeholders. They have **not** been checked against Lehigh's actual credit-load policy. Confirm them before implementation, and make them configurable rather than hard-coded.
+### Credit limits
+
+These are based on Lehigh's overload policy (text provided by the team, 2026-10-15), plus a team rule capping every schedule at 21 credits. Keep the numbers in configuration rather than hard-coding them.
+
+| Rule | Value | Source |
+|---|---|---|
+| **Absolute maximum** | **21 credits** per semester. No schedule may exceed this. | Team rule |
+| Default range (student didn't say) | `minCredits` 12, `maxCredits` 18 | Team default |
+| Normal load | Up to **17** credits for first-semester students; up to **18** for everyone else | Lehigh policy |
+| Overload | Anything above the normal load. Needs special approval. | Lehigh policy |
+
+**Who approves an overload** (Lehigh policy):
+
+| Student status | Approver for an overload up to… | Above that |
+|---|---|---|
+| First-semester student | 18 credits: Associate Dean | SOS |
+| GPA ≤ 3.5 | 19 credits: Associate Dean | SOS |
+| GPA > 3.5 | 20 credits: Associate Dean | SOS |
+
+Exception: the policy doesn't apply where the student's normal departmental program requires more credits.
+
+**Other policy rules.** The app can't check these, so it only shows them as information:
+- Overloads aren't approved for repeating a course.
+- Overloads aren't approved in a semester where the student is enrolled in a graduate course.
+- Overload courses can't be added until after the normal three-week registration period, and space can't be reserved for them.
+
+**How the app applies this**
+- `maxCredits` must be **1–21**, and `minCredits ≤ maxCredits`. A request with `maxCredits > 21` returns `400`.
+- **Preference extraction:**
+  - If the student asks for more than 21 credits, `maxCredits` is set to 21, and a warning is added.
+  - If they ask for more than 18 credits, a warning says this is an overload that needs approval.
+- **Schedule generation:** each schedule with `totalCredits > 18` has `overload: true`. The frontend then shows an approval notice: the approver table above, plus "first-semester students: more than 17 credits is already an overload".
+- The app doesn't know a student's GPA or whether they're in their first semester. So it flags overloads at the general 18-credit threshold, and doesn't try to say which approver applies.
 
 **Example**
 
@@ -288,7 +320,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 **Status codes:** `200`; `400` if `text` is empty or too long; `422` if the term is unknown; `429` if rate limited; `502` if the AI output failed validation after retry, or the provider errored; `503` if AI is not configured.
 
 **Error handling rules**
-- The response **never** contains unvalidated model output. The AI's JSON is schema-constrained, then validated server-side (ranges, `minCredits <= maxCredits`, `start < end`, course IDs exist in the term).
+- The response **never** contains unvalidated model output. The AI's JSON is schema-constrained, then validated server-side (ranges, `minCredits <= maxCredits`, `maxCredits <= 21`, `start < end`, course IDs exist in the term). Credit warnings follow [Credit limits](#credit-limits).
 - Course IDs that don't exist go to `unresolved`. They are never silently dropped and never invented.
 - The student's `text` is treated as data, not instructions.
 
@@ -317,7 +349,8 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 | `schedules` | `Schedule[]` | Best first; empty if no feasible schedule exists |
 | `schedules[].rank` | int | 1 = best |
 | `schedules[].score` | number | 0–100. Higher means better soft-preference fit. |
-| `schedules[].totalCredits` | number | |
+| `schedules[].totalCredits` | number | Never more than 21 |
+| `schedules[].overload` | boolean | `true` if `totalCredits > 18`, meaning the schedule needs overload approval (see [Credit limits](#credit-limits)) |
 | `schedules[].sections` | object[] | `{ crn, courseId, sectionCode, title, credits, meetings[] }` (`meetings` as in endpoint 4) |
 | `schedules[].scoreBreakdown` | object | Penalty per soft preference, e.g. `{ "earliestStart": 0, "daysOff": 4 }` |
 | `diagnostics` | string[] | When results are empty or limited: why, e.g. which required courses conflict |
@@ -339,6 +372,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
       "rank": 1,
       "score": 100,
       "totalCredits": 7,
+      "overload": false,
       "sections": [
         { "crn": "40123", "courseId": "CSE-017", "sectionCode": "010", "title": "Programming and Data Structures", "credits": 3,
           "meetings": [ { "days": ["MONDAY","WEDNESDAY","FRIDAY"], "start": "10:45", "end": "11:35", "location": "TBD" } ] },
@@ -381,4 +415,6 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
+| 2026-10-15 | Team agreed the whole contract as written; provisional status removed | Michael, David, Marpu, Sunny |
 | 2026-10-15 | Initial contract: health implemented; endpoints 2–7 proposed | Claude Code session for @04michael4 |
