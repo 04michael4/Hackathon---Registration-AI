@@ -13,18 +13,18 @@ class CourseServiceTest {
 
 	@Test
 	void codeQueriesMatchSubjectAndNumberOnly() {
-		assertThat(CourseService.matches(CSE_017, "cse 17")).isTrue();
-		assertThat(CourseService.matches(CSE_017, "CSE017")).isTrue();
-		assertThat(CourseService.matches(CSE_017, "CSE 170")).isFalse();
-		assertThat(CourseService.matches(CSE_017, "MATH 17")).isFalse();
+		assertThat(CourseQuery.matches(CSE_017, "cse 17")).isTrue();
+		assertThat(CourseQuery.matches(CSE_017, "CSE017")).isTrue();
+		assertThat(CourseQuery.matches(CSE_017, "CSE 170")).isFalse();
+		assertThat(CourseQuery.matches(CSE_017, "MATH 17")).isFalse();
 	}
 
 	@Test
 	void wordQueriesNeedEveryWordInIdOrTitle() {
-		assertThat(CourseService.matches(CSE_017, "data structures")).isTrue();
-		assertThat(CourseService.matches(CSE_017, "cse data")).isTrue();
-		assertThat(CourseService.matches(CSE_017, "data biology")).isFalse();
-		assertThat(CourseService.matches(CSE_017, " ")).isTrue();
+		assertThat(CourseQuery.matches(CSE_017, "data structures")).isTrue();
+		assertThat(CourseQuery.matches(CSE_017, "cse data")).isTrue();
+		assertThat(CourseQuery.matches(CSE_017, "data biology")).isFalse();
+		assertThat(CourseQuery.matches(CSE_017, " ")).isTrue();
 	}
 
 	@Test
