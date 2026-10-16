@@ -68,6 +68,45 @@ class ClaudeEndpointFakeServerIntegrationTest {
 			.andExpect(jsonPath("$.preferences.softPreferences.earliestStart.value").value("10:00"));
 	}
 
+	/**
+	 * Regression (pre-main merge): the shared HardConstraints is @NotEmpty for the Schedule API, but a
+	 * partial extraction with no identifiable course must still be a 200 with a warning, not a 400/500.
+	 */
+	@Test
+	void extractionWithNoRequiredCourseIsStillOkWithWarningAndUnresolved() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", """
+				{"requiredCourses":["Underwater Basket Weaving"],"optionalCourses":[],"optionalCoursesWeight":null,
+				 "minCredits":null,"maxCredits":null,"blockedTimes":[],
+				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				"""));
+
+		perform().andExpect(status().isOk())
+			.andExpect(jsonPath("$.preferences.hardConstraints.requiredCourseIds").isEmpty())
+			.andExpect(jsonPath("$.unresolved[0]").value("Underwater Basket Weaving"))
+			.andExpect(jsonPath("$.warnings[0]").value("No required courses were identified; add them before generating schedules."));
+	}
+
+	/** Regression (pre-main merge): TimeBlock no longer sorts days, so the AI layer must still de-duplicate and sort them. */
+	@Test
+	void blockedTimeDaysAreDeduplicatedAndSortedByTheAiLayer() throws Exception {
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", """
+				{"requiredCourses":["CSE 17"],"optionalCourses":[],"optionalCoursesWeight":null,
+				 "minCredits":12,"maxCredits":15,
+				 "blockedTimes":[{"days":["THURSDAY","TUESDAY","TUESDAY"],"start":"15:00","end":"18:00"}],
+				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
+				 "daysOff":["FRIDAY","MONDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"assumptions":[]}
+				"""));
+
+		perform().andExpect(status().isOk())
+			.andExpect(jsonPath("$.preferences.hardConstraints.blockedTimes[0].days.length()").value(2))
+			.andExpect(jsonPath("$.preferences.hardConstraints.blockedTimes[0].days[0]").value("TUESDAY"))
+			.andExpect(jsonPath("$.preferences.hardConstraints.blockedTimes[0].days[1]").value("THURSDAY"))
+			.andExpect(jsonPath("$.preferences.hardConstraints.blockedTimes[0].ordered").doesNotExist())
+			.andExpect(jsonPath("$.preferences.softPreferences.daysOff.value[0]").value("MONDAY"))
+			.andExpect(jsonPath("$.preferences.softPreferences.daysOff.value[1]").value("FRIDAY"));
+	}
+
 	@Test
 	void providerRateLimitBecomes429() throws Exception {
 		SERVER.enqueue(FakeAnthropicServer.error(429, "rate_limit_error", SENSITIVE));

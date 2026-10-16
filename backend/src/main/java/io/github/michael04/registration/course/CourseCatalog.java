@@ -6,9 +6,10 @@ import java.util.Optional;
 /**
  * Read access to the course catalog for one term.
  *
- * <p>TEMPORARY STAND-IN created on the AI branch with only the lookups the AI module needs.
- * Owned by the Backend API module (Marpu); the database-backed implementation comes from David.
- * Extend freely (search with paging, sections, etc.).
+ * <p>Owned by the Backend API module (Marpu). Section data comes separately from {@link SectionCatalog}.
+ * Implementations: {@link DummyCourseCatalog} (made-up courses, no database) is the default. A
+ * database-backed catalog and any {@link SectionCatalog} implementation are not built yet, so the
+ * schedule endpoint returns 503 until one is registered.
  */
 public interface CourseCatalog {
 

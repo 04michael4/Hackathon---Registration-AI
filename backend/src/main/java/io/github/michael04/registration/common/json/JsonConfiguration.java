@@ -7,6 +7,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.cfg.CoercionAction;
+import tools.jackson.databind.cfg.CoercionInputShape;
+import tools.jackson.databind.type.LogicalType;
 
 /**
  * App-wide JSON formats from docs/api-contract.md § Conventions.
@@ -21,8 +26,15 @@ public class JsonConfiguration {
 
 	@Bean
 	JsonMapperBuilderCustomizer contractTimeFormat() {
-		return builder -> builder.withConfigOverride(LocalTime.class,
-				override -> override.setFormat(JsonFormat.Value.forPattern(TIME_PATTERN)));
+		return builder -> builder
+			.disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+			.disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
+			.withCoercionConfig(LogicalType.Textual, config -> config
+				.setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+				.setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+				.setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail))
+			.withConfigOverride(LocalTime.class,
+				override -> override.setFormat(JsonFormat.Value.forPattern(TIME_PATTERN).withLenient(false)));
 	}
 
 }

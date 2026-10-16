@@ -4,9 +4,9 @@ Live record of project progress. **Read it at the start of every session; update
 
 | | |
 |---|---|
-| **Last updated** | 2026-10-15 23:24 EDT, by a Claude Code session for Michael (@04michael4), on `integrate/ai-into-pre-main` (local) |
-| **Current milestone** | Phase 1 ✅ on `main`. Phase 2: Marpu's `common` error handling and CORS are on `pre-main`. **Michael's AI module (live-verified, eval 19/20 = 95%) is integrated with it on the local branch `integrate/ai-into-pre-main`: 177/177 tests pass.** Not pushed; PR to `pre-main` pending review. |
-| **Next milestone** | Michael reviews the integration branch, then pushes it and opens a PR into **`pre-main`** with Marpu as reviewer. `main` stays untouched. |
+| **Last updated** | 2026-10-16 14:45 EDT, by a Claude Code session for Michael (@04michael4), on the local branch `reconcile/ai-pre-main` |
+| **Current milestone** | Phase 1 ✅ on `main`. Phase 2 on `pre-main`: Marpu's `common` error handling, CORS and Schedule API (validation and mapping; 503 until a production catalog and engine exist). **Michael's AI module (live-verified, eval 19/20 = 95%) is merged with the latest `pre-main` (`9cd9cdf`) on the local branch `reconcile/ai-pre-main`: 307/307 tests pass.** Not pushed. |
+| **Next milestone** | Michael reviews `reconcile/ai-pre-main`; then PR #2 (`integrate/ai-into-pre-main` → `pre-main`) is updated and Marpu reviews it. Sunny's engine branch and David's data branch follow through their own PRs. `main` stays untouched. |
 
 ## Repository state
 
@@ -14,12 +14,38 @@ Live record of project progress. **Read it at the start of every session; update
 |---|---|
 | `main` | `098cf09` "docs: finalize API contract and apply Lehigh credit-load policy". Phase 1 was merged via PR #1 (`76a8310`). |
 | AI branch | `feature/ai-preference-extractor`, created from `098cf09`. Step 1 is in the commit "feat(ai): implement validated preference extraction with dummy provider" (run `git log` for the hash), pushed to `origin/feature/ai-preference-extractor`. Step 2 is in the commit "feat(ai): integrate Claude API and validate live extraction" on top of it, also pushed. **Not merged into `pre-main` or `main`.** |
-| `pre-main` | **Shared integration branch** (team decision, 2026-10-15). At `533633d` "feat(backend): add common error handling and CORS" (Marpu). `main` must stay untouched. |
-| Integration branch | `integrate/ai-into-pre-main` (**local only, not pushed**), created from `origin/pre-main` `533633d`. Three commits: a `--no-ff` merge of `feature/ai-preference-extractor` (`c6c7121`) with the conflicts resolved; `fix(ai)` routing AI errors through the shared handler; `docs`. The feature branch itself is unchanged. |
-| Other branches | `dev-marpu` (at `76a8310`, no new commits); `feature/backend-foundation` (merged) |
+| `pre-main` | **Shared integration branch** (team decision, 2026-10-15). At `9cd9cdf` "feat(schedule): add validated schedule API and integration boundary" (Marpu), on top of `533633d` (`common` error handling and CORS). `main` must stay untouched. |
+| Integration branch | `integrate/ai-into-pre-main`, pushed, **PR #2** into `pre-main` (open). At `4abcddb`, based on `pre-main` `533633d`: the AI merge, the shared-handler fix, docs, and the minimum-credit and student-text escaping fixes (195/195 tests at `4abcddb`). |
+| Reconcile branch | `reconcile/ai-pre-main` (**local only, not pushed**): `integrate/ai-into-pre-main` (`4abcddb`) plus a `--no-ff` merge of `pre-main` `9cd9cdf`, with 11 conflicts resolved. Intended to update PR #2 after review. |
+| Other branches | `integrate/engine-into-pre-main` and `feature/engine-core` (Sunny's engine, not yet in `pre-main`); `feature/data-cse007-snapshot` (David's CSE 007 database fixtures, no PR); `dev-marpu`; `feature/backend-foundation` (merged) |
 | Toolchain verified | OpenJDK 21.0.12 (Homebrew), Maven 3.10.0 via wrapper, Spring Boot 4.1.1, macOS |
 
 ## Latest test results
+
+**Reconcile run, 2026-10-16 14:40 EDT**, on the local branch `reconcile/ai-pre-main` (`integrate/ai-into-pre-main` `4abcddb` merged with `pre-main` `9cd9cdf`), with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI`, `AI_PROVIDER` or `CATALOG_SOURCE` set, command `cd backend && ./mvnw -B clean test`: **`Tests run: 307, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS (5.871 s).** `ClaudeLiveEval` did not run.
+
+| Group | Tests |
+|---|---|
+| AI branch at `4abcddb` (all kept): AI module, `common`, health, app context | 195 |
+| `pre-main` Schedule API: `ScheduleControllerTest` 86, `EngineMapperTest` 13, `SchedulingConfigurationTest` 9, `ScheduleUnavailableTest` 2 | 110 |
+| **New regression tests** in `ClaudeEndpointFakeServerIntegrationTest`: a request naming no known course still returns `200` with a warning and `unresolved`; blocked-time days are de-duplicated and sorted by the AI layer | 2 |
+
+The 195 + 158 (`pre-main`) tests overlap in 48 shared `common`/health/app tests, so the merge itself ran 305 before the 2 new tests.
+
+**Live app check, 14:39 EDT** (packaged jar, `PORT=8093`, no API key, no database; no external calls):
+
+| Mode | Result |
+|---|---|
+| Defaults (`AI_PROVIDER` none, catalog dummy) | Starts without a database. `GET /api/health` `200`. Extract `503`. Generate `503` (no `SectionCatalog`/engine registered) |
+| `AI_PROVIDER=dummy` | Extract `200`, contract JSON with `"15:00"`-style times, no extra `ordered` field; unknown term `422`; generate still `503` |
+| `AI_PROVIDER=claude` without a key | Extract `503` (never falls back to dummy) |
+| Strict validation (generate) | `400` for weight `"3"`, `3.5`, `6`, missing or null; times `"9:00"`, `"25:00"`; start after end; empty or null days; `FUNDAY`; empty, blank or null course IDs; number as course ID; `maxCredits` 22; min above max; credits as a string; 11 optional courses. `422` for an unknown course or term |
+| Strict validation (extract) | `400` for numeric `text`, blank `text` and malformed JSON |
+
+Every error was `application/problem+json` with an `X-Request-Id` header.
+
+### Earlier: AI integration run (before the `pre-main` Schedule API)
+
 
 **Integration run, 2026-10-15 23:22 EDT**, on `integrate/ai-into-pre-main`, with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI` or `AI_PROVIDER` set, command `cd backend && ./mvnw -B clean test`: **`Tests run: 177, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS (5.335 s).**
 
@@ -151,7 +177,7 @@ Also observed earlier the same day: an unknown path returns `404` and `POST /api
 
 | # | Item | Type | Owner | Status |
 |---|---|---|---|---|
-| 1 | Module owners not yet assigned (README team table is `_TBD_`) | Blocker (coordination) | Team | Open |
+| 1 | ~~Module owners not yet assigned~~ | Blocker (coordination) | Team | Resolved 2026-10-15 (Michael AI, David Frontend & Database, Marpu Backend API, Sunny Scheduling Engine) |
 | 2 | **Lehigh course data source not chosen.** Blocks real course search and scheduling. | Blocker | Data (_TBD_) | Open |
 | 3 | ~~Phase 1 is committed and pushed on `feature/backend-foundation` but not merged to `main`~~ | Process | @04michael4 | Resolved 2026-10-15 (PR #1, `76a8310`) |
 | 4 | No CI; tests run only locally | Gap | _TBD_ | Open |
@@ -195,7 +221,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Backend API
 
-**Owner:** Marpu (per the team assignments in README; Phase 1 foundation: @04michael4) · **Status:** ✅ Foundation merged; `common` implemented and verified on `feature/backend-common`; integration target: `pre-main` for testing, as directed by the user
+**Owner:** Marpu (per the team assignments in README; Phase 1 foundation: @04michael4) · **Status:** ✅ Foundation/common available; 🟡 Schedule API layer implemented and tested on `feature/backend-schedule`, based on testing branch `pre-main`; production engine/catalog integration pending
 
 **Completed**
 - 2026-10-15: Spring Boot 4.1.1 / Java 21 project from Spring Initializr in `backend/`, with Maven Wrapper (Maven 3.10.0).
@@ -203,6 +229,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 - 2026-10-15: Tests: `HealthControllerTest` (2 × `@WebMvcTest`) and a context-load test. All passing; see [Latest test results](#latest-test-results).
 - 2026-10-15: Root `.gitignore` (ignores `.env`/`.env.*`, keeps `.env.example`; verified with `git check-ignore`), `.env.example`, docs.
 - 2026-10-15: Codex implemented `common`: centralized RFC 9457 Problem Details, sorted validation errors, safe application exceptions, request IDs, servlet fallback, and exact-origin CORS. Added `spring-boot-starter-validation` for Bean Validation and documented the error-contract change and `CORS_ALLOWED_ORIGINS`. Production changes stay within `common`, `pom.xml`, and `application.properties`; other modules are untouched.
+- 2026-10-15: Codex implemented the Schedule API layer: `POST /api/schedules/generate`, nested/cross-field validation, original-list optional limit (10), stable required/optional normalization, term/status section filtering, component/link/time mapping, unchanged score/breakdown and result ordering, actual-credit overload flag, and validated `scheduling.node-cap`. No solver algorithm or production sample results were added. Reuses the existing global advice; no duplicate exception handler.
 
 **Verification — 2026-10-15 22:01 EDT**
 - Phase 0: read `docs/development-guide.md`, `AGENTS.md`, `CLAUDE.md`, and this handoff in order; `PLANS.md` is absent. Fetched `origin`, confirmed a clean tree, checked that the task branch did not exist, then created and verified `feature/backend-common` from `origin/main` at `098cf092d49379ec32c634bd6e6c1432229fd7bc`. Local `main` matched `origin/main`, so no merge was needed. Git metadata writes required sandbox approval. No commit, push, or PR was made.
@@ -216,7 +243,23 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 - **Pre-push recheck — 2026-10-15 22:26 EDT:** the same `./mvnw -B test` command via Git Bash/JDK 21 returned `Tests run: 48, Failures: 0, Errors: 0, Skipped: 0` and `BUILD SUCCESS`. `git diff --check` is clean. Target: `origin/pre-main`, explicitly requested by the user.
 
 **In progress**
-- Common implementation is complete. The user authorized committing and pushing it to `pre-main` for testing; `main` is not a push target. Freshly fetched `origin/pre-main` matches the feature base (`098cf09`), so no merge is required. This explicit instruction takes precedence over the guide's default `main` PR destination.
+- Common implementation and the authorized push are complete: `origin/pre-main` contains `533633d`.
+- 2026-10-15 23:18 EDT: Codex claims Schedule API on `feature/backend-schedule`, created and verified from freshly fetched `origin/pre-main` (`533633d`), following the user's testing-branch direction. Clean tree verified before edits; baseline `./mvnw -B test` via Git Bash/JDK 21: `Tests run: 48, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`.
+- Integration gap: no engine implementation or section catalog exists in the fetched repository. Section 7 describes a planned algorithm; README examples lack final scores, total credits, and component links. Preparing the API boundary and tests without implementing or fabricating a solver. Shared preference types will retain the shapes already introduced on `origin/feature/ai-preference-extractor`; consuming owners must review the integration boundary.
+
+**Schedule API verification — 2026-10-15 23:51 EDT**
+- Branch: `feature/backend-schedule`, base `origin/pre-main` at `533633dedc6ac885903f1a6853d7ed5db953c6fc`. Fetched origin, read the required guides/contracts, checked existing branches and the clean worktree, then created/switched/verified the task branch before edits. `PLANS.md` is absent. The user's prior testing-branch instruction takes precedence over the guide's default `main` integration workflow. No commit, push, merge or PR for this task.
+- Final command from `backend/`: `$env:JAVA_HOME='C:\Program Files\Java\jdk-21'; & 'C:\Program Files\Git\bin\bash.exe' ./mvnw -B verify` → **`Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`**, **`BUILD SUCCESS`**, 2026-10-15 23:49 EDT. Includes all 48 existing tests and 110 new tests: 86 controller/service tests, 13 mapper tests, 9 configuration tests and 2 full-context unavailable-integration tests. Executable JAR packaging succeeded. Tests use synthetic fixtures/mocked solver; no DB or live AI calls.
+- Tests cover every required range/boundary, invalid requests never reaching catalog/engine, 10/11 optional entries (including duplicates/overlaps), all five weights, strict JSON types and times, required/optional deduplication, closed lectures/labs/recitations, UNKNOWN status, term filtering, component/link preservation, TBA/online empty meetings, stable preparation, score precision/order, overload at 18/19/21, normal empty results, 422/500/503 errors, cap defaults/custom values and invalid startup config.
+- Live: `./mvnw -B spring-boot:run '-Dspring-boot.run.arguments=--server.port=0'` via Git Bash/JDK 21 started on port 54069. `curl.exe -i` verified health 200; empty required list 400 with nested field errors; 11 overlapping optional entries at weight 0 still 400; valid scheduling request 503 because production adapters are absent. Error bodies use the shared Problem Details format and matching request IDs; allowed-origin CORS headers present on 503. Server stopped gracefully after checks. A live successful schedule cannot be verified until the native engine and catalog exist.
+- Failures found and resolved: initial 146-test run had one test-only 503 wording mismatch; expanded tests caught Jackson's numeric/boolean-to-string coercion (2 failures in an 85-test targeted run), then lenient `24:00` normalization (1 failure in a 156-test full run). Strict coercion/time settings fixed both parsing defects. Subsequent targeted 86-test run and final 158-test build passed. Mockito's existing dynamic-agent warning and Windows wrapper workaround remain unchanged.
+- Files created: `schedule/{ScheduleController,ScheduleService,EngineMapper,GenerateScheduleRequest,GenerateScheduleResponse,ScheduleRequestValidator,ValidScheduleRequest,SchedulingProperties,SchedulingConfiguration}.java`, `schedule/integration/SchedulingEngine.java`; `course/{CourseCatalog,CourseSummary,SectionCatalog,CatalogSection}.java`; `common/json/JsonConfiguration.java`; `common/preferences/{SchedulePreferences,HardConstraints,SoftPreferences,Weighted,GapsPreference,TimeBlock,CreditLimits,Weights}.java`; four `schedule` test classes (`ScheduleControllerTest`, `EngineMapperTest`, `SchedulingConfigurationTest`, `ScheduleUnavailableTest`). Modified: `application.properties`, `.env.example`, README, this handoff, `docs/api-contract.md`, `docs/architecture.md`. No build dependencies, engine algorithm, AI implementation, frontend, or persistence files changed.
+- Shared-interface notes: preference/catalog Java shapes were taken from AI branch `c6c7121`, without merging its implementation. Request validation/JSON parsing are stricter. Schedule credit bounds remain the fixed 1–21 public contract, centralized in shared `CreditLimits`; the old contract's request to configure those numbers has been clarified. Reversed credit bounds now return 400 as explicitly required by this task (old contract said 422). Frontend/AI/engine/data owners should review these shared changes when integration is authorized.
+- Remaining work: obtain Sunny's actual native solver interface and finalized scoring/component-link rules; implement its `SchedulingEngine` adapter, supply `CourseCatalog`/`SectionCatalog` implementations, then run real-engine/catalog end-to-end tests. The provisional adapter boundary preserves metadata as supplied but cannot prove compatibility with an unavailable engine schema. Full Schedule API Definition of Done is **not yet met**; API-layer checks pass. No user answer identifying another engine location was received during this session.
+
+**Pre-push recheck — 2026-10-16 11:34 EDT**
+- User authorized committing all pending changes and pushing to `pre-main`. Fetched `origin/pre-main`; it matches the feature branch base (`533633d`), allowing a normal fast-forward push.
+- `./mvnw -B test` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`; `BUILD SUCCESS`. Initial sandbox attempt could not create `C:\.m2\repository`; the approved run outside the sandbox used the existing user cache and passed. `git diff --check` is clean. Production engine/catalog adapters remain pending as documented above.
 
 **Next recommended**
 1. ~~Review Phase 1, then open a PR from `feature/backend-foundation` into `main` and merge it.~~ Resolved 2026-10-15: Git records the merge as `76a8310`.
@@ -224,7 +267,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 3. ~~`common`: global error handling with RFC 9457 Problem Details, plus `spring-boot-starter-validation`. This is a contract change, so update [api-contract.md](docs/api-contract.md).~~ Implemented and verified 2026-10-15 on `feature/backend-common`; test on `pre-main` and review the contract before promotion to `main`.
 4. Persistence phase: PostgreSQL, a migration tool and the `course` package, once the data source is decided.
 
-**Blockers:** none for items 1–3. Item 4 is blocked on the data-source decision.
+**Blockers:** no blocker for the completed foundation/common work. Production Schedule API integration is blocked on the missing engine and catalog adapters; persistence still depends on the data-source decision.
 
 ---
 
@@ -247,7 +290,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## AI Integration
 
-**Owner:** Michael (@04michael4) · **Status:** ✅ Steps 1 and 2 committed and pushed on `feature/ai-preference-extractor`. **Live-verified: 1 request 16/16 checks; eval 19/20 = 95%.** Integrated with `common` on the local branch `integrate/ai-into-pre-main` (177/177 tests); PR to `pre-main` pending.
+**Owner:** Michael (@04michael4) · **Status:** ✅ Steps 1 and 2 committed and pushed on `feature/ai-preference-extractor`. **Live-verified: 1 request 16/16 checks; eval 19/20 = 95%.** In PR #2 (`integrate/ai-into-pre-main`); merged with the latest `pre-main` Schedule API on the local branch `reconcile/ai-pre-main` (307/307 tests), not pushed yet.
 
 **Completed** (2026-10-15, branch `feature/ai-preference-extractor`)
 - `POST /api/preferences/extract`: request validation (400), unknown term (422, checked before any AI call), AI unavailable (503), invalid AI output (502).
@@ -374,6 +417,9 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 14:45 EDT | Claude Code for Michael | AI Integration | Local branch `reconcile/ai-pre-main` (worktree) from `integrate/ai-into-pre-main` `4abcddb`; `--no-ff` merge of `pre-main` `9cd9cdf`. 11 conflicts resolved: shared records and `JsonConfiguration` take Marpu's strict versions; comment-only and property conflicts combined; docs combined and stale status corrected. Added 2 AI regression tests. `./mvnw -B clean test`: 307/307 pass; live app checks in all three AI modes. Not pushed. |
+| 2026-10-16 11:34 EDT | Codex | Backend API | User authorized commit/push of all pending Schedule API changes to `pre-main`. Fetched target and confirmed matching base `533633d`. Pre-push `./mvnw -B test` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`. Prepared normal fast-forward push with explicit `HEAD:refs/heads/pre-main`; production adapters remain pending. |
+| 2026-10-15 23:51 EDT | Codex | Backend API | Created and verified `feature/backend-schedule` from testing base `origin/pre-main` (`533633d`) before edits. Implemented Schedule API validation/preparation/response mapping, node-cap config and docs; reused AI-branch shared type shapes. Final `./mvnw -B verify` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`; JAR packaged, live curl 400/503 checks passed. Native solver/section catalog absent; successful real integration remains blocked and documented. Changes uncommitted; no push/merge/PR. |
 | 2026-10-15 23:24 EDT | Claude Code for Michael | AI Integration | Integrated AI into a local `integrate/ai-into-pre-main` from `origin/pre-main` `533633d`: `--no-ff` merge, 5 conflicts resolved keeping both sides; AI errors moved onto shared `common` types and `ResponseStatusException` (no `common/` changes); 20 integration tests added. Before the fix: 157 tests, 5 failures (AI errors returned 500). After: 177/177. Workflow docs retargeted to `pre-main`. Nothing pushed. |
 | 2026-10-15 23:10 EDT | Claude Code for Michael | AI Integration | Recorded the live verification (1 request 16/16; eval 19/20 = 95%; failure `vague-time` and evaluation limits documented). Marked endpoint 5 live-verified. Found the `pre-main` error-handler conflict (read-only). Committed and pushed step 2 to `feature/ai-preference-extractor`; not merged. |
 | 2026-10-15 22:30 EDT | Claude Code for Michael | AI Integration | Step 2: Claude provider with the official SDK 2.71.0, structured output, prompt, 429/502/503 mapping, 20-case eval set and opt-in live runner. 112/112 tests pass offline; app modes verified with no key. No live API call made. Uncommitted. |

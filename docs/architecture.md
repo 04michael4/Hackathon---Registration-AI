@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-15):** The backend foundation and the `common` error/CORS infrastructure are implemented and verified locally. The only implemented `/api` endpoint is `GET /api/health`; `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
+> **Status at a glance (2026-10-15):** The backend foundation and `common` error/CORS infrastructure are implemented. `POST /api/preferences/extract` (AI preference extraction) is implemented and live-verified (eval 19/20 = 95%). `POST /api/schedules/generate` has validation, preparation and mapping with automated test doubles; production engine and catalog integration remain pending (503 until available). `/error` handles servlet error dispatches. Other features remain **planned design**, labeled ⬜. Check the code before assuming anything here exists; [HANDOFF.md](../HANDOFF.md) has the live status.
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -69,7 +69,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 3. Component interaction and data flow
 
-Main user flow (all ⬜ planned):
+Main user flow (status per package in [§4](#4-backend-package-structure)):
 
 ```mermaid
 sequenceDiagram
@@ -115,11 +115,11 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | ⬜ | Course/section entities, repositories, search service, `CourseController` | Backend API |
+| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); persistence, production providers and course endpoints pending | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | ⬜ | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. | Scheduling Engine |
-| `schedule` | ⬜ | `ScheduleController`, maps `course` data to `engine` input, maps results to DTOs | Scheduling Engine |
-| `ai` | ⬜ | Claude client wrapper, prompts, output validation, `PreferenceController` | AI Integration |
+| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.SchedulingEngine` adapter boundary pending the actual engine | Backend API |
+| `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
 
@@ -208,6 +208,20 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 **Status: ⬜ planned.** Module: Scheduling Engine. Package: `engine`.
 
+**Schedule API integration status (2026-10-15).** The fetched repository has no `engine` implementation, database entities/migrations or section repository. The README's `ScheduleSolver.solve(ScheduleProblem)` sample is a starting point, not a published implementation: its section record has no component/link metadata, and its result exposes a penalty rather than the score and actual credit total required by the API. This section has no finalized scoring formula. Those gaps are explicit; the API does not invent a penalty-to-score conversion or implement a second solver.
+
+`schedule.integration.SchedulingEngine` is an **API-owned provisional adapter boundary**, not a replacement engine model. Tests provide doubles. Once Sunny publishes the native engine interface, implement an adapter in `schedule` that converts the prepared input to native records and returns the engine's score, breakdown, totals, CRNs, diagnostics, and cap flag unchanged. Keep the engine pure Java and independent of `schedule`. The adapter must preserve actual component/link semantics; the current boundary carries a source-provided, opaque `lectureLink` without inferring links. Engine-owner review of that mapping is required before claiming full integration.
+
+**Caller rules implemented by the API:**
+- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 10 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
+- De-duplicate by course ID; required membership wins over optional membership. Resolve all selected IDs against the requested term. Prepare courses by ID and sections by CRN for deterministic input.
+- `includeClosedSections=false` excludes closed lectures, labs, recitations and other components. `true` retains closed sections; term/course eligibility still applies. Preserve component types and opaque lecture associations; retain UNKNOWN availability. Unscheduled sections use empty meetings lists. Duplicate identical section rows collapse; contradictory rows and malformed scheduled meetings are internal errors, not guessed data.
+- Pass required courses with no eligible sections to the engine for infeasibility diagnostics. Conflict solving, blocked-time exclusion, linked-component selection, credit feasibility, ranking and scoring remain engine responsibilities.
+- Map engine results in their returned order. Copy score/breakdown without rescaling, rounding or adding missing values. Derive overload only from the returned `totalCredits > 18`; resolve display metadata from the same prepared snapshot. Unknown result CRNs or missing scores/breakdowns fail safely with 500.
+- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+
+`CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. The `ai` package uses these shared records and `CourseCatalog`; `engine` and `schedule` never depend on `ai`. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
+
 **Problem:** for each required course, pick exactly one section (plus linked components) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty.
 
 **Planned algorithm: backtracking search with pruning and bounded top-K.**
@@ -251,7 +265,7 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 ## 9. AI integration and validation
 
-**Status: 🟡 preference extraction implemented** on `feature/ai-preference-extractor` and tested offline against a fake Anthropic API. **Live Claude responses are not yet verified.** Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
+**Status: ✅ preference extraction implemented and live-verified** (2026-10-15: one request passed 16/16 checks; 20-case eval 19/20 = 95%, failure `vague-time` documented in api-contract.md). Automated tests run offline against a fake Anthropic API. Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
