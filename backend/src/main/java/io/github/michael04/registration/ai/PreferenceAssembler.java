@@ -4,12 +4,14 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -32,7 +34,16 @@ import io.github.michael04.registration.course.CourseSummary;
 @Component
 public class PreferenceAssembler {
 
-	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT);
+	/**
+	 * A time must look like {@code H:mm} or {@code HH:mm} (ASCII digits, minutes always two digits) and be a real
+	 * time of day. Two guards are needed: the shape check, because a single {@code H} also accepts "009:30"; and
+	 * {@link ResolverStyle#STRICT}, because the default SMART style reads "24:00" as end-of-day and silently
+	 * turns it into 00:00, which would change a blocked-time constraint.
+	 */
+	private static final Pattern TIME_SHAPE = Pattern.compile("\\d{1,2}:\\d{2}");
+
+	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
+		.withResolverStyle(ResolverStyle.STRICT);
 
 	private final CourseMentionResolver resolver;
 
@@ -209,11 +220,15 @@ public class PreferenceAssembler {
 		if (raw == null || raw.isBlank()) {
 			return Optional.empty();
 		}
+		String text = raw.trim();
 		try {
-			return Optional.of(LocalTime.parse(raw.trim(), TIME));
+			if (!TIME_SHAPE.matcher(text).matches()) {
+				throw new DateTimeParseException("not H:mm or HH:mm", text, 0);
+			}
+			return Optional.of(LocalTime.parse(text, TIME));
 		}
 		catch (DateTimeParseException ex) {
-			result.warnings.add("Ignored invalid " + label + " time '" + raw.trim() + "' (expected HH:mm)");
+			result.warnings.add("Ignored invalid " + label + " time '" + text + "' (expected HH:mm)");
 			return Optional.empty();
 		}
 	}

@@ -8,12 +8,16 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.github.michael04.registration.common.AiUnavailableException;
 import io.github.michael04.registration.ai.ClaudeGateway.Outcome;
 import io.github.michael04.registration.ai.ClaudeGateway.Reply;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * The real Anthropic SDK against {@link FakeAnthropicServer}: verifies what we send, how responses
@@ -61,6 +65,20 @@ class AnthropicClaudeGatewayTest {
 		assertThat(schema.path("properties").has("requiredCourses")).isTrue();
 		// "Not mentioned" must be expressible, so the model never has to invent a value.
 		assertThat(schema.path("properties").path("minCredits").path("type").toString()).contains("null");
+	}
+
+	/** The properties we ask the model for must be exactly the ones the validator insists on. */
+	@Test
+	void theSchemaSentToTheModelAndTheValidatorsRequiredPropertiesAgree() {
+		server.enqueue(FakeAnthropicServer.message("end_turn", VALID_JSON));
+
+		gateway.send("s", "u");
+
+		JsonNode schema = JSON.readTree(server.requests().get(0).body()).path("output_config").path("format").path("schema");
+		List<String> sent = schema.path("properties").propertyNames().stream().toList();
+		assertThat(sent).containsExactlyInAnyOrderElementsOf(ClaudeExtractionValidator.requiredProperties());
+		List<String> required = schema.path("required").valueStream().map(JsonNode::asString).toList();
+		assertThat(required).containsExactlyInAnyOrderElementsOf(ClaudeExtractionValidator.requiredProperties());
 	}
 
 	@Test
@@ -204,6 +222,147 @@ class AnthropicClaudeGatewayTest {
 		assertThatThrownBy(() -> gateway.send("s", "u")).isInstanceOf(AiRateLimitedException.class);
 		assertThat(server.requests()).hasSize(2);
 	}
+
+	// ---- required properties: a reply must contain every property of the ClaudeExtraction contract ----
+
+	private static final JsonMapper JSON = JsonMapper.builder().build();
+
+	/** Every top-level property in the structured-output contract; the SDK marks all of them required. */
+	private static final String[] TOP_LEVEL = { "requiredCourses", "optionalCourses", "optionalCoursesWeight", "minCredits",
+			"maxCredits", "blockedTimes", "earliestStart", "earliestStartWeight", "latestEnd", "latestEndWeight", "daysOff",
+			"daysOffWeight", "minimizeGapsWeight", "assumptions" };
+
+	private static ObjectNode validObject() {
+		return (ObjectNode) JSON.readTree(VALID_JSON);
+	}
+
+	private Reply replyFor(String modelText) {
+		server.enqueue(FakeAnthropicServer.message("end_turn", modelText));
+		return gateway.send("s", "u");
+	}
+
+	/** Review finding: a reply of {} used to be accepted as COMPLETE with every list silently empty. */
+	@Test
+	void emptyObjectIsMalformedNotComplete() {
+		Reply reply = replyFor("{}");
+
+		assertThat(reply.outcome()).isEqualTo(Outcome.MALFORMED);
+		assertThat(reply.extraction()).isNull();
+	}
+
+	@ParameterizedTest(name = "missing {0}")
+	@ValueSource(strings = { "requiredCourses", "optionalCourses", "optionalCoursesWeight", "minCredits", "maxCredits",
+			"blockedTimes", "earliestStart", "earliestStartWeight", "latestEnd", "latestEndWeight", "daysOff",
+			"daysOffWeight", "minimizeGapsWeight", "assumptions" })
+	void aReplyMissingAnyOneTopLevelPropertyIsMalformed(String property) {
+		ObjectNode node = validObject();
+		node.remove(property);
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	@Test
+	void aReplyWithOnlySomeRequiredFieldsIsMalformed() {
+		assertThat(replyFor("{\"requiredCourses\":[\"CSE 17\"],\"optionalCourses\":[]}").outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	@ParameterizedTest(name = "blockedTimes[0] missing {0}")
+	@ValueSource(strings = { "days", "start", "end" })
+	void aBlockedTimeMissingAnyRequiredFieldIsMalformed(String property) {
+		ObjectNode node = validObject();
+		((ObjectNode) node.get("blockedTimes").get(0)).remove(property);
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	@Test
+	void aReplyIsMalformedWhenOnlyTheSecondBlockedTimeIsIncomplete() {
+		ObjectNode node = validObject();
+		((ArrayNode) node.get("blockedTimes"))
+			.add(JSON.readTree("{\"days\":[\"MONDAY\"],\"start\":\"08:00\"}"));
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	/** An explicit null is a real answer for the nullable fields; an explicit [] is a real answer for lists. */
+	@Test
+	void aCompleteReplyWithEmptyListsAndExplicitNullsIsComplete() {
+		Reply reply = replyFor("""
+				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,"minCredits":null,
+				 "maxCredits":null,"blockedTimes":[],"earliestStart":null,"earliestStartWeight":null,
+				 "latestEnd":null,"latestEndWeight":null,"daysOff":[],"daysOffWeight":null,
+				 "minimizeGapsWeight":null,"assumptions":[]}
+				""");
+
+		assertThat(reply.outcome()).isEqualTo(Outcome.COMPLETE);
+		RawPreferences raw = reply.extraction().toRawPreferences();
+		assertThat(raw.requiredCourses()).isEmpty();
+		assertThat(raw.optionalCourses()).isEmpty();
+		assertThat(raw.blockedTimes()).isEmpty();
+		assertThat(raw.minCredits()).isNull();
+		assertThat(raw.earliestStart()).isNull();
+	}
+
+	@ParameterizedTest(name = "explicit null for {0}")
+	@ValueSource(strings = { "optionalCoursesWeight", "minCredits", "maxCredits", "earliestStart", "earliestStartWeight",
+			"latestEnd", "latestEndWeight", "daysOffWeight", "minimizeGapsWeight" })
+	void anExplicitNullIsAcceptedForEachNullableField(String property) {
+		ObjectNode node = validObject();
+		node.putNull(property);
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.COMPLETE);
+	}
+
+	@ParameterizedTest(name = "null for non-nullable {0}")
+	@ValueSource(strings = { "requiredCourses", "optionalCourses", "blockedTimes", "daysOff", "assumptions" })
+	void anExplicitNullIsNotAcceptedWhereAListIsRequired(String property) {
+		ObjectNode node = validObject();
+		node.putNull(property);
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	@Test
+	void anExplicitNullIsNotAcceptedForARequiredBlockedTimeField() {
+		ObjectNode node = validObject();
+		((ObjectNode) node.get("blockedTimes").get(0)).putNull("start");
+
+		assertThat(replyFor(node.toString()).outcome()).isEqualTo(Outcome.MALFORMED);
+	}
+
+	@Test
+	void presentFieldsOfTheWrongTypeAreMalformed() {
+		for (String[] change : new String[][] { { "requiredCourses", "\"CSE 17\"" }, { "minCredits", "\"12\"" },
+				{ "minCredits", "12.5" }, { "earliestStart", "10" }, { "daysOff", "\"FRIDAY\"" },
+				{ "assumptions", "{}" }, { "blockedTimes", "{}" }, { "optionalCoursesWeight", "true" } }) {
+			ObjectNode node = validObject();
+			node.set(change[0], JSON.readTree(change[1]));
+
+			assertThat(replyFor(node.toString()).outcome()).as(change[0] + " = " + change[1]).isEqualTo(Outcome.MALFORMED);
+		}
+	}
+
+	@Test
+	void theDiagnosticNamesTheMissingPropertyButNeverEchoesModelOutput() {
+		String secret = "sensitive-student-text-123";
+		ObjectNode node = validObject();
+		node.remove("minCredits");
+		node.putArray("assumptions").add(secret);
+
+		Reply reply = replyFor(node.toString());
+
+		assertThat(reply.outcome()).isEqualTo(Outcome.MALFORMED);
+		assertThat(reply.detail()).contains("minCredits").doesNotContain(secret).doesNotContain("CSE 17");
+	}
+
+	@Test
+	void aMalformedThenAValidResponseIsHandledByTheTwoCallsIndependently() {
+		server.enqueue(FakeAnthropicServer.message("end_turn", "{}"), FakeAnthropicServer.message("end_turn", VALID_JSON));
+
+		assertThat(gateway.send("s", "u").outcome()).isEqualTo(Outcome.MALFORMED);
+		assertThat(gateway.send("s", "u").outcome()).isEqualTo(Outcome.COMPLETE);
+	}
+
 
 	private ClaudeGateway gateway(int maxRetries, Duration timeout) {
 		return AnthropicClaudeGateway.create(

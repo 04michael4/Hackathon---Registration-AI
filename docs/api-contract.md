@@ -372,6 +372,8 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 - Course IDs that don't exist go to `unresolved`. They are never silently dropped and never invented.
 - `requiredCourseIds` may be **empty** when no course could be identified. That is still `200`, with a warning ("No required courses were identified; add them before generating schedules."). Endpoint 6 rejects an empty list with `400`, so the student adds a course first.
 - The student's `text` is treated as data, not instructions.
+- **Times** in the model's output must be real times of day written `H:mm` or `HH:mm` (`00:00`–`23:59`). `24:00`, other out-of-range values and other shapes (for example `009:30`, `10:00:30`, `3pm`) are rejected with a warning, never converted: an invalid `earliestStart` or `latestEnd` is dropped, and a blocked time with an invalid start or end is dropped whole.
+- **The model's reply must contain every property** of the structured-output contract (all top-level properties, and `days`, `start` and `end` in every blocked time), with the right JSON types. An explicit `null` is a valid answer for the nullable fields and `[]` for the lists, but an absent property is not: `{}` or a partial reply counts as malformed output. Malformed output is retried once, then returns `502`. Refusals and provider errors are not retried.
 
 ---
 
@@ -479,6 +481,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-16 | Endpoint 5 review fixes (Marpu, PR #2): `24:00` and other malformed times are rejected instead of being read as `00:00`; a model reply missing any required property is treated as malformed (retry once, then `502`). No request or response shape changed. **Consuming-module review requested.** | Michael |
 | 2026-10-16 | AI integration merged with `pre-main`'s Schedule API. Shared preference records use the Backend API's strict JSON and validation; endpoint 5 behavior is unchanged (a request that names no course still returns `200` with a warning). Clarified the 422 row and that endpoint 5 may return an empty `requiredCourseIds`. **Consuming-module review required.** | Michael |
 | 2026-10-15 | Implement Schedule API validation and mapping with test doubles; require HTTP 400 for more than 10 original optional selections and reversed credit bounds; document normalization, closed-component filtering, exact score pass-through, overload, configurable node cap, and 503 while production adapters are absent. Shared preference record shapes retained from AI branch; consuming-owner review required. | Codex, Backend API task |
 | 2026-10-15 | Endpoint 5 integrated with `common` Problem Details: AI errors mapped onto shared types (422/429/502/503 with fixed `detail` texts); duplicate `ai.AiUnavailableException` removed | Michael |

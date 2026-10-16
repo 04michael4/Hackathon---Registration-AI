@@ -64,6 +64,11 @@ final class FakeAnthropicServer implements AutoCloseable {
 		return this;
 	}
 
+	/** Drops replies nobody asked for, so one test's leftovers can never be served to the next test. */
+	void clearQueued() {
+		queue.clear();
+	}
+
 	List<Recorded> requests() {
 		return List.copyOf(requests);
 	}

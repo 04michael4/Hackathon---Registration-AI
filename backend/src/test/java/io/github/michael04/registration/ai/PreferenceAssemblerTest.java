@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.github.michael04.registration.ai.RawPreferences.RawTimeBlock;
 import io.github.michael04.registration.common.preferences.HardConstraints;
@@ -207,6 +208,126 @@ class PreferenceAssemblerTest {
 		assertThat(r.warnings()).contains(DummyPreferenceExtractor.NOTICE);
 	}
 
+	// ---- strict HH:mm times (review finding: "24:00" was silently accepted as 00:00) ----
+
+	@Test
+	void twentyFourHundredIsRejectedNotTurnedIntoMidnightForEarliestStart() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").earliestStart("24:00", 4).build());
+
+		assertThat(r.preferences().softPreferences().earliestStart()).isNull();
+		assertThat(r.warnings()).contains("Ignored invalid earliest start time '24:00' (expected HH:mm)");
+	}
+
+	@Test
+	void twentyFourHundredIsRejectedNotTurnedIntoMidnightForLatestEnd() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").latestEnd("24:00", 3).build());
+
+		assertThat(r.preferences().softPreferences().latestEnd()).isNull();
+		assertThat(r.warnings()).contains("Ignored invalid latest end time '24:00' (expected HH:mm)");
+	}
+
+	/** The dangerous case: 24:00 as a start used to give a 00:00-10:00 block the student never asked for. */
+	@Test
+	void twentyFourHundredBlockedStartDoesNotCreateAMidnightBlock() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17")
+				.blocked(new RawTimeBlock(List.of("MONDAY"), "24:00", "10:00")).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes()).isEmpty();
+		assertThat(r.warnings()).contains("Ignored invalid blocked-time start time '24:00' (expected HH:mm)",
+				"Ignored an incomplete blocked time");
+	}
+
+	@Test
+	void twentyFourHundredBlockedEndDoesNotCreateAModifiedBlock() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17")
+				.blocked(new RawTimeBlock(List.of("MONDAY"), "15:00", "24:00")).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes()).isEmpty();
+		assertThat(r.warnings()).contains("Ignored invalid blocked-time end time '24:00' (expected HH:mm)",
+				"Ignored an incomplete blocked time");
+		// Previously this was reported as "start must be before end" because 24:00 had become 00:00.
+		assertThat(r.warnings()).noneMatch(w -> w.contains("start must be before end"));
+	}
+
+	@ParameterizedTest(name = "earliestStart {0}")
+	@ValueSource(strings = { "24:00", "24:01", "24:30", "25:00", "99:99", "12:60", "10:75", "-1:00", "9:5", "009:30",
+			"10:00:30", "1000", "10.00", "10:0a", "3pm", "noon", "10 :00" })
+	void invalidEarliestStartIsDiscardedWithAWarning(String time) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").earliestStart(time, 3).build());
+
+		assertThat(r.preferences().softPreferences().earliestStart()).isNull();
+		assertThat(r.warnings()).anyMatch(w -> w.startsWith("Ignored invalid earliest start time '" + time + "'"));
+	}
+
+	@ParameterizedTest(name = "latestEnd {0}")
+	@ValueSource(strings = { "24:00", "24:01", "24:30", "25:00", "99:99", "12:60", "10:75", "-1:00", "9:5", "009:30",
+			"10:00:30", "1000", "10.00", "10:0a", "3pm", "noon", "10 :00" })
+	void invalidLatestEndIsDiscardedWithAWarning(String time) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").latestEnd(time, 3).build());
+
+		assertThat(r.preferences().softPreferences().latestEnd()).isNull();
+		assertThat(r.warnings()).anyMatch(w -> w.startsWith("Ignored invalid latest end time '" + time + "'"));
+	}
+
+	@ParameterizedTest(name = "blocked start {0}")
+	@ValueSource(strings = { "24:00", "24:01", "24:30", "25:00", "99:99", "12:60", "10:75", "-1:00", "9:5", "009:30",
+			"10:00:30", "1000", "10.00", "10:0a", "3pm", "noon", "10 :00" })
+	void invalidBlockedStartDropsTheWholeBlock(String time) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17")
+				.blocked(new RawTimeBlock(List.of("TUESDAY"), time, "23:00")).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes()).isEmpty();
+		assertThat(r.warnings()).anyMatch(w -> w.startsWith("Ignored invalid blocked-time start time '" + time + "'"));
+		assertThat(r.warnings()).contains("Ignored an incomplete blocked time");
+	}
+
+	@ParameterizedTest(name = "blocked end {0}")
+	@ValueSource(strings = { "24:00", "24:01", "24:30", "25:00", "99:99", "12:60", "10:75", "-1:00", "9:5", "009:30",
+			"10:00:30", "1000", "10.00", "10:0a", "3pm", "noon", "10 :00" })
+	void invalidBlockedEndDropsTheWholeBlock(String time) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17")
+				.blocked(new RawTimeBlock(List.of("TUESDAY"), "08:00", time)).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes()).isEmpty();
+		assertThat(r.warnings()).anyMatch(w -> w.startsWith("Ignored invalid blocked-time end time '" + time + "'"));
+		assertThat(r.warnings()).contains("Ignored an incomplete blocked time");
+	}
+
+	/** The valid range is unchanged, including midnight, the last minute of the day and single-digit hours. */
+	@ParameterizedTest(name = "{0} -> {1}")
+	@CsvSource({ "00:00, 00:00", "0:00, 00:00", "09:30, 09:30", "9:30, 09:30", "10:00, 10:00", "12:00, 12:00",
+			"23:59, 23:59", "' 10:00 ', 10:00" })
+	void validTimesAreStillAccepted(String input, String expected) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").earliestStart(input, 3)
+				.latestEnd(input, 2).build());
+
+		assertThat(r.preferences().softPreferences().earliestStart().value()).isEqualTo(LocalTime.parse(expected));
+		assertThat(r.preferences().softPreferences().latestEnd().value()).isEqualTo(LocalTime.parse(expected));
+		assertThat(r.warnings()).noneMatch(w -> w.contains("invalid"));
+	}
+
+	@Test
+	void midnightAndLastMinuteBlockedTimesAreStillAccepted() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17")
+				.blocked(new RawTimeBlock(List.of("FRIDAY", "monday"), "00:00", "23:59"),
+						new RawTimeBlock(List.of("TUESDAY"), "9:30", "10:00")).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes()).containsExactly(
+				new TimeBlock(List.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(0, 0), LocalTime.of(23, 59)),
+				new TimeBlock(List.of(DayOfWeek.TUESDAY), LocalTime.of(9, 30), LocalTime.of(10, 0)));
+		assertThat(r.warnings()).noneMatch(w -> w.contains("invalid") || w.contains("Ignored"));
+	}
+
+	@Test
+	void anInvalidBlockDoesNotAffectItsValidNeighbours() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").blocked(
+				new RawTimeBlock(List.of("MONDAY"), "24:00", "10:00"),
+				new RawTimeBlock(List.of("TUESDAY"), "15:00", "18:00")).build());
+
+		assertThat(r.preferences().hardConstraints().blockedTimes())
+			.containsExactly(new TimeBlock(List.of(DayOfWeek.TUESDAY), LocalTime.of(15, 0), LocalTime.of(18, 0)));
+	}
+
 	private static Builder raw() {
 		return new Builder();
 	}
@@ -221,6 +342,8 @@ class PreferenceAssemblerTest {
 		private List<RawTimeBlock> blocked = List.of();
 		private String earliest;
 		private Integer earliestWeight;
+		private String latest;
+		private Integer latestWeight;
 		private List<String> daysOff;
 		private Integer daysOffWeight;
 		private Integer gaps;
@@ -231,13 +354,14 @@ class PreferenceAssemblerTest {
 		Builder credits(Integer min, Integer max) { this.min = min; this.max = max; return this; }
 		Builder blocked(RawTimeBlock... blocks) { blocked = List.of(blocks); return this; }
 		Builder earliestStart(String time, Integer weight) { earliest = time; earliestWeight = weight; return this; }
+		Builder latestEnd(String time, Integer weight) { latest = time; latestWeight = weight; return this; }
 		Builder daysOff(List<String> days, Integer weight) { daysOff = days; daysOffWeight = weight; return this; }
 		Builder gaps(Integer weight) { gaps = weight; return this; }
 		Builder assumptions(String... notes) { assumptions = java.util.Arrays.asList(notes); return this; }
 
 		RawPreferences build() {
 			return new RawPreferences(required, optional, null, min, max, blocked,
-					earliest, earliestWeight, null, null, daysOff, daysOffWeight, gaps, assumptions);
+					earliest, earliestWeight, latest, latestWeight, daysOff, daysOffWeight, gaps, assumptions);
 		}
 
 	}

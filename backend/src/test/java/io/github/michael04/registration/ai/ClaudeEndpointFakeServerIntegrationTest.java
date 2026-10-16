@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,6 +48,11 @@ class ClaudeEndpointFakeServerIntegrationTest {
 		registry.add("app.ai.anthropic.base-url", SERVER::baseUrl);
 		registry.add("app.ai.anthropic.max-retries", () -> "0");
 		registry.add("app.ai.anthropic.timeout", () -> "5s");
+	}
+
+	@BeforeEach
+	void noLeftoverRepliesFromEarlierTests() {
+		SERVER.clearQueued();
 	}
 
 	@AfterAll
@@ -150,6 +156,88 @@ class ClaudeEndpointFakeServerIntegrationTest {
 
 		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
 		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	// ---- review finding: a reply missing required properties must be retried once, then fail with 502 ----
+
+	@Test
+	void emptyObjectThenAValidReplySucceedsOnTheSecondAttempt() throws Exception {
+		int before = SERVER.requests().size();
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", "{}"), FakeAnthropicServer.message("end_turn", VALID_JSON));
+
+		perform().andExpect(status().isOk())
+			.andExpect(jsonPath("$.preferences.hardConstraints.requiredCourseIds[0]").value("CSE-017"));
+		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	@Test
+	void emptyObjectTwiceBecomes502AfterExactlyTwoAttempts() throws Exception {
+		int before = SERVER.requests().size();
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", "{}"), FakeAnthropicServer.message("end_turn", "{}"));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	@Test
+	void aReplyMissingOneRequiredPropertyIsRetriedOnceThenBecomes502() throws Exception {
+		int before = SERVER.requests().size();
+		String missingMinCredits = VALID_JSON.replace("\"minCredits\":null,", "");
+		assertThat(missingMinCredits).isNotEqualTo(VALID_JSON);
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", missingMinCredits),
+				FakeAnthropicServer.message("end_turn", missingMinCredits));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	@Test
+	void aBlockedTimeMissingItsEndIsRetriedOnceThenBecomes502() throws Exception {
+		int before = SERVER.requests().size();
+		String noEnd = VALID_JSON.replace(",\"end\":\"18:00\"", "");
+		assertThat(noEnd).isNotEqualTo(VALID_JSON);
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", noEnd), FakeAnthropicServer.message("end_turn", noEnd));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+
+	/** Legitimately empty lists are still a complete answer: 200 with the documented warning, no retry. */
+	@Test
+	void aCompleteReplyWithEmptyCourseListsIsStill200WithTheNoCoursesWarning() throws Exception {
+		int before = SERVER.requests().size();
+		SERVER.enqueue(FakeAnthropicServer.message("end_turn", """
+				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,
+				 "minCredits":null,"maxCredits":null,"blockedTimes":[],
+				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				"""));
+
+		perform().andExpect(status().isOk())
+			.andExpect(jsonPath("$.preferences.hardConstraints.requiredCourseIds").isEmpty())
+			.andExpect(jsonPath("$.unresolved").isEmpty())
+			.andExpect(jsonPath("$.warnings[?(@ == 'No required courses were identified; add them before generating schedules.')]").exists());
+		assertThat(SERVER.requests()).hasSize(before + 1);
+	}
+
+	/** The malformed-output retry must not widen: refusals and provider failures are never re-asked. */
+	@Test
+	void aRefusalIsNotRetried() throws Exception {
+		int before = SERVER.requests().size();
+		// Only the refusal is queued: a retry would reach the empty queue and show up as a second request.
+		SERVER.enqueue(FakeAnthropicServer.refusal());
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 1);
+	}
+
+	@Test
+	void aProviderFailureIsNotRetriedByTheExtractor() throws Exception {
+		int before = SERVER.requests().size();
+		SERVER.enqueue(FakeAnthropicServer.error(500, "api_error", SENSITIVE));
+
+		assertSafeProblem(perform(), 502, "Upstream service returned an invalid response");
+		assertThat(SERVER.requests()).hasSize(before + 1);
 	}
 
 	@Test

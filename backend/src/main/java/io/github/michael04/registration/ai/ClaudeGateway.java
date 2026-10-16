@@ -19,13 +19,13 @@ interface ClaudeGateway extends AutoCloseable {
 	}
 
 	enum Outcome {
-		/** Finished normally with schema-valid output. */
+		/** Finished normally with valid output that contains every property of the {@link ClaudeExtraction} contract. */
 		COMPLETE,
 		/** The model declined (stop reason {@code refusal}). Retrying won't help. */
 		REFUSED,
 		/** Cut off ({@code max_tokens} or context window). Worth one retry. */
 		TRUNCATED,
-		/** Missing or unparseable output, or an unexpected stop reason. Worth one retry. */
+		/** Missing or unparseable output, a reply lacking required properties, or an unexpected stop reason. Worth one retry. */
 		MALFORMED
 	}
 

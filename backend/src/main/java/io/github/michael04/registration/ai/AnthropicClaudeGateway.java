@@ -124,12 +124,22 @@ final class AnthropicClaudeGateway implements ClaudeGateway {
 		}
 		try {
 			// Read blocks by type: thinking blocks may come before the text block.
-			Optional<ClaudeExtraction> extraction = message.content().stream()
-				.flatMap(block -> block.text().stream())
-				.map(StructuredTextBlock::text)
-				.filter(e -> e != null)
+			Optional<StructuredTextBlock<ClaudeExtraction>> block = message.content().stream()
+				.flatMap(content -> content.text().stream())
 				.findFirst();
-			return extraction.map(Reply::complete).orElseGet(() -> Reply.of(Outcome.MALFORMED, "no text block"));
+			if (block.isEmpty()) {
+				return Reply.of(Outcome.MALFORMED, "no text block");
+			}
+			// The SDK's typed parse turns a missing property into null, which would later look like an empty
+			// answer. Presence can only be proven on the raw JSON, so check that first.
+			Optional<String> problem = ClaudeExtractionValidator.firstProblem(block.get().rawTextBlock().text());
+			if (problem.isPresent()) {
+				// The problem names schema properties only, never content from the reply.
+				log.warn("Claude reply rejected: {}", problem.get());
+				return Reply.of(Outcome.MALFORMED, problem.get());
+			}
+			ClaudeExtraction extraction = block.get().text();
+			return extraction == null ? Reply.of(Outcome.MALFORMED, "empty structured output") : Reply.complete(extraction);
 		}
 		catch (AnthropicException | IllegalArgumentException | IllegalStateException ex) {
 			// The SDK parses the structured JSON lazily; invalid JSON surfaces here.

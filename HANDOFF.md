@@ -4,8 +4,8 @@ Live record of project progress. **Read it at the start of every session; update
 
 | | |
 |---|---|
-| **Last updated** | 2026-10-16 14:45 EDT, by a Claude Code session for Michael (@04michael4), on the local branch `reconcile/ai-pre-main` |
-| **Current milestone** | Phase 1 ✅ on `main`. Phase 2 on `pre-main`: Marpu's `common` error handling, CORS and Schedule API (validation and mapping; 503 until a production catalog and engine exist). **Michael's AI module (live-verified, eval 19/20 = 95%) is merged with the latest `pre-main` (`9cd9cdf`) on the local branch `reconcile/ai-pre-main`: 307/307 tests pass.** Not pushed. |
+| **Last updated** | 2026-10-16 15:25 EDT, by a Claude Code session for Michael (@04michael4), on the local branch `reconcile/ai-pre-main` |
+| **Current milestone** | Phase 1 ✅ on `main`. Phase 2 on `pre-main`: Marpu's `common` error handling, CORS and Schedule API (validation and mapping; 503 until a production catalog and engine exist). **Michael's AI module (live-verified, eval 19/20 = 95%) is merged with the latest `pre-main` (`9cd9cdf`) on the local branch `reconcile/ai-pre-main`.** Marpu's two PR #2 review findings (`24:00` accepted as `00:00`; a model reply of `{}` accepted as complete) are fixed there with regression tests: **460/460 tests pass.** Not pushed. |
 | **Next milestone** | Michael reviews `reconcile/ai-pre-main`; then PR #2 (`integrate/ai-into-pre-main` → `pre-main`) is updated and Marpu reviews it. Sunny's engine branch and David's data branch follow through their own PRs. `main` stays untouched. |
 
 ## Repository state
@@ -22,7 +22,16 @@ Live record of project progress. **Read it at the start of every session; update
 
 ## Latest test results
 
-**Reconcile run, 2026-10-16 14:40 EDT**, on the local branch `reconcile/ai-pre-main` (`integrate/ai-into-pre-main` `4abcddb` merged with `pre-main` `9cd9cdf`), with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI`, `AI_PROVIDER` or `CATALOG_SOURCE` set, command `cd backend && ./mvnw -B clean test`: **`Tests run: 307, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS (5.871 s).** `ClaudeLiveEval` did not run.
+**Review-fix run, 2026-10-16 15:10 EDT**, on the local branch `reconcile/ai-pre-main` after Marpu's two PR #2 findings were fixed, with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI`, `AI_PROVIDER` or `CATALOG_SOURCE` set, command `cd backend && ./mvnw -B clean test`: **`Tests run: 460, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS (7.213 s)**. `ClaudeLiveEval` did not run; no real Anthropic call was made (a localhost fake only).
+
+| Finding | Root cause | Fix | Tests |
+|---|---|---|---|
+| `24:00` accepted as `00:00` | `PreferenceAssembler` parsed times with `DateTimeFormatter.ofPattern("H:mm")`, whose default SMART resolver reads `24:00` as end-of-day and returns midnight. The single `H` also accepted `009:30`. | `ResolverStyle.STRICT` plus an explicit `H:mm`/`HH:mm` shape check; an invalid endpoint drops the preference, or the whole blocked time, with a warning | `PreferenceAssemblerTest` 22 → 104 |
+| `{}` accepted as a complete reply | The SDK's typed parse turns a missing property into `null`, and `ClaudeExtraction.toRawPreferences()` turns that into an empty list | `ClaudeExtractionValidator` checks the raw JSON (`rawTextBlock().text()`) for every property and its type, derived from the record; a failure is `MALFORMED` (existing retry once, then 502) | `ClaudeExtractionValidatorTest` 24 (new), `AnthropicClaudeGatewayTest` 17 → 57, `ClaudeEndpointFakeServerIntegrationTest` 10 → 17 |
+
+Both probes were also sent to the packaged app against a localhost stand-in for the Anthropic API (fake key): `{}` twice → 502 after exactly 2 model calls; `{}` then a valid reply → 200 after 2 calls; a partial reply or a blocked time without `end`, twice → 502 after 2 calls; a complete reply with empty course lists → 200 with the no-courses warning after 1 call; `24:00` as block start, block end, `earliestStart` and `latestEnd` → all dropped with warnings, and the one valid block is kept.
+
+**Earlier: reconcile run, 2026-10-16 14:40 EDT**, on the local branch `reconcile/ai-pre-main` (`integrate/ai-into-pre-main` `4abcddb` merged with `pre-main` `9cd9cdf`), with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI`, `AI_PROVIDER` or `CATALOG_SOURCE` set, command `cd backend && ./mvnw -B clean test`: **`Tests run: 307, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS (5.871 s).** `ClaudeLiveEval` did not run.
 
 | Group | Tests |
 |---|---|
@@ -417,6 +426,7 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 15:25 EDT | Claude Code for Michael | AI Integration | Fixed Marpu's two PR #2 review findings on the local `reconcile/ai-pre-main`: strict `H:mm`/`HH:mm` times (`24:00` is no longer read as `00:00`) and required-property validation of the model's raw JSON (`{}` is malformed: retry once, then 502). 153 new tests; `./mvnw -B clean test`: 460/460 pass; both probes also checked on the packaged app against a localhost fake of the Anthropic API. No real Anthropic call. Not pushed. |
 | 2026-10-16 14:45 EDT | Claude Code for Michael | AI Integration | Local branch `reconcile/ai-pre-main` (worktree) from `integrate/ai-into-pre-main` `4abcddb`; `--no-ff` merge of `pre-main` `9cd9cdf`. 11 conflicts resolved: shared records and `JsonConfiguration` take Marpu's strict versions; comment-only and property conflicts combined; docs combined and stale status corrected. Added 2 AI regression tests. `./mvnw -B clean test`: 307/307 pass; live app checks in all three AI modes. Not pushed. |
 | 2026-10-16 11:34 EDT | Codex | Backend API | User authorized commit/push of all pending Schedule API changes to `pre-main`. Fetched target and confirmed matching base `533633d`. Pre-push `./mvnw -B test` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`. Prepared normal fast-forward push with explicit `HEAD:refs/heads/pre-main`; production adapters remain pending. |
 | 2026-10-15 23:51 EDT | Codex | Backend API | Created and verified `feature/backend-schedule` from testing base `origin/pre-main` (`533633d`) before edits. Implemented Schedule API validation/preparation/response mapping, node-cap config and docs; reused AI-branch shared type shapes. Final `./mvnw -B verify` via Git Bash/JDK 21: `Tests run: 158, Failures: 0, Errors: 0, Skipped: 0`, `BUILD SUCCESS`; JAR packaged, live curl 400/503 checks passed. Native solver/section catalog absent; successful real integration remains blocked and documented. Changes uncommitted; no push/merge/PR. |

@@ -11,6 +11,10 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
  * {@code Optional} fields become nullable, so the model answers {@code null} instead of inventing a value
  * the student never gave, and days are restricted to {@code MONDAY}…{@code SUNDAY}.
  *
+ * <p>Every property here is required: {@link ClaudeExtractionValidator} derives the required names and types from
+ * this record and rejects a reply that omits one (a nullable field must be sent as an explicit {@code null}).
+ * Adding a component here therefore makes it required automatically.
+ *
  * <p>Converted to {@link RawPreferences} and then validated by {@link PreferenceAssembler} like any
  * other extractor's output; nothing here is trusted.
  */
@@ -73,7 +77,8 @@ record ClaudeExtraction(
 				copy(assumptions));
 	}
 
-	// Jackson leaves an Optional null (not empty) when the key is missing entirely, so handle both.
+	// Jackson leaves an Optional null (not empty) when the key is missing entirely, so handle both. Missing keys never
+	// reach this point from a model reply: ClaudeExtractionValidator rejects them first. This stays as defense in depth.
 	private static <T> T orNull(Optional<T> value) {
 		return value == null ? null : value.orElse(null);
 	}
