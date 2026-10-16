@@ -54,6 +54,43 @@ class NativeSchedulingEngineTest {
 	}
 
 	@Test
+	void checkReportsAMissingLabAndHighlightsTheLabsThatFit() {
+		var check = engine.check(new Problem(List.of(cse007("12275")), ANY, START_AT_10, 1), List.of("12275"));
+
+		assertThat(check.complete()).isFalse();
+		assertThat(check.issues()).extracting(SchedulingEngine.Issue::type).containsExactly("MISSING_LINKED_SECTION");
+		assertThat(check.issues().getFirst().severity()).isEqualTo("INCOMPLETE");
+		assertThat(check.candidates()).filteredOn(SchedulingEngine.Candidate::completesLecture)
+			.extracting(SchedulingEngine.Candidate::crn).containsExactly("12638", "13132");
+		assertThat(check.totalCredits()).isEqualTo(4);
+	}
+
+	@Test
+	void suggestElectivesReturnsFittingCoursesWithTheirSections() {
+		var elective = new Course("ECO-001", false, List.of(
+				new Section("30001", "ECO-001", 4, "LECTURE", null, List.of(meeting("14:00", "15:15", DayOfWeek.TUESDAY))),
+				new Section("30002", "ECO-001", 4, "LECTURE", null, List.of(meeting("09:00", "09:50", DayOfWeek.MONDAY)))));
+
+		var fits = engine.suggestElectives(new Problem(List.of(cse007("12275")), ANY, START_AT_10, 1),
+				List.of("12275", "12638"), List.of(elective), 5);
+
+		assertThat(fits).hasSize(1);
+		assertThat(fits.getFirst().crns()).containsExactly("30001"); // 30002 clashes with the Monday lecture
+		assertThat(fits.getFirst().totalCredits()).isEqualTo(8);
+	}
+
+	@Test
+	void solveExplainsElectivesThatMissedTheSuggestions() {
+		var blocked = new Course("ECO-001", false, List.of(
+				new Section("30002", "ECO-001", 4, "LECTURE", null, List.of(meeting("09:00", "09:50", DayOfWeek.MONDAY)))));
+
+		var result = engine.solve(new Problem(List.of(cse007("12275"), blocked), ANY, START_AT_10, 4), 1_000_000);
+
+		assertThat(result.electiveAdvice()).singleElement()
+			.satisfies(advice -> assertThat(advice.status()).isEqualTo("CANNOT_FIT"));
+	}
+
+	@Test
 	void labsWhoseLectureIsMissingAreNeverChosen() {
 		var result = engine.solve(new Problem(List.of(cse007("99999")), ANY, START_AT_10, 5), 1_000_000);
 

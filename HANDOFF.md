@@ -364,6 +364,20 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 - Earliest start, latest end and days off stay **soft**. The score caps stay at **300/600 min**.
 - The major's required courses come from **one demo major entered by hand** (data: David; endpoint: Marpu).
 
+**Backend work done for the team, 2026-10-16** (at the engine owner's request, on `feature/backend-catalog-endpoints`; it touches the Backend API and Data areas, so **Marpu and David should review the PR**):
+- **Demo section catalog** `course/DummySectionCatalog`: made-up sections (labs, recitations, a closed section, clashes) under the default `CATALOG_SOURCE=dummy`, so `generate` returns real schedules with no database. In `database` mode, PR #5's PostgreSQL catalogs replace it; no overlap.
+- **Endpoints 3–4** (course search and detail; sections also carry `componentType`, `lectureLink`, `credits`).
+- **Endpoint 8** `/api/schedules/check` (manual mode).
+- **Endpoint 9** `/api/schedules/suggest-electives`.
+- **`electiveAdvice`** in `generate`.
+- **Engine:** when the minimum credits can't be reached, diagnostics now say how many credits to add or what to lower the minimum to.
+- `ScheduleUnavailableTest` now runs with `CATALOG_SOURCE=none` plus a course catalog only, keeping its purpose: safe 503 without section data.
+- **Live verification** (`AI_PROVIDER=dummy`): health 200; AI extract 200; `generate` with the dummy AI's preferences returns no schedules, because CSE-017 + MATH-021 total only 7 credits against the default minimum of 12, and now says how to fix it; search, detail, check and suggest all return 200 with correct content.
+- ~~**Merging with PR #5**~~ Resolved 2026-10-16 on `integrate/catalog-endpoints-into-pre-main`, which merges PR #5 and this branch into `pre-main` with both adjustments below applied; 683 tests, 0 failures, 10 opt-in skipped. Original note: the code merges cleanly, and the combined suite gives 683 tests, 1 failure, 10 skipped. Whichever PR lands second must make two small changes:
+  1. `README.md`: the `DB_URL`/`CATALOG_SOURCE` rows conflict. Keep PR #5's `DB_URL` row and database description, and add "`dummy` now includes demo sections".
+  2. `DefaultModeStartsWithoutDatabaseTest` asserts no `SectionCatalog` in default mode. Change it to `hasSize(1).containsOnlyKeys("dummySectionCatalog")`; the "no database objects" intent is unchanged.
+- **Still needed:** the frontend (David). It should send `maxResults: 4`, show `diagnostics` and `electiveAdvice`, and use `/check` + `/suggest-electives` for manual mode.
+
 **Needs team agreement** (details in architecture.md § 7)
 1. **Marpu:** review the adapter, the `EngineMapper` closed-section change and the `lectureLink` definition (contract change); also the scoring formula and the node-cap default.
 2. **David:** the production `SectionCatalog` must set `lectureLink` = the lecture's CRN for each lab or recitation (from `section_link`), and `null` for lectures. Labs carry 0 credits, the lecture carries the course credits. Note: earliest start and days off are **soft** preferences. The data README's "no classes before 10 yields no complete pair" holds only if the team wants those as hard filters; the engine ranks such schedules lower instead.
@@ -491,7 +505,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Database integration (`catalog_api`, JDBC adapter, `banner_evidence`)
 
-**Status:** 🟡 Implemented and tested on `integrate/database-into-pre-main` (from `origin/pre-main` `b715f86`, which already contains the scheduling engine). One course, **CSE 007, is schedule-ready**; nothing else is. Full guide: [docs/database.md](docs/database.md); decision: [ADR-0002](docs/decisions/0002-read-only-database-catalog-through-catalog-api-views.md).
+**Status:** 🟡 Implemented and tested on `integrate/database-into-pre-main` (merged with `origin/pre-main` `4fb4ff2`, which contains the scheduling engine, PR #5 and the catalog endpoints). One course, **CSE 007, is schedule-ready**; nothing else is. Full guide: [docs/database.md](docs/database.md); decision: [ADR-0002](docs/decisions/0002-read-only-database-catalog-through-catalog-api-views.md).
 
 **Implemented**
 - `data/cse007-snapshot/`: the verified CSE 007 PostgreSQL schema and seed (copied unchanged from `origin/feature/data-cse007-snapshot` at `ee07e18`; images and PDFs not included).
@@ -553,6 +567,8 @@ Newest first, one line per session. Append only.
 | When | Who | Module | Summary |
 |---|---|---|---|
 | 2026-10-16 (evening) | Claude Code for Michael | Database | Created `integrate/database-into-pre-main` from `origin/pre-main` `b715f86` and integrated the CSE 007 snapshot, `catalog_api` views, `banner_evidence` schema and collector, JDBC catalog adapter and a local database setup script; reconciled `pom.xml`, `application.properties`, `.env.example` and `README.md` with the engine-bearing pre-main. Replaced the adapter's recording engine double with the real engine: CSE 007 at 4 credits yields two valid schedules. Default build 645 tests, 0 failures, 10 skipped (opt-in); opt-in database tests 10/10. |
+| 2026-10-16 18:41 EDT | Claude Code for Sunny | Integration | `integrate/catalog-endpoints-into-pre-main` from `pre-main` `b715f86`: merged PR #5 (database catalog, Michael) and `feature/backend-catalog-endpoints`. Resolved the README `CATALOG_SOURCE`/`DB_URL` conflict (both kept) and updated one assertion in `DefaultModeStartsWithoutDatabaseTest` (demo section catalog now expected). `cd backend && ./mvnw -B clean test` → `Tests run: 683, Failures: 0, Errors: 0, Skipped: 10` (opt-in live AI / DB tests), BUILD SUCCESS. Live: default mode generate 4 schedules (top 100), search/check 200; database mode with no DB → health 200, generate 503. For review via PR into `pre-main`. |
+| 2026-10-16 18:33 EDT | Claude Code for Sunny | Scheduling Engine (+ Backend API / Data, at the owner's request) | `feature/backend-catalog-endpoints` from `pre-main` `b715f86`: demo section catalog, course search/detail, `/check`, `/suggest-electives`, `electiveAdvice`, min-credit suggestion. Docs updated. `cd backend && ./mvnw -B test` → `Tests run: 588, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Live: all endpoints verified with `AI_PROVIDER=dummy`. |
 | 2026-10-16 15:58 EDT | Claude Code for Sunny | Scheduling Engine | Addressed Marpu's integration review on `integrate/engine-into-pre-main`: blank or self-referencing lecture links are rejected (mapper and adapter), with new tests (they fail without the fix). Probed `pre-main`: the closed-lab bug is still there (fixed on this branch). `cd backend && ./mvnw -B test` → `Tests run: 550, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. |
 | 2026-10-16 15:43 EDT | Claude Code for Sunny | Scheduling Engine | Elective recommendations on `feature/engine-core`: `ElectiveAdvisor` (explain and fix typed electives; suggest electives that fit a schedule), `ElectiveAdvice` and `ElectiveSuggestion`, 11 tests. Solver tie-break: more electives first on an equal score; the new test fails without the change. Documented the elective flow. `cd backend && ./mvnw -B test` → `Tests run: 79, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. |
 | 2026-10-16 15:29 EDT | Codex | Backend API | User authorized updating PR #3 (`pre-main` head). Carried local review notes and unavailable-integration test comment onto fresh `pre-main` at `fef4857`, preserving the merged AI changes and retaining a backup stash. Targeted availability tests: 2 tests, zero failures/errors, BUILD SUCCESS; normal fast-forward push prepared. |

@@ -9,7 +9,7 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 | | |
 |---|---|
 | **Current phase** | Backend foundation merged to `main` (which stays untouched). Integration on **`pre-main`**: Marpu's `common` error handling, CORS and Schedule API (validation, preparation, response mapping) are there. Michael's AI preference extraction is being integrated through PR #2 (`integrate/ai-into-pre-main`, pending review). Sunny's scheduling engine is on `integrate/engine-into-pre-main`, not yet in `pre-main`. Production catalog adapters are not built. |
-| **What works today** | Health endpoint, standardized Problem Details errors, validation infrastructure, configurable CORS, and Schedule API validation and mapping (Marpu; schedule success paths are tested with doubles, and the running app returns 503 for schedules until a production catalog and engine are registered). AI preference extraction with Claude, live-verified (eval 19/20 = 95%) (Michael). Test counts: see [HANDOFF.md](HANDOFF.md#latest-test-results). |
+| **What works today** | Health endpoint, standardized Problem Details errors, validation infrastructure, configurable CORS, and Schedule API validation and mapping (Marpu). **The scheduling engine is connected** (Sunny): with the default demo catalog (no database) the running app returns real ranked schedules, course search and course detail, manual-mode checks (`/api/schedules/check`) and elective suggestions. The PostgreSQL catalog is in PR #5. AI preference extraction with Claude, live-verified (eval 19/20 = 95%) (Michael). Test counts: see [HANDOFF.md](HANDOFF.md#latest-test-results). |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -41,10 +41,11 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
-| Course search by code/title for a term | ✔ | ⬜ Planned |
+| Course search by code/title for a term | ✔ | ✅ `GET /api/courses`, `GET /api/courses/{id}` (demo catalog; database catalog in PR #5) |
 | AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
 | Editable preference form (works without AI too) | ✔ | ⬜ Planned |
-| Conflict-free schedule generation, ranked by preferences | ✔ | 🟡 API layer implemented; catalog and solver adapters pending |
+| Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Engine + API; works on the demo catalog with no database |
+| Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); UI not built |
 | Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
 | AI explanation of a schedule | Stretch | ⬜ Planned |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
@@ -148,7 +149,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `1000000` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
-| `CATALOG_SOURCE` | Backend | No | `dummy`: made-up courses, no database. `database`: read-only PostgreSQL catalog via the `catalog_api` views (CSE 007 only so far; the API term `2027-SPRING` maps to Banner `202710` through `app.catalog.terms`). |
+| `CATALOG_SOURCE` | Backend | No | `dummy` (default): made-up courses **and sections**, no database, so schedules work out of the box. `database`: read-only PostgreSQL catalog via the `catalog_api` views (CSE 007 only so far; the API term `2027-SPRING` maps to Banner `202710` through `app.catalog.terms`). `none`: no catalog (schedule endpoints return 503). |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
@@ -244,8 +245,8 @@ Database setup, running the backend in database mode, and what data is (and is n
 |---|---|
 | Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented; merged to `main` in `76a8310` |
 | Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
-| Course catalog, PostgreSQL | 🟡 Read-only JDBC catalog over the `catalog_api` views implemented and tested (CSE 007 only; opt-in `CATALOG_SOURCE=database`); other courses not schedule-ready. See [docs/database.md](docs/database.md) |
-| Scheduling engine | ⬜ Planned |
+| Course catalog | 🟡 Demo catalog (courses + sections) works with no database; a read-only PostgreSQL catalog over the `catalog_api` views is implemented and tested (CSE 007 only; opt-in `CATALOG_SOURCE=database`; other courses not schedule-ready). See [docs/database.md](docs/database.md) |
+| Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
 | Frontend | ⬜ Planned |
 | CI, deployment | ⬜ Not started; no deployed URL exists |

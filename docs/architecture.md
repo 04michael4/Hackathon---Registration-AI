@@ -115,10 +115,10 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); `persistence`: read-only JDBC catalog over the `catalog_api` views, active only with `CATALOG_SOURCE=database` ([ADR-0002](decisions/0002-read-only-database-catalog-through-catalog-api-views.md), [database guide](database.md)); course endpoints pending | Backend API (+ Data) |
+| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`. Demo catalogs `DummyCourseCatalog` + `DummySectionCatalog` (default; made-up courses **and sections**, no database). `CourseController`/`CourseService` for search and detail (endpoints 3–4), `CourseQuery` for search matching. `persistence`: read-only JDBC catalogs over the `catalog_api` views, active only with `CATALOG_SOURCE=database` ([ADR-0002](decisions/0002-read-only-database-catalog-through-catalog-api-views.md), [database guide](database.md)). | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
-| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine (2026-10-16). Production catalogs pending. | Backend API |
+| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine. Endpoints: `generate` (with `electiveAdvice`), `check` (manual mode), `suggest-electives`. | Backend API |
 | `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
@@ -344,7 +344,7 @@ Decisions (owner, 2026-10-16):
 
 Tests check that every schedule the solver generates passes the checker with zero issues and the identical score, so the two modes never disagree.
 
-**Proposed endpoint (for the Backend API owner to add and own in api-contract.md):** `POST /api/schedules/check`, with request `{ term, preferences, crns: string[] }`. The response is the `SelectionReport` fields above plus `overload`, with `breakdown` as `scoreBreakdown` like `generate`. It also needs one adapter method on `SchedulingEngine`. The frontend loads section times for the calendar from `GET /api/courses/{courseId}` (endpoint 4, planned).
+**Endpoint (implemented 2026-10-16):** `POST /api/schedules/check`, endpoint 8 in api-contract.md. It has no elective limit.
 
 **Not engine scope:** listing a major's required courses automatically. That needs degree-requirement data and the student's major and completed courses (see HANDOFF).
 
@@ -364,9 +364,7 @@ Tests check that every schedule the solver generates passes the checker with zer
 
 To stay fast, the fix checks re-solve only the required courses plus that one elective, relaxing one thing at a time. The student's minimum credits are ignored in those checks, because the other electives are left out. A "raise your maximum to N" fix can exceed the API's 21-credit cap; the API layer should drop or reword it.
 
-**Proposed API (for the Backend API owner):**
-- Add `electiveAdvice` to the `generate` response.
-- Add `POST /api/schedules/suggest-electives` with `{ term, preferences, crns, q?/subject? }`. It searches the catalog for candidates and returns the suggestions.
+**API (implemented 2026-10-16):** `electiveAdvice` in the `generate` response, and `POST /api/schedules/suggest-electives` (endpoint 9), with candidates from the catalog narrowed like course search.
 
 **Determinism rules.** The same input and catalog snapshot always give the same output, and tests check that shuffling the input changes nothing:
 - No randomness and no wall-clock limits. A time limit would make results depend on machine speed.

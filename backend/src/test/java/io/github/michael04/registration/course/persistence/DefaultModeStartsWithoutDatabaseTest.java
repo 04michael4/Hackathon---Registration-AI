@@ -36,7 +36,8 @@ class DefaultModeStartsWithoutDatabaseTest {
 		assertThat(context.getBeansOfType(CourseCatalog.class)).hasSize(1).containsOnlyKeys("dummyCourseCatalog");
 		assertThat(context.getBean(CourseCatalog.class)).isInstanceOf(DummyCourseCatalog.class);
 		assertThat(context.getBeansOfType(DataSource.class)).isEmpty();
-		assertThat(context.getBeansOfType(SectionCatalog.class)).isEmpty();
+		// The default mode has demo sections (DummySectionCatalog) but still no database object.
+		assertThat(context.getBeansOfType(SectionCatalog.class)).hasSize(1).containsOnlyKeys("dummySectionCatalog");
 		assertThat(context.getBeansOfType(JdbcCourseCatalog.class)).isEmpty();
 		assertThat(context.getBeansOfType(JdbcSectionCatalog.class)).isEmpty();
 	}
