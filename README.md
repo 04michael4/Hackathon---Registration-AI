@@ -42,7 +42,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
 | Course search by code/title for a term | ✔ | ⬜ Planned |
-| AI preference extraction from free text | ✔ | ✅ Implemented and live-verified on `feature/ai-preference-extractor` (not yet in `pre-main`) |
+| AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
 | Editable preference form (works without AI too) | ✔ | ⬜ Planned |
 | Conflict-free schedule generation, ranked by preferences | ✔ | ⬜ Planned |
 | Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
@@ -224,7 +224,7 @@ Owners agreed 2026-10-15. Detailed responsibilities and how to build each part a
 
 ## Git workflow
 
-- `main` always builds and passes tests. All work happens on branches named `<type>/<module>-<desc>`, e.g. `feature/engine-backtracking`.
+- `pre-main` (the integration branch) always builds and passes tests, and `main` stays untouched. All work happens on branches named `<type>/<module>-<desc>`, e.g. `feature/engine-backtracking`.
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(engine): add backtracking search`.
 - Open a PR into **`pre-main`**, the team's shared integration branch, with ≥ 1 approving review and the `./mvnw test` result in the description, then squash-merge. `main` stays untouched until the team decides to promote `pre-main`.
 - Update your module's section in [HANDOFF.md](HANDOFF.md) with each meaningful change.
@@ -239,7 +239,7 @@ Full workflow, including conflicts, AI agents and onboarding: **[docs/developmen
 | Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
 | Course catalog, PostgreSQL | ⬜ Planned |
 | Scheduling engine | ⬜ Planned |
-| AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20) on `feature/ai-preference-extractor`; not yet merged into `pre-main`. Schedule explanation (stretch) ⬜ |
+| AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
 | Frontend | ⬜ Planned |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
@@ -277,7 +277,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 
 ## Team work plan
 
-Assignments agreed 2026-10-15. Each person works on short-lived branches with their own prefix, opens PRs into `main`, and updates their section of [HANDOFF.md](HANDOFF.md). The code snippets below are **starting points**: verify them against the current library docs while implementing, and keep [docs/api-contract.md](docs/api-contract.md) in sync.
+Assignments agreed 2026-10-15. Each person works on short-lived branches with their own prefix, opens PRs into **`pre-main`** (never `main`), and updates their section of [HANDOFF.md](HANDOFF.md). The code snippets below are **starting points**: verify them against the current library docs while implementing, and keep [docs/api-contract.md](docs/api-contract.md) in sync.
 
 | Person | Module | Branch prefix | Owns | First milestone |
 |---|---|---|---|---|
@@ -296,7 +296,7 @@ flowchart LR
     BE -->|"REST API (api-contract.md)"| FE["David<br/>Next.js frontend"]
 ```
 
-**Agree on these shared interfaces first.** Each one goes into `main` as a small PR containing only types and interfaces, no logic, so everyone codes against the same thing from day one:
+**Agree on these shared interfaces first.** Each one goes into `pre-main` as a small PR containing only types and interfaces, no logic, so everyone codes against the same thing from day one:
 
 | Interface | What it is | Defined by | Must approve changes |
 |---|---|---|---|
@@ -337,7 +337,7 @@ flowchart LR
 - [x] Run the live evaluation against the real Claude API (2026-10-15): **19/20 = 95%**. See "Live verification results" below.
 - [ ] Stretch: `POST /api/schedules/explain`.
 
-**Status:** everything above is implemented, passes 112 offline tests, and is **live-verified** with `claude-haiku-5-5`. It's on `feature/ai-preference-extractor`, not yet merged into `pre-main`.
+**Status:** everything above is implemented and **live-verified** with `claude-haiku-5-5`. It was developed on `feature/ai-preference-extractor` (112 tests), and is integrated with Marpu's `common` error handling and CORS on `integrate/ai-into-pre-main` (177 tests, including 20 full-application integration tests). The PR to `pre-main` is pending. AI errors are RFC 9457 Problem Details from the shared handler; see the [API contract, endpoint 5](docs/api-contract.md#5-post-apipreferencesextract).
 
 **Live verification results** (2026-10-15)
 
@@ -615,7 +615,7 @@ RUN_LIVE_AI=true ./mvnw test -Dtest=ClaudeLiveEval -Dsurefire.failIfNoSpecifiedT
              cache: maven
          - run: ./mvnw -B test
    ```
-   Then make this check required in the branch protection rules for `main`. GitHub's Ubuntu runners include Docker, so Testcontainers works there.
+   Then make this check required in the branch protection rules for `pre-main` (and protect `main`). GitHub's Ubuntu runners include Docker, so Testcontainers works there.
 2. **Errors.** Add `spring-boot-starter-validation`, and set `spring.mvc.problemdetails.enabled=true`.
    - Create `GlobalExceptionHandler` (`@RestControllerAdvice`, extending `ResponseEntityExceptionHandler`).
    - Add exceptions such as `NotFoundException` (404), `UnprocessableException` (422) and `AiUnavailableException` (503).

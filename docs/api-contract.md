@@ -18,7 +18,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | ⬜ Planned | Backend API (+ Data) |
 | 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
 | 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
-| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ✅ Implemented, live-verified (eval 19/20 = 95%), on `feature/ai-preference-extractor` | AI Integration |
+| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ✅ Implemented, live-verified (eval 19/20 = 95%); integrated on `integrate/ai-into-pre-main` (PR to `pre-main` pending) | AI Integration |
 | 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ⬜ Planned | Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
 
@@ -75,7 +75,7 @@ Status code usage:
 | 406 | Requested response media type is not supported |
 | 415 | Request content type is not supported |
 | 422 | Well-formed request that can't be processed, e.g. unknown course IDs in a body, or `minCredits > maxCredits` |
-| 429 | Rate limit exceeded (AI endpoints; mechanism TBD) |
+| 429 | Rate limit exceeded. AI endpoints: provider rate limit via `ai.AiRateLimitedException` (a `ResponseStatusException`); see endpoint 5 |
 | 500 | Unexpected server error. Never includes stack traces. |
 | 502 | The AI provider returned an error or output that failed validation |
 | 503 | AI features are not configured (no API key) or the provider is unavailable |
@@ -225,7 +225,7 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 ## 5. `POST /api/preferences/extract`
 
-**Status: ✅ Implemented and live-verified** on branch `feature/ai-preference-extractor` (not yet merged into `pre-main`). Module: AI Integration. **Priority: high.** Code: [`ai/PreferenceController`](../backend/src/main/java/io/github/michael04/registration/ai/PreferenceController.java).
+**Status: ✅ Implemented and live-verified.** Developed on `feature/ai-preference-extractor`; combined with `common` error handling and CORS on `integrate/ai-into-pre-main` (local, PR to `pre-main` pending review). Module: AI Integration. **Priority: high.** Code: [`ai/PreferenceController`](../backend/src/main/java/io/github/michael04/registration/ai/PreferenceController.java).
 
 **Live verification (2026-10-15, model `claude-haiku-5-5`, SDK 2.71.0):**
 
@@ -251,17 +251,18 @@ The endpoint, validation, course-name resolution and error codes all work, and t
 | `dummy` | Ignores the text and returns the example below, so you can build the frontend without an API key |
 | `claude` | Real extraction with Claude (model from `ANTHROPIC_MODEL`, default `claude-haiku-5-5`). Without `ANTHROPIC_API_KEY`, returns `503`; it never falls back to dummy output. |
 
-How Claude failures map to status codes (verified offline):
+**Errors** are RFC 9457 Problem Details from the shared `common.GlobalExceptionHandler` (see [Error responses](#error-responses)). They use `application/problem+json`, `type`/`status`/`detail`/`instance`, and a `requestId` that matches the `X-Request-Id` header. This was verified by full-application integration tests on `integrate/ai-into-pre-main`, using fake providers only.
 
-| Situation | Status |
-|---|---|
-| Rate limited (after the SDK's one automatic retry) | `429` |
-| Model refused, or the output was truncated or malformed twice | `502` |
-| Other provider errors (e.g. bad request, unknown model) | `502` |
-| Provider overloaded or unavailable, connection failure, timeout | `503` |
-| Missing or rejected API key | `503` |
+| Situation | Status | `detail` (exact) | AI exception → shared type |
+|---|---|---|---|
+| Blank text, text over 2,000 characters, or missing term | `400` | `Request validation failed`, plus `errors[].field` | Bean Validation |
+| Unknown term (checked before any AI call) | `422` | `Term is not available` (the term is never echoed) | `UnknownTermException` extends `common.UnprocessableException` |
+| Rate limited (after the SDK's one automatic retry) | `429` | `Too many requests` | `AiRateLimitedException` extends `ResponseStatusException` |
+| Model refused, or output truncated or malformed twice | `502` | `Upstream service returned an invalid response` | `AiOutputInvalidException` extends `ResponseStatusException` |
+| Other provider errors (e.g. bad request, unknown model, HTTP 500) | `502` | same as above | `AiProviderException` extends `ResponseStatusException` |
+| AI off (`none`), missing or rejected key, provider overloaded (503/529), connection failure, timeout | `503` | `AI service is unavailable` | `common.AiUnavailableException` (the AI module's duplicate class was removed) |
 
-Error responses never include provider messages, keys or stack traces.
+Error responses never include provider messages, student text, keys, exception names or stack traces. Integration tests plant a marker in every exception and request and assert it never appears.
 
 Course data currently comes from a temporary dummy catalog with one term, `2027-SPRING`.
 
@@ -462,6 +463,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-15 | Endpoint 5 integrated with `common` Problem Details: AI errors mapped onto shared types (422/429/502/503 with fixed `detail` texts); duplicate `ai.AiUnavailableException` removed | Michael |
 | 2026-10-15 | Endpoint 5 live-verified: 1 request 16/16 checks; 20-case eval 19/20 (95%); failed case `vague-time` documented | Michael |
 | 2026-10-15 | Endpoint 5: Claude provider added (`AI_PROVIDER=claude`), tested offline only; Claude error codes 429/502/503 specified | Michael |
 | 2026-10-15 | Endpoint 5 implemented without Claude (`AI_PROVIDER` = `none` / `dummy`); times are serialized as `"HH:mm"` | Michael |

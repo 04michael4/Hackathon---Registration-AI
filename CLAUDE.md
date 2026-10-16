@@ -136,7 +136,8 @@ To change one:
 ## Git safety rules
 
 - **No `git commit`, `git push`, merge, rebase, tag or branch deletion without explicit permission in the current session.** Permission for one commit doesn't carry over to the next.
-- Never force-push to shared branches, and never push to `main` directly.
+- **PRs target `pre-main`**, the shared integration branch. **`main` stays untouched**: never push, merge or open PRs into it. It changes only when the team explicitly promotes `pre-main`.
+- Never force-push to shared branches, and never push directly to `pre-main`; changes reach it through reviewed PRs.
 - Never run destructive commands (`git reset --hard`, `git clean -fd`, `git checkout -- .`) on uncommitted work without asking first.
 - Check `git status` before and after your work, and report what changed.
 
