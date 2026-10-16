@@ -30,25 +30,67 @@ class EngineMapperTest {
 	private final EngineMapper mapper = new EngineMapper();
 	private final Map<String, CourseSummary> courses = Map.of("CSE-017", new CourseSummary("CSE-017", "Programming", 3));
 
-	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
-	void filtersAllClosedComponentsAndPreservesMetadataAndLectureLinks(boolean includeClosed) {
+	// lectureLink holds the CRN of the lecture a linked section belongs to (null for lectures).
+	private List<CatalogSection> mixedStatusSections() {
 		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
-		var lab = section("2", "LAB", "lecture-crn:1", CatalogSection.Status.OPEN, List.of());
+		var lab = section("2", "LAB", "1", CatalogSection.Status.OPEN, List.of());
 		var closedLecture = section("3", "LECTURE", null, CatalogSection.Status.CLOSED, List.of());
-		var closedLab = section("4", "LAB", "lecture-crn:3", CatalogSection.Status.CLOSED, List.of());
-		var closedRecitation = section("5", "RECITATION", "lecture-crn:1", CatalogSection.Status.CLOSED, List.of());
+		var closedLab = section("4", "LAB", "3", CatalogSection.Status.CLOSED, List.of());
+		var closedRecitation = section("5", "RECITATION", "1", CatalogSection.Status.CLOSED, List.of());
 		var unknown = section("6", "SEMINAR", null, CatalogSection.Status.UNKNOWN, List.of());
-		var input = mapper.prepare(request(includeClosed), Set.of("CSE-017"), courses,
-			List.of(closedLab, unknown, lab, closedRecitation, closedLecture, lecture));
+		return List.of(closedLab, unknown, lab, closedRecitation, closedLecture, lecture);
+	}
+
+	@Test
+	void includingClosedKeepsEverySectionAndPreservesMetadataAndLectureLinks() {
+		var input = mapper.prepare(request(true), Set.of("CSE-017"), courses, mixedStatusSections());
 		var actual = input.problem().courses().getFirst().sections();
-		assertThat(actual).extracting(SchedulingEngine.Section::crn)
-			.containsExactlyElementsOf(includeClosed ? List.of("1", "2", "3", "4", "5", "6") : List.of("1", "2", "6"));
+		assertThat(actual).extracting(SchedulingEngine.Section::crn).containsExactly("1", "2", "3", "4", "5", "6");
 		assertThat(actual.get(0).componentType()).isEqualTo("LECTURE");
 		assertThat(actual.get(0).lectureLink()).isNull();
 		assertThat(actual.get(1).componentType()).isEqualTo("LAB");
-		assertThat(actual.get(1).lectureLink()).isEqualTo("lecture-crn:1");
+		assertThat(actual.get(1).lectureLink()).isEqualTo("1");
 		assertThat(actual.get(1).credits()).isEqualTo(0);
+	}
+
+	@Test
+	void excludingClosedAlsoDropsLecturesThatLostAllSectionsOfALinkedComponent() {
+		var input = mapper.prepare(request(false), Set.of("CSE-017"), courses, mixedStatusSections());
+		// Lecture 1's only recitation (5) is closed, so lecture 1 can't be taken and its lab 2 goes too.
+		// Lecture 3 and its lab 4 are closed. Section 6 has UNKNOWN status and stays.
+		assertThat(input.problem().courses().getFirst().sections()).extracting(SchedulingEngine.Section::crn)
+			.containsExactly("6");
+	}
+
+	@Test
+	void excludingClosedKeepsALectureWhileOneOfItsLabsIsOpen() {
+		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
+		var closedLab = section("2", "LAB", "1", CatalogSection.Status.CLOSED, List.of());
+		var openLab = section("3", "LAB", "1", CatalogSection.Status.OPEN, List.of());
+		var input = mapper.prepare(request(false), Set.of("CSE-017"), courses, List.of(lecture, closedLab, openLab));
+		assertThat(input.problem().courses().getFirst().sections()).extracting(SchedulingEngine.Section::crn)
+			.containsExactly("1", "3");
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void blankOrSelfLectureLinksAreIntegrationFailures(boolean includeClosed) {
+		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
+		var blankLink = section("2", "LAB", " ", CatalogSection.Status.OPEN, List.of());
+		var selfLink = section("3", "LAB", "3", CatalogSection.Status.OPEN, List.of());
+		assertThatThrownBy(() -> mapper.prepare(request(includeClosed), Set.of("CSE-017"), courses, List.of(lecture, blankLink)))
+			.isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> mapper.prepare(request(includeClosed), Set.of("CSE-017"), courses, List.of(lecture, selfLink)))
+			.isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void labLinkedToAnotherLabIsAnIntegrationFailure() {
+		var lecture = section("1", "LECTURE", null, CatalogSection.Status.OPEN, List.of());
+		var lab = section("2", "LAB", "1", CatalogSection.Status.OPEN, List.of());
+		var labOfLab = section("3", "LAB", "2", CatalogSection.Status.CLOSED, List.of());
+		assertThatThrownBy(() -> mapper.prepare(request(false), Set.of("CSE-017"), courses, List.of(lecture, lab, labOfLab)))
+			.isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
@@ -117,9 +159,9 @@ class EngineMapperTest {
 	}
 
 	@Test
-	void preparationCannotPassMoreThanTenOptionalCoursesEvenOutsideTheController() {
+	void preparationCannotPassMoreThanEightOptionalCoursesEvenOutsideTheController() {
 		Map<String, CourseSummary> oversized = new LinkedHashMap<>(courses);
-		for (int i = 0; i < 11; i++) {
+		for (int i = 0; i < 9; i++) {
 			String id = "OPT-" + i;
 			oversized.put(id, new CourseSummary(id, "Optional", 3));
 		}

@@ -117,8 +117,8 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
 | `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); persistence, production providers and course endpoints pending | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
-| `engine` | ⬜ | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. | Scheduling Engine |
-| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.SchedulingEngine` adapter boundary pending the actual engine | Backend API |
+| `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
+| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine (2026-10-16). Production catalogs pending. | Backend API |
 | `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
@@ -206,38 +206,171 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 ## 7. Scheduling engine
 
-**Status: ⬜ planned.** Module: Scheduling Engine. Package: `engine`.
+**Status: 🟡 implemented (2026-10-15).** Unit-tested (plain JUnit), but not yet wired into an endpoint. Module: Scheduling Engine. Package: `engine`. Implementation: [`BacktrackingScheduleSolver`](../backend/src/main/java/io/github/michael04/registration/engine/BacktrackingScheduleSolver.java).
 
 **Schedule API integration status (2026-10-15).** The fetched repository has no `engine` implementation, database entities/migrations or section repository. The README's `ScheduleSolver.solve(ScheduleProblem)` sample is a starting point, not a published implementation: its section record has no component/link metadata, and its result exposes a penalty rather than the score and actual credit total required by the API. This section has no finalized scoring formula. Those gaps are explicit; the API does not invent a penalty-to-score conversion or implement a second solver.
 
 `schedule.integration.SchedulingEngine` is an **API-owned provisional adapter boundary**, not a replacement engine model. Tests provide doubles. Once Sunny publishes the native engine interface, implement an adapter in `schedule` that converts the prepared input to native records and returns the engine's score, breakdown, totals, CRNs, diagnostics, and cap flag unchanged. Keep the engine pure Java and independent of `schedule`. The adapter must preserve actual component/link semantics; the current boundary carries a source-provided, opaque `lectureLink` without inferring links. Engine-owner review of that mapping is required before claiming full integration.
 
 **Caller rules implemented by the API:**
-- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 10 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
+- Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 8 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
 - De-duplicate by course ID; required membership wins over optional membership. Resolve all selected IDs against the requested term. Prepare courses by ID and sections by CRN for deterministic input.
 - `includeClosedSections=false` excludes closed lectures, labs, recitations and other components. `true` retains closed sections; term/course eligibility still applies. Preserve component types and opaque lecture associations; retain UNKNOWN availability. Unscheduled sections use empty meetings lists. Duplicate identical section rows collapse; contradictory rows and malformed scheduled meetings are internal errors, not guessed data.
 - Pass required courses with no eligible sections to the engine for infeasibility diagnostics. Conflict solving, blocked-time exclusion, linked-component selection, credit feasibility, ranking and scoring remain engine responsibilities.
 - Map engine results in their returned order. Copy score/breakdown without rescaling, rounding or adding missing values. Derive overload only from the returned `totalCredits > 18`; resolve display metadata from the same prepared snapshot. Unknown result CRNs or missing scores/breakdowns fail safely with 500.
-- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:1000000}` (default raised from 200,000 on 2026-10-16) through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+
+**Update 2026-10-16 (engine integration).** The native engine now exists (`engine` package, sections below). `schedule.integration.NativeSchedulingEngine` is the adapter: it translates the boundary records to engine records and back, and passes score, breakdown, credits, CRNs, diagnostics and the cap flag through unchanged. Two caller rules were settled with the engine owner:
+- **`lectureLink`** is the lecture's CRN (or `null` for a lecture).
+- **Closed sections:** `EngineMapper` removes closed sections with `CourseOption.excluding`, so a lecture whose labs are all closed is removed too.
+
+`ScheduleEngineIntegrationTest` covers the whole path with the real engine. Only production catalogs are missing.
 
 `CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. The `ai` package uses these shared records and `CourseCatalog`; `engine` and `schedule` never depend on `ai`. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
 
-**Problem:** for each required course, pick exactly one section (plus linked components) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty.
+**Problem:** for each required course, pick exactly one section (a lecture plus its linked labs or recitations) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty. The engine plans **one semester**. Choosing *which* courses to take is degree planning, which is out of MVP scope.
 
-**Planned algorithm: backtracking search with pruning and bounded top-K.**
+### Engine API (🟡 implemented, shared interface)
 
-1. **Pre-filter.** Remove sections that violate constraints that apply to a single section on its own, such as overlapping a blocked time or being closed. If a required course has no sections left, return "infeasible" right away, with that course named in `diagnostics`.
-2. **Precompute conflicts.** Build a section-by-section conflict table once, so checking two sections during the search is a single lookup.
-3. **Order variables.** Search the course with the **fewest** remaining sections first (the "minimum remaining values" heuristic). This finds dead ends early.
-4. **Depth-first search.** Assign sections, and backtrack as soon as a time conflict or the credit cap is hit.
-5. **Score and keep the top K.** Score each complete schedule with a weighted sum of soft penalties. Keep the best `maxResults`, and skip branches that can't beat the current K-th best.
-6. **Bound the work deterministically.** Stop after a fixed **number of explored nodes** (configurable), not after a fixed amount of time, and report `searchLimitReached`.
+The `schedule` package calls the engine through these types only. They're a [shared interface](../CLAUDE.md#shared-interfaces), so changes need the Backend API owner's review.
 
-**Determinism rules.** The same input and catalog snapshot always give the same output:
+| Type | Role |
+|---|---|
+| `ScheduleSolver` | `ScheduleResult solve(ScheduleProblem problem)`. Pure, deterministic, never throws for infeasible input. |
+| `BacktrackingScheduleSolver(nodeLimit)` | The implementation. Stateless and thread-safe, so one instance can be a singleton `@Bean`. `DEFAULT_NODE_LIMIT` is 1,000,000. |
+| `ScheduleProblem(courses, constraints, soft, maxResults)` | Complete input. Course IDs unique, CRNs unique across courses, `maxResults ≥ 1`. Input order doesn't matter. |
+| `CourseOption(courseId, required, sections)` | A requested course with **all** its sections (lectures and linked labs/recitations). Required and optional courses share this type; `required` tells them apart. `excluding(predicate)` drops sections safely (see rule 4). |
+| `SectionOption(crn, courseId, component, parentCrn, credits, meetings)` | One section. `component` is e.g. `LEC`, `LAB`, `REC`. `parentCrn` is `null` for a lecture or standalone section, or the CRN of the lecture a lab or recitation belongs to. An empty `meetings` list conflicts with nothing. |
+| `Meeting(days, start, end)` | Weekly block, `start < end`, no midnight crossing. Used for class meetings and blocked times. `overlaps(other)`: shares a day and the times overlap; touching times (10:50 / 10:50) don't. |
+| `Constraints(minCredits, maxCredits, blockedTimes)` | Hard constraints. Only checks `0 ≤ min ≤ max`; the 21-credit cap is enforced by the API layer. |
+| `SoftWeights(earliestStart, …Weight, latestEnd, …Weight, daysOff, …Weight, gapsWeight, optionalCoursesWeight)` | Soft preferences, weights 0–5. Times are `null` when unset. |
+| `ScoredSchedule(sections, totalCredits, penalty, score, breakdown)` | One valid schedule. `sections` lists every chosen CRN, including labs: by course ID, then each lecture before its linked sections. |
+| `ScheduleResult(schedules, diagnostics, searchLimitReached)` | Best first; never contains an empty schedule. |
+
+**Rules for the caller (`schedule` package, Backend API).** The engine defines these; the Backend API follows them:
+1. Reject invalid requests before calling the engine: credits outside 1–21, `minCredits > maxCredits`, weights outside 0–5, an empty `requiredCourseIds`, `maxResults` outside 1–10.
+2. Pass **at most 8 optional courses**; reject more with `400`. *(Decided 2026-10-16, down from 10. Enforced by `ScheduleRequestValidator.MAX_OPTIONAL_COURSES` and documented in api-contract.md. See "Search size" for why.)*
+3. If a course is both required and optional, treat it as required only.
+4. When `includeClosedSections` is false, remove closed sections with **`course.excluding(s -> closed)`**, not by filtering the list yourself. `excluding` also removes a lecture that lost all its labs (or all its recitations), because it can't be taken alone. *(Done in `EngineMapper`, 2026-10-16.)*
+5. Fill in `component` and `parentCrn` for every section from the catalog's lecture–lab relation. A section with no scheduled time (TBA/online) gets an empty `meetings` list.
+6. Put a course's credits on its lecture and the catalog's own value (usually 0) on its linked sections; the engine adds them up.
+7. Set `overload` from `totalCredits` (> 18), and copy `score`, `breakdown` and `diagnostics` through unchanged.
+8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, whose default was raised to 1,000,000 on 2026-10-16; see "Search size".)*
+
+**Linked sections (decided 2026-10-15).** One lecture may allow several labs or recitations. A lecture that has linked sections **must** be taken with exactly one of them **per component type**. For example, lecture 010 with labs 011 and 012 and recitations R1 and R2 gives four choices. The engine expands each lecture into these bundles itself. It discards any bundle whose parts overlap each other or a blocked time, and it never picks a linked section without its lecture.
+
+### Algorithm (🟡 implemented)
+
+1. **Bundles and pre-filter.** Expand each course into lecture+linked-section bundles. Drop bundles that conflict internally or overlap a blocked time. A required course with no bundle left, or required credits above `maxCredits`, or a `minCredits` that can't be reached, ends the run straight away with a diagnostic.
+2. **Conflict table.** A bundle-by-bundle table is built once, so a clash check during search is a single lookup.
+3. **Order.** Required courses first, then optional ones; within each group, fewest bundles first (ties by course ID). Within a course, bundles that score best on their own come first (ties by CRNs), so good schedules are found early and pruning bites sooner.
+4. **Depth-first search.** Pick one bundle per course; an optional course can also be skipped. Cut a branch when:
+   - it has a time conflict;
+   - it would go over `maxCredits`, or can no longer reach `minCredits`, or the remaining required courses can't fit;
+   - its **lower bound** can't beat the current K-th best (branch-and-bound). The bound is the score of what's chosen so far plus the minimum the remaining required courses must still add (early/late minutes, days they always meet). Gaps aren't in the bound, because adding a class can shrink a gap.
+5. **Top K.** Keep the best `maxResults` schedules. A schedule only replaces another if it's strictly better, so among equally good schedules the first one found in the canonical order is kept.
+6. **Node cap.** Stop after `nodeLimit` search steps, and set `searchLimitReached`. The schedules are still valid, but may not be the best possible. This bounds the worst-case time without depending on machine speed.
+
+**When nothing fits** (decided 2026-10-15): no schedules are returned, and `diagnostics` explains why. Actual messages:
+- `"CSE-017: every section overlaps your blocked times."` (also `no sections available`, or `no lecture/lab combination fits together without a time conflict`)
+- `"CSE-017 and MATH-021 conflict in every combination."`
+- `"Your required courses need at least 22 credits, above your maximum of 18."`
+- `"These courses add up to at most 7 credits, below your minimum of 12."`
+- otherwise a general "no combination fits" message, or "the search stopped at its limit".
+
+They're followed by **suggestions**: the engine re-runs once with each required course made optional, and reports `"Suggestion: making MATH-021 optional gives schedules without it."` The engine never drops a required course on its own. When schedules *are* returned, `diagnostics` can still note an optional course that can't be added, or that the search limit was reached.
+
+### Search size (measured 2026-10-15)
+
+Measured on an Apple M5 Pro (JDK 25 running Java 21 bytecode). Synthetic catalogs: every course has 10 sections, random weekday times from 08:00 to 17:00, all five soft preferences on, credits 12–21, 20 seeds per row. The worst time is the slowest of the 20.
+
+| Courses | Cap 200k: worst time / cap hit | **Cap 1M (default)** | Cap 5M |
+|---|---|---|---|
+| 7 required | 22 ms / 0 of 20 | 27 ms / 0 of 20 | 23 ms / 0 of 20 |
+| 5 required + 3 optional, 3 labs per lecture | 27 ms / 2 of 20 | 54 ms / 0 of 20 | 53 ms / 0 of 20 |
+| 5 required + 5 optional | 30 ms / 19 of 20 | 124 ms / 6 of 20 | 183 ms / 0 of 20 |
+| 4 required + 10 optional | 33 ms / 20 of 20 | 162 ms / 20 of 20 | 626 ms / 16 of 20 |
+
+**Decided 2026-10-16 (engine owner):** the default node cap is **1,000,000**, and requests may list at most **8 optional courses**. Above about 5 optional courses with many sections each, a search can still stop at the cap. Its results are then valid but flagged `searchLimitReached`.
+
+**Optional courses drive the cost.** Each optional course multiplies the choices by (sections + 1). Required courses are cheap, because conflicts and the credit cap prune them hard. Real catalogs usually have far fewer sections per course than these synthetic ones. Options if the cap is hit too often in practice:
+- lower the optional-course limit (rule 2);
+- raise the node cap;
+- add an optimization: bundles of one course with identical times and credits score the same, so they could be searched once and expanded afterwards. Not implemented.
+
+### Scoring (🟡 implemented; to confirm with the Backend API owner)
+
+Each **active** soft preference (weight > 0 and a value set) contributes 0–20 penalty points:
+
+```
+points = round(4 × weight × r)        r ∈ [0, 1], weight ∈ 0..5   → at most 20 points
+score  = 100 − Σ points               5 preferences × 20 = 100, so score is always 0–100
+```
+
+| Breakdown key | `r` (raw penalty, normalized) |
+|---|---|
+| `earliestStart` | min(1, Σ over each class day of the minutes the class *starts* before `earliestStart`, ÷ 300). E.g. an 08:00 MWF class with earliest start 10:00 is 3 × 120 = 360 → r = 1. |
+| `latestEnd` | min(1, Σ over each class day of the minutes the class *ends* after `latestEnd`, ÷ 300) |
+| `daysOff` | requested days off that have any class ÷ number of requested days off |
+| `minimizeGaps` | min(1, weekly idle minutes between consecutive same-day classes ÷ 600) |
+| `optionalCourseIds` | optional courses left out ÷ number of optional courses (including ones that can't fit at all) |
+
+`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values. They were kept on 2026-10-16, to revisit with real schedules. **Earliest start, latest end and days off stay soft** (decided 2026-10-16): they lower a schedule's rank but never remove it. Blocked times are the way to forbid a time outright.
+
+**Ranking:**
+- By displayed points first, so a higher rank never shows a lower score.
+- Then by the exact weighted sum, which `ScheduleScorer` keeps as integers, so rounding ties are broken without floating point.
+- Then by **more of the student's electives included** (decided 2026-10-16). With an elective weight of 0, a schedule with a typed elective otherwise ties with the same schedule without it.
+- Then by the sorted list of CRNs.
+
+### Manual mode: `SelectionChecker` (🟡 implemented 2026-10-16)
+
+The app has two modes (owner decision, 2026-10-16):
+- **Suggested:** the frontend asks `generate` for `maxResults: 4`.
+- **Manual:** the student sees every section of their courses on a calendar and drags sections in.
+
+The engine supports manual mode with `new SelectionChecker().check(problem, selectedCrns)`. It uses the same `ScheduleProblem` as the solver and returns a `SelectionReport`:
+
+| Field | Use in the UI |
+|---|---|
+| `sections`, `totalCredits`, `score`, `breakdown` | Current schedule, scored exactly like generated ones |
+| `issues` (`SelectionIssue`: `type`, `severity`, `crns`, `message`) | `CONFLICT` → red warning on the placed sections (time clash, blocked time, two lectures of one course, two labs for one lecture, over max credits, unknown CRN). `INCOMPLETE` → prompt (lecture needs a LAB, lab needs its lecture, required course not placed, under min credits). `complete()` = no issues. |
+| `candidates` (`SectionFit`: `crn`, `fits`, `completesLecture`, `reasons`), one per unplaced section | `fits = false` → grey out while dragging, and show `reasons` on hover. `completesLecture = true` → highlight: the labs a placed lecture still needs. |
+
+Decisions (owner, 2026-10-16):
+- Bad drops are **greyed out and warned about**, not blocked. A placed conflict is reported, never refused.
+- Lecture and lab are **dragged separately**. Placing a lecture highlights its compatible labs, and a lab can't fit until its lecture is placed.
+
+Tests check that every schedule the solver generates passes the checker with zero issues and the identical score, so the two modes never disagree.
+
+**Proposed endpoint (for the Backend API owner to add and own in api-contract.md):** `POST /api/schedules/check`, with request `{ term, preferences, crns: string[] }`. The response is the `SelectionReport` fields above plus `overload`, with `breakdown` as `scoreBreakdown` like `generate`. It also needs one adapter method on `SchedulingEngine`. The frontend loads section times for the calendar from `GET /api/courses/{courseId}` (endpoint 4, planned).
+
+**Not engine scope:** listing a major's required courses automatically. That needs degree-requirement data and the student's major and completed courses (see HANDOFF).
+
+### Electives: flow and recommendations (🟡 engine implemented 2026-10-16)
+
+**Flow** (owner, 2026-10-16):
+1. **Suggested mode** usually gets only the required courses and returns 4 schedules.
+2. The student picks one and **adds electives in manual mode**: search the catalog and drag sections in, checked by `SelectionChecker`. Manual mode has **no elective limit**. The 8-course limit applies only to the optional list in a `generate` request, because that is what multiplies the search.
+3. Students can also **type electives up front**. They're sent as optional courses, and the engine fits as many as it can.
+
+**Recommendations: `ElectiveAdvisor`** (both kinds were requested):
+
+| Method | Returns | For |
+|---|---|---|
+| `explainElectives(problem, result)` | One `ElectiveAdvice` per typed elective: `status` (`IN_TOP_SCHEDULE`, `IN_OTHER_SUGGESTION`, `FITS_WITH_CHANGES`, `CANNOT_FIT`), a `summary` sentence, `fixes` sentences, and `alternativeCrns` | Explaining why a typed elective is missing and how to get it in. Example fixes: "Take MATH-021 20001 instead of 20002.", "Free up your blocked time Tue/Thu 15:00–18:00.", "Raise your maximum credits to 12.", "Take CSE-007 in another semester; it blocks ECO-001." |
+| `suggestElectives(problem, scheduleCrns, candidates, limit)` | `ElectiveSuggestion`s (course, the sections to add, credits and time-preference score after adding), best first | "Other electives that fit": `candidates` come from a catalog search (endpoint 3, or the demo major's elective list). Only courses that fit the schedule as it is are returned |
+
+To stay fast, the fix checks re-solve only the required courses plus that one elective, relaxing one thing at a time. The student's minimum credits are ignored in those checks, because the other electives are left out. A "raise your maximum to N" fix can exceed the API's 21-credit cap; the API layer should drop or reword it.
+
+**Proposed API (for the Backend API owner):**
+- Add `electiveAdvice` to the `generate` response.
+- Add `POST /api/schedules/suggest-electives` with `{ term, preferences, crns, q?/subject? }`. It searches the catalog for candidates and returns the suggestions.
+
+**Determinism rules.** The same input and catalog snapshot always give the same output, and tests check that shuffling the input changes nothing:
 - No randomness and no wall-clock limits. A time limit would make results depend on machine speed.
-- Iterate in a stable order: courses by ID, sections by CRN.
-- Break score ties by the lexicographic list of CRNs.
-- No hash-order dependence: use sorted lists or `LinkedHashMap`, never iterate a `HashSet` to produce output.
+- Iterate in a stable order: courses by ID, sections by CRN, components by name.
+- No hash-order dependence: `HashMap`/`HashSet` are used only for lookups, never iterated to produce output.
 
 **Why hand-written backtracking instead of a constraint solver** (OR-Tools, Choco, Timefold)?
 - The problem is small: a student typically schedules about 4–7 courses with a handful of sections each, which is well within reach of pruned search.
@@ -249,16 +382,16 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 | Constraint | Kind | Notes | Status |
 |---|---|---|---|
-| No two chosen sections overlap in time | **Hard** | Core guarantee | ⬜ |
-| Every required course is scheduled exactly once | **Hard** | Linked components (lab/recitation) must be included too, if the data models them | ⬜ |
-| Total credits within `[minCredits, maxCredits]` | **Hard** | **Hard cap 21 credits** (team rule); default range 12–18. Above 18 (above 17 for first-semester students) is an overload that needs approval under Lehigh policy, so those schedules are flagged `overload: true`. See [api-contract.md § Credit limits](api-contract.md#credit-limits). | ⬜ |
-| No class during `blockedTimes` | **Hard** | Work, practice, etc. | ⬜ |
-| Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | Depends on enrollment data being available | ⬜ |
+| No two chosen sections overlap in time | **Hard** | Core guarantee | 🟡 engine |
+| Every required course is scheduled exactly once | **Hard** | A lecture with linked sections is taken with exactly one linked section per component type (lab, recitation). See §7. | 🟡 engine |
+| Total credits within `[minCredits, maxCredits]` | **Hard** | **Hard cap 21 credits** (team rule); default range 12–18. Above 18 (above 17 for first-semester students) is an overload that needs approval under Lehigh policy, so those schedules are flagged `overload: true`. See [api-contract.md § Credit limits](api-contract.md#credit-limits). The engine enforces the range; the 21 cap and the overload flag are the API layer's job. | 🟡 engine range |
+| No class during `blockedTimes` | **Hard** | Work, practice, etc. | 🟡 engine |
+| Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | Depends on enrollment data being available. The caller filters, using `CourseOption.excluding` (§7 rule 4). | ⬜ caller |
 | Prerequisites satisfied | Out of MVP scope | Needs reliable prerequisite data and the student's history. The UI should say we don't check this. | — |
-| Include optional courses | Soft | Weighted; only if credits allow | ⬜ |
-| Earliest start / latest end | Soft | Penalty grows with minutes outside the window | ⬜ |
-| Days off | Soft | Penalty per class meeting on a preferred day off | ⬜ |
-| Minimize gaps between classes | Soft | Penalty per idle minute between same-day classes | ⬜ |
+| Include optional courses | Soft | Weighted; only if credits allow. Formulas for all soft preferences: [§7, Scoring](#7-scheduling-engine) | 🟡 engine |
+| Earliest start / latest end | Soft | Penalty grows with minutes outside the window | 🟡 engine |
+| Days off | Soft | Penalty per requested day off that has any class (one class already costs the day off) | 🟡 engine |
+| Minimize gaps between classes | Soft | Penalty grows with idle minutes between same-day classes | 🟡 engine |
 | Travel between campuses for back-to-back classes | Soft (future) | Needs location data | — |
 
 **Why separate the two kinds?** A hard constraint is a rule the result must obey. A soft preference is a ranking signal. Mixing them, for example by giving conflicts a huge penalty, can still let invalid schedules through and makes scores hard to interpret. The weights (0–5) come from the student, either set directly or extracted by the AI and confirmed by the student.

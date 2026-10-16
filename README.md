@@ -146,7 +146,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 |---|---|---|---|
 | `PORT` | Backend | No | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
-| `SCHEDULING_NODE_CAP` | Schedule API | No | `200000` |
+| `SCHEDULING_NODE_CAP` | Schedule API | No | `1000000` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
 | `CATALOG_SOURCE` | Backend | No | `dummy`: made-up courses, no database. `database` is reserved for the PostgreSQL catalog (not built yet). |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
@@ -158,9 +158,9 @@ cp .env.example .env    # optional right now; nothing is required yet
 
 `CORS_ALLOWED_ORIGINS` accepts comma-separated exact frontend origins, for example `http://localhost:3000,https://planner.example`. Do not include trailing slashes, paths, or wildcards. The allowlist replaces the localhost default. An empty value disables cross-origin access when using a same-origin frontend proxy. CORS covers `/api/**`, allows GET/HEAD/POST/OPTIONS with Accept/Content-Type headers, and disables credentials. Error responses use Problem Details with a `requestId` and matching `X-Request-Id` header; see the [API contract](docs/api-contract.md#error-responses).
 
-`SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 200,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
+`SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 1,000,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
 
-**Schedule API status:** `POST /api/schedules/generate` now validates requests, prepares catalog input, and maps solver results. Success paths are tested with explicit doubles. The fetched repository has no production scheduling engine or section catalog; valid requests return a safe **503** until `CourseCatalog`, `SectionCatalog`, and a `SchedulingEngine` adapter are registered. Invalid requests still return **400** before those dependencies are accessed. This includes more than 10 optional selections, measured before deduplication. See [architecture §7](docs/architecture.md#7-scheduling-engine) for the pending native-engine mapping; no solver algorithm or successful production results are fabricated.
+**Schedule API status:** `POST /api/schedules/generate` now validates requests, prepares catalog input, and maps solver results. Success paths are tested with explicit doubles. The fetched repository has no production scheduling engine or section catalog; valid requests return a safe **503** until `CourseCatalog`, `SectionCatalog`, and a `SchedulingEngine` adapter are registered. Invalid requests still return **400** before those dependencies are accessed. This includes more than 8 optional selections, measured before deduplication. See [architecture §7](docs/architecture.md#7-scheduling-engine) for the pending native-engine mapping; no solver algorithm or successful production results are fabricated.
 
 ### 4. Run the automated tests
 
