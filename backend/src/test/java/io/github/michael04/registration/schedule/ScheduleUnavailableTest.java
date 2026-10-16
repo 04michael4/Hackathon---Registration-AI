@@ -11,7 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** The actual app must start without pretending that the missing catalog and solver are implemented. */
+/** The app must start and return a safe 503 when required scheduling integrations are unavailable. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class ScheduleUnavailableTest {
