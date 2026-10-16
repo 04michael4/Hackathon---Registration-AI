@@ -162,8 +162,8 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 4. **David:** the catalog must give each section a component type and the CRN of its lecture, so the "lecture must have its lab" rule works. The credits convention is course credits on the lecture and 0 on its labs, unless the catalog says otherwise.
 5. **Michael:** nothing engine-specific. AI output reaches the engine only through `SchedulePreferences`.
 6. **Marpu:** add `POST /api/schedules/check` (proposed in architecture.md § 7 "Manual mode") and a `check` method on the `SchedulingEngine` adapter. **David:** the frontend's two modes: suggested (`generate` with `maxResults: 4`), and manual (calendar with every section of the student's courses, grey-out and highlight from `/check`). Manual mode also needs `GET /api/courses/{courseId}` (endpoint 4) for section times.
-8. **Marpu:** expose elective recommendations by adding `electiveAdvice` to the `generate` response and adding `POST /api/schedules/suggest-electives` (candidates from course search). Proposed in architecture.md § 7 "Electives".
 7. **Whole team, scope change:** the owner wants manual mode to list **the major's required courses automatically**. The README currently puts degree requirements out of scope. It needs degree-requirement data per major (David), the student's major and completed courses as input (frontend/AI), and an endpoint that returns the courses still required and offered this term (Marpu). A hand-entered requirement list for one demo major would be a feasible hackathon version. Not engine work.
+8. **Marpu:** expose elective recommendations by adding `electiveAdvice` to the `generate` response and adding `POST /api/schedules/suggest-electives` (candidates from course search). Proposed in architecture.md § 7 "Electives".
 
 **Next recommended**
 1. At merge: write the `SchedulingEngine` adapter and resolve the merge notes above, together with Marpu.
