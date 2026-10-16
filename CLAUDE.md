@@ -107,6 +107,7 @@ Details: [architecture.md § 4](docs/architecture.md#4-backend-package-structure
 - The engine has plain JUnit tests, with no Spring. Include determinism (same input twice gives identical output) and "no returned schedule contains a conflict".
 - AI code is tested with fakes. **`./mvnw test` must never call the real Anthropic API** or need network access, a database, or secrets.
 - Prefer slice tests to `@SpringBootTest` unless the full context is required.
+- `@WebMvcTest` skips `@Configuration` classes. Controller tests that check JSON formats (e.g. times as `"15:00"`) must `@Import(JsonConfiguration.class)`.
 - Bug fixes come with a test that fails without the fix.
 
 ## Documentation update requirements

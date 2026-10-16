@@ -4,21 +4,51 @@ Live record of project progress. **Read it at the start of every session; update
 
 | | |
 |---|---|
-| **Last updated** | 2026-10-15 16:45 EDT, by a Claude Code session for @04michael4 |
-| **Current milestone** | Phase 1: backend foundation. ✅ Implemented and verified locally; committed on `feature/backend-foundation`. **Awaiting review before merging to `main`.** |
-| **Next milestone** | Phase 2: _to be defined by the team_ (see [Next recommended tasks](#next-recommended-tasks)) |
+| **Last updated** | 2026-10-15 22:01 EDT, by a Claude Code session for Michael (@04michael4), on `feature/ai-preference-extractor` |
+| **Current milestone** | Phase 1 (backend foundation) ✅ merged to `main` via PR #1. Phase 2 in progress: AI Integration step 1 committed and pushed on `feature/ai-preference-extractor`, awaiting PR review (not merged to `main`). |
+| **Next milestone** | AI step 2 (Claude), and the other modules' first PRs (see [Next recommended tasks](#next-recommended-tasks)) |
 
 ## Repository state
 
 | | |
 |---|---|
-| Branch | `feature/backend-foundation`, pushed to `origin/feature/backend-foundation` for review |
-| Base commit | `8ea194c` "Initial commit" (`main` is still at this commit) |
-| Phase 1 commit | `feat: initialize Spring Boot backend and team documentation`, the commit directly after `8ea194c` on this branch (run `git log` for the hash). Contains the backend skeleton, health endpoint, tests and docs. |
-| Merged to `main`? | **No.** Waiting for review. |
+| `main` | `098cf09` "docs: finalize API contract and apply Lehigh credit-load policy". Phase 1 was merged via PR #1 (`76a8310`). |
+| AI branch | `feature/ai-preference-extractor`, created from `098cf09`. Step 1 is in the commit "feat(ai): implement validated preference extraction with dummy provider" (run `git log` for the hash), pushed to `origin/feature/ai-preference-extractor`. **Not merged to `main`.** |
+| Other branches | `dev-marpu` (at `76a8310`, no new commits); `feature/backend-foundation` (merged) |
 | Toolchain verified | OpenJDK 21.0.12 (Homebrew), Maven 3.10.0 via wrapper, Spring Boot 4.1.1, macOS |
 
 ## Latest test results
+
+**Run 2026-10-15 22:00 EDT** on `feature/ai-preference-extractor`, immediately before the step 1 commit, command `cd backend && ./mvnw -B clean test`:
+
+```
+Tests run: 4,  Failures: 0 -- course.CourseCatalogSelectionTest
+Tests run: 2,  Failures: 0 -- health.HealthControllerTest
+Tests run: 4,  Failures: 0 -- common.json.JsonConfigurationTest
+Tests run: 7,  Failures: 0 -- ai.PreferenceControllerTest
+Tests run: 15, Failures: 0 -- ai.PreferenceAssemblerTest
+Tests run: 4,  Failures: 0 -- ai.PreferenceExtractionServiceTest
+Tests run: 14, Failures: 0 -- ai.CourseMentionResolverTest
+Tests run: 1,  Failures: 0 -- RegistrationBackendApplicationTests
+Tests run: 51, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS   (Total time: 3.131 s)
+```
+
+**Live check, 21:57 EDT, same code** (packaged jar on `localhost:8080`):
+
+| Case | Result |
+|---|---|
+| `AI_PROVIDER=dummy`: `POST /api/preferences/extract` | `200`, contract JSON with times as `"15:00"` |
+| `AI_PROVIDER=none`: `POST /api/preferences/extract` | `503` |
+| No env vars set (defaults: `none`, catalog `dummy`) | `503`; the app starts without a database |
+| `CATALOG_SOURCE=database` (no database catalog exists yet) | Startup fails as intended: "required a bean of type 'CourseCatalog' that could not be found", and the process exits |
+| `GET /api/health` | `200` |
+
+Earlier the same evening (21:40, before the catalog change): unknown term → `422`, blank text → `400`.
+
+**Checks:** `git diff --check` clean. No credentials or secret patterns in any of the 39 changed or new files. No `.env` files or build artifacts.
+
+### Earlier: Phase 1 baseline
 
 **Run 2026-10-15 16:45 EDT** (just before the Phase 1 commit), command `cd backend && ./mvnw -B clean test`:
 
@@ -126,18 +156,44 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## AI Integration
 
-**Owner:** _TBD_ · **Status:** ⬜ Not started
+**Owner:** Michael (@04michael4) · **Status:** 🟡 Step 1 committed and pushed on `feature/ai-preference-extractor` (PR pending, not merged); Claude not connected yet
 
-**Completed:** _none_. The design is proposed in [architecture.md § 9](docs/architecture.md#9-ai-integration-and-validation).
+**Completed** (2026-10-15, branch `feature/ai-preference-extractor`)
+- `POST /api/preferences/extract`: request validation (400), unknown term (422, checked before any AI call), AI unavailable (503), invalid AI output (502).
+- `PreferenceExtractor` interface with providers chosen by `AI_PROVIDER`: `none` (default, 503) and `dummy` (fixed example, no key).
+- `CourseMentionResolver`: "CSE 17", "cse017", "CSE-017" become `CSE-017`; title nicknames like "Calc 1" become `MATH-021`. It only resolves when exactly one course matches; otherwise the mention goes to `unresolved`. Course IDs never come from the AI.
+- `PreferenceAssembler`: validates everything from the AI. Defaults 12–18, caps at 21, overload warning above 18, drops invalid times and days with warnings, clamps weights to 0–5, drops weight-0 preferences.
+- **Shared stand-ins for Marpu to take over:**
+  - `common/preferences/` (`SchedulePreferences` records, `CreditLimits`, `Weights`);
+  - `course/CourseCatalog` and `DummyCourseCatalog` (8 fake courses, term `2027-SPRING`);
+  - `common/json/JsonConfiguration`, which writes times as `"HH:mm"`.
+- Added `spring-boot-starter-validation` to `pom.xml`.
+- Tests: 40 new (resolver 14, assembler 15, service 4, controller 7).
+- Cleanup, 2026-10-15 21:57:
+  - `DummyCourseCatalog` is now active only when `app.catalog.source=dummy` (env `CATALOG_SOURCE`, the default), so it can't conflict with a database catalog. `CourseCatalogSelectionTest` (4) proves exactly one catalog exists for each setting.
+  - `JsonConfigurationTest` (4) proves the contract's `SchedulePreferences` JSON reads and writes losslessly, with `"HH:mm"` times.
+  - README "Michael: AI Integration" now matches the code, and David's section explains how to replace the dummy catalog.
+
+**Notes for teammates** (shared stand-ins created on this branch; please review them in the PR)
+- **Marpu:**
+  - Take over `common/preferences/`, `course/CourseCatalog`, `course/CourseSummary` and `common/json/JsonConfiguration`, rather than writing new versions.
+  - `spring-boot-starter-validation` is already in `pom.xml`.
+  - The records enforce 1–21 credits with `@Max`, but nothing checks `minCredits ≤ maxCredits` or start-before-end on incoming requests. Your generate endpoint needs those checks.
+  - `@WebMvcTest` needs `@Import(JsonConfiguration.class)`.
+- **David:**
+  - Annotate your catalog with `@ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "database")` and run with `CATALOG_SOURCE=database`. Steps are in README, David's Part A, step 5.
+  - The frontend can use `AI_PROVIDER=dummy` now.
+  - Times arrive as `"15:00"`; days as `"FRIDAY"`, sorted Monday to Sunday.
+- **Sunny:** nothing to integrate yet. Your engine shouldn't use `SchedulePreferences` directly; Marpu's `schedule` package converts it into your engine's own records. Weights are 0–5, and a preference with weight 0 is omitted.
 
 **In progress:** _none_.
 
 **Next recommended**
-1. Agree with the Engine owner on the final `SchedulePreferences` shape; the proposal is in the [contract](docs/api-contract.md#5-post-apipreferencesextract).
-2. Add `com.anthropic:anthropic-java` (pin the version; check Jackson compatibility with Boot 4) behind a `PreferenceExtractor` interface, with a fake for tests.
-3. Build `POST /api/preferences/extract` with server-side validation. `./mvnw test` must not call the real API.
+1. Step 2: add `com.anthropic:anthropic-java` (pin the version; check Jackson compatibility with Boot 4) and a `ClaudePreferenceExtractor` that returns `RawPreferences` through structured output, with `AI_PROVIDER=claude`.
+2. Evaluation set of 15–20 example sentences, run only with `RUN_LIVE_AI=true`.
+3. Marpu: review and take over the shared stand-ins; David: replace `DummyCourseCatalog` with the database catalog.
 
-**Blockers:** each developer needs their own Anthropic API key, kept in a local `.env` or shell environment and never committed.
+**Blockers:** step 2 needs an Anthropic API key (each developer's own, in a local `.env` or shell environment, never committed).
 
 ---
 
@@ -182,6 +238,9 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-15 22:01 EDT | Claude Code for Michael | AI Integration | Pre-commit checks passed (51/51 tests, diff-check clean, no secrets or artifacts); committed step 1 and pushed `feature/ai-preference-extractor`. Not merged. Claude provider not built. |
+| 2026-10-15 21:58 EDT | Claude Code for Michael | AI Integration | Step 1 cleanup: dummy catalog switchable via `CATALOG_SOURCE`; JSON contract round-trip tests; README AI section corrected; David's replacement steps added. 51/51 tests pass; live-checked dummy 200, none 503, database setting fails clearly. Uncommitted. |
+| 2026-10-15 21:45 EDT | Claude Code for Michael | AI Integration | Step 1 on `feature/ai-preference-extractor`: extract endpoint, resolver, validator, dummy/none providers, shared stand-ins (preferences, catalog, JSON time format). 43/43 tests pass; live-checked 200/400/422/503. Uncommitted. |
 | 2026-10-15 21:30 EDT | Claude Code for @04michael4 | docs | Credit limits updated from Lehigh's overload policy (cap 21, overload flag); updated api-contract.md, architecture.md, README, HANDOFF.md. Docs only. |
 | 2026-10-15 21:22 EDT | Claude Code for @04michael4 | docs | Team agreed the API contract as written; removed "provisional" markers from api-contract.md, architecture.md and HANDOFF.md. Docs only, no code changes. |
 | 2026-10-15 16:45 EDT | Claude Code for @04michael4 | Backend API / docs | Pre-commit checks; marked API contract, credit limits and team roles as provisional; re-ran tests (3/3 pass) and verified health with curl. Committed Phase 1 and pushed to `origin/feature/backend-foundation`; not merged to `main`. |

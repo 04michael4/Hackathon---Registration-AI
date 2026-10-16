@@ -18,7 +18,7 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | ⬜ Planned | Backend API (+ Data) |
 | 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ⬜ Planned | Backend API (+ Data) |
 | 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ⬜ Planned | Backend API (+ Data) |
-| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ⬜ Planned | AI Integration |
+| 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | 🟡 Implemented (no Claude yet) | AI Integration |
 | 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ⬜ Planned | Scheduling Engine |
 | 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ⬜ Planned (stretch) | AI Integration |
 
@@ -216,7 +216,17 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 ## 5. `POST /api/preferences/extract`
 
-**Status: ⬜ Planned, not implemented.** Module: AI Integration. **Priority: high.**
+**Status: 🟡 Implemented, without Claude yet** (branch `feature/ai-preference-extractor`). Module: AI Integration. **Priority: high.** Code: [`ai/PreferenceController`](../backend/src/main/java/io/github/michael04/registration/ai/PreferenceController.java).
+
+The endpoint, validation, course-name resolution and error codes all work. The AI step is chosen with `AI_PROVIDER`:
+
+| `AI_PROVIDER` | Behavior |
+|---|---|
+| `none` (default) | Returns `503`, so the frontend shows the manual form |
+| `dummy` | Ignores the text and returns the example below, so you can build the frontend without an API key |
+| `claude` | ⬜ Not built yet; this is the next step |
+
+Course data currently comes from a temporary dummy catalog with one term, `2027-SPRING`.
 
 **Purpose:** turn a student's free-text description of what they want into a structured `SchedulePreferences` object (the same shape that [`/api/schedules/generate`](#6-post-apischedulesgenerate) accepts). The frontend shows the result to the student for **review and editing before** they generate schedules. The AI proposes; the student confirms.
 
@@ -415,6 +425,7 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-15 | Endpoint 5 implemented without Claude (`AI_PROVIDER` = `none` / `dummy`); times are serialized as `"HH:mm"` | Michael |
 | 2026-10-15 | Credit limits follow Lehigh's overload policy: hard cap 21 (was 24), normal load 17/18, overload approvals; added `schedules[].overload` | Michael, with the team |
 | 2026-10-15 | Team agreed the whole contract as written; provisional status removed | Michael, David, Marpu, Sunny |
 | 2026-10-15 | Initial contract: health implemented; endpoints 2–7 proposed | Claude Code session for @04michael4 |
