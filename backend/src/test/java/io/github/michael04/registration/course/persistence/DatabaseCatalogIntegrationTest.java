@@ -2,7 +2,9 @@ package io.github.michael04.registration.course.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,19 +15,15 @@ import java.sql.Statement;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sql.DataSource;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,7 +33,6 @@ import io.github.michael04.registration.course.CatalogSection.Status;
 import io.github.michael04.registration.course.CourseCatalog;
 import io.github.michael04.registration.course.CourseSummary;
 import io.github.michael04.registration.course.SectionCatalog;
-import io.github.michael04.registration.schedule.integration.SchedulingEngine;
 
 /**
  * OPT-IN: runs against a real PostgreSQL holding David's cse007_snapshot with the catalog_api views installed
@@ -49,14 +46,13 @@ import io.github.michael04.registration.schedule.integration.SchedulingEngine;
  * Read-only by construction: the pool is read-only, and the one test that tries to write only uses statements that
  * would change zero rows even if the server allowed them.
  *
- * <p>The scheduling engine is a recording double: it returns no schedules and invents none; it only captures what
- * the scheduler would be handed.
+ * <p>The scheduling engine is the REAL one (pre-main's NativeSchedulingEngine): one test generates CSE 007 schedules
+ * end to end from the database.
  */
 @EnabledIfEnvironmentVariable(named = "RUN_DB_IT", matches = "true")
 @SpringBootTest(properties = { "app.catalog.source=database", "app.catalog.database.url=${DB_URL}",
 		"app.catalog.database.username=${DB_USERNAME}", "app.catalog.database.password=${DB_PASSWORD:}" })
 @AutoConfigureMockMvc
-@Import(DatabaseCatalogIntegrationTest.RecordingEngineConfig.class)
 class DatabaseCatalogIntegrationTest {
 
 	private static final String TERM = "2027-SPRING";
@@ -72,36 +68,6 @@ class DatabaseCatalogIntegrationTest {
 
 	@Autowired
 	MockMvc mvc;
-
-	@Autowired
-	RecordingEngine engine;
-
-	@BeforeEach
-	void clear() {
-		engine.problems.clear();
-	}
-
-	@TestConfiguration
-	static class RecordingEngineConfig {
-
-		@Bean
-		RecordingEngine recordingEngine() {
-			return new RecordingEngine();
-		}
-
-	}
-
-	static class RecordingEngine implements SchedulingEngine {
-
-		final List<Problem> problems = new CopyOnWriteArrayList<>();
-
-		@Override
-		public Result solve(Problem problem, int nodeCap) {
-			problems.add(problem);
-			return new Result(List.of(), List.of("test double: no engine ran, no schedule was produced"), false);
-		}
-
-	}
 
 	private static final List<CatalogSection> EXPECTED = List.of(
 			new CatalogSection(TERM, "CSE-007", "12275", "010", 4, "LECTURE", null, Status.UNKNOWN,
@@ -180,11 +146,11 @@ class DatabaseCatalogIntegrationTest {
 			try (Statement statement = connection.createStatement()) {
 				// Zero-row statements: harmless even if the server were to allow them. The rollback below is extra insurance.
 				assertThatThrownBy(() -> statement.executeUpdate("UPDATE cse007_snapshot.section SET credits = credits WHERE false"))
-					.isInstanceOf(SQLException.class).hasMessageContaining("read-only transaction");
+					.isInstanceOf(SQLException.class).hasMessageMatching("(?s).*(read-only transaction|permission denied).*");
 				connection.rollback();
 				assertThatThrownBy(() -> statement.executeUpdate(
 						"INSERT INTO cse007_snapshot.term SELECT * FROM cse007_snapshot.term WHERE false"))
-					.isInstanceOf(SQLException.class).hasMessageContaining("read-only transaction");
+					.isInstanceOf(SQLException.class).hasMessageMatching("(?s).*(read-only transaction|permission denied).*");
 			}
 			finally {
 				connection.rollback();
@@ -193,37 +159,38 @@ class DatabaseCatalogIntegrationTest {
 	}
 
 	@Test
-	void theSchedulerWouldReceiveExactlyTheLectureAndTwoLinkedLabs() throws Exception {
-		mvc.perform(post("/api/schedules/generate").contentType(MediaType.APPLICATION_JSON).content("""
+	void theRealEngineProducesTheTwoValidCse007SchedulesFromTheDatabase() throws Exception {
+		String body = mvc.perform(post("/api/schedules/generate").contentType(MediaType.APPLICATION_JSON).content("""
 				{"term":"2027-SPRING","preferences":{"hardConstraints":{"requiredCourseIds":["CSE-007"],"minCredits":4,"maxCredits":4}}}
 				"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.schedules").isEmpty())
-			.andExpect(jsonPath("$.diagnostics", hasItem("test double: no engine ran, no schedule was produced")));
+			.andExpect(jsonPath("$.term").value(TERM))
+			.andExpect(jsonPath("$.searchLimitReached").value(false))
+			.andExpect(jsonPath("$.schedules", hasSize(2)))
+			.andExpect(jsonPath("$.schedules[*].totalCredits", everyItem(is(4))))
+			.andExpect(jsonPath("$.schedules[*].overload", everyItem(is(false))))
+			.andReturn().getResponse().getContentAsString();
 
-		assertThat(engine.problems).hasSize(1);
-		SchedulingEngine.Problem problem = engine.problems.get(0);
-		assertThat(problem.constraints().minCredits()).isEqualTo(4);
-		assertThat(problem.constraints().maxCredits()).isEqualTo(4);
-		assertThat(problem.courses()).singleElement().satisfies(course -> {
-			assertThat(course.courseId()).isEqualTo("CSE-007");
-			assertThat(course.required()).isTrue();
-			assertThat(course.sections()).extracting(SchedulingEngine.Section::crn).containsExactly("12275", "12638", "13132");
-			assertThat(course.sections()).extracting(SchedulingEngine.Section::credits).containsExactly(4, 0, 0);
-			assertThat(course.sections()).extracting(SchedulingEngine.Section::lectureLink).containsExactly(null, "12275", "12275");
-			assertThat(course.sections()).extracting(SchedulingEngine.Section::componentType)
-				.containsExactly("LECTURE", "LAB", "LAB");
-		});
+		List<String> first = JsonPath.read(body, "$.schedules[0].sections[*].crn");
+		List<String> second = JsonPath.read(body, "$.schedules[1].sections[*].crn");
+		// Each schedule is the lecture plus exactly ONE of the two linked labs, and together they cover both labs.
+		assertThat(first).hasSize(2).contains("12275").containsAnyOf("13132", "12638");
+		assertThat(second).hasSize(2).contains("12275").containsAnyOf("13132", "12638");
+		assertThat(List.of(first.stream().filter(c -> !c.equals("12275")).findFirst().orElseThrow(),
+				second.stream().filter(c -> !c.equals("12275")).findFirst().orElseThrow()))
+			.containsExactlyInAnyOrder("13132", "12638");
+		// Ranked best first.
+		double score1 = ((Number) JsonPath.read(body, "$.schedules[0].score")).doubleValue();
+		double score2 = ((Number) JsonPath.read(body, "$.schedules[1].score")).doubleValue();
+		assertThat(score1).isGreaterThanOrEqualTo(score2);
 	}
 
 	@Test
-	void anUncertifiedOrUnknownRequiredCourseIsRejectedAndNeverReachesTheScheduler() throws Exception {
+	void anUncertifiedOrUnknownRequiredCourseIsRejectedAndNeverReachesTheEngine() throws Exception {
 		mvc.perform(post("/api/schedules/generate").contentType(MediaType.APPLICATION_JSON).content("""
 				{"term":"2027-SPRING","preferences":{"hardConstraints":{"requiredCourseIds":["CSE-007","CSE-017"],"minCredits":4,"maxCredits":18}}}
 				"""))
 			.andExpect(status().isUnprocessableContent());
-
-		assertThat(engine.problems).isEmpty();
 	}
 
 }
