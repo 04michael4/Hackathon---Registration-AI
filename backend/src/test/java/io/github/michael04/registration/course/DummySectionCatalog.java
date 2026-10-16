@@ -12,15 +12,14 @@ import org.springframework.stereotype.Component;
 import io.github.michael04.registration.course.CatalogSection.Status;
 
 /**
- * TEMPORARY made-up sections for the courses in {@link DummyCourseCatalog}, so the app can build schedules
- * with no database. Not real Lehigh data: CRNs, times and rooms are invented.
+ * Test-only made-up sections for {@link DummyCourseCatalog}. Retained for deterministic unit/API regression tests;
+ * never packaged in the application. CRNs, times and rooms are synthetic.
  *
  * <p>The data covers the cases a demo needs: a lecture with labs and recitations (PHY-011), a lecture with
  * recitations (ECO-001), a closed section (CSE-017 012), early classes, a Friday-only section, and sections that
  * clash with each other.
  *
- * <p>Active under the same switch as {@link DummyCourseCatalog} ({@code app.catalog.source=dummy}, the default).
- * In {@code database} mode the PostgreSQL-backed catalogs replace both.
+ * <p>Active under the same test-only switch as {@link DummyCourseCatalog}. Production uses PostgreSQL catalogs.
  */
 @Component
 @ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "dummy", matchIfMissing = true)

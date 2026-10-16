@@ -1,0 +1,33 @@
+{
+  "verifiedAt": "2026-10-16T23:12:34.194485+00:00",
+  "test": "Stopped only the task-owned isolated PostgreSQL cluster after successful scheduling; application kept running",
+  "request": {
+    "term": "2027-SPRING",
+    "preferences": {
+      "hardConstraints": {
+        "requiredCourseIds": [
+          "CSE-007"
+        ],
+        "minCredits": 4,
+        "maxCredits": 4
+      }
+    }
+  },
+  "actualStatus": 503,
+  "response": {
+    "detail": "Service is temporarily unavailable",
+    "instance": "/api/schedules/generate",
+    "status": 503,
+    "title": "Service Unavailable",
+    "type": "about:blank",
+    "requestId": "defdb54a-603d-438c-8ec7-47cab1580365"
+  },
+  "healthStatus": 200,
+  "healthResponse": {
+    "status": "UP",
+    "service": "registration-backend"
+  },
+  "passed": 2,
+  "failed": 0,
+  "fallbackUsed": false
+}

@@ -18,8 +18,8 @@ import io.github.michael04.registration.course.DummyCourseCatalog;
 import io.github.michael04.registration.course.SectionCatalog;
 
 /**
- * With the default settings the app must start with no database at all, even though the PostgreSQL driver, HikariCP and
- * spring-jdbc are now on the classpath. (Spring Boot's own JDBC starter would have broken this.)
+ * The Maven test profile uses test-only catalog fixtures and requires no database.
+ * The packaged application instead defaults to the authoritative database catalog.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

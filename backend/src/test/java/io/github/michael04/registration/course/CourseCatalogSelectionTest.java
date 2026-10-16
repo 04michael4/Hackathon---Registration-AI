@@ -43,15 +43,14 @@ class CourseCatalogSelectionTest {
 	}
 
 	@Test
-	void applicationDefaultSelectsTheDummy() {
-		// Mirrors application.properties: app.catalog.source=${CATALOG_SOURCE:dummy}
+	void testFixtureCanBeExplicitlySelectedWithoutDatabaseSettings() {
+		// Test-only fixture selection. The production default is database, verified by the packaging check.
 		runner.withPropertyValues("app.catalog.source=${CATALOG_SOURCE:dummy}")
 			.run(ctx -> assertThat(ctx).hasSingleBean(DummyCourseCatalog.class));
 	}
 
 	/**
-	 * Test-only stand-in for David's future database-backed catalog. It shows the annotation
-	 * the real class needs; it is not database code.
+	 * Test-only stand-in that isolates conditional bean selection; actual JDBC wiring has its own tests.
 	 */
 	@ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "database")
 	static class DatabaseCatalogStandIn implements CourseCatalog {
