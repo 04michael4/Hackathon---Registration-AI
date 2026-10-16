@@ -115,7 +115,7 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); persistence, production providers and course endpoints pending | Backend API (+ Data) |
+| `course` | 🟡 | Read interfaces `CourseCatalog`, `SectionCatalog`, `CourseSummary`, `CatalogSection`; `DummyCourseCatalog` (default, made-up courses); `persistence`: read-only JDBC catalog over the `catalog_api` views, active only with `CATALOG_SOURCE=database` ([ADR-0002](decisions/0002-read-only-database-catalog-through-catalog-api-views.md), [database guide](database.md)); course endpoints pending | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
 | `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine (2026-10-16). Production catalogs pending. | Backend API |
@@ -194,6 +194,7 @@ Design choices:
 - **Read-mostly.** Data is imported from snapshots in `data/`, and students never write catalog data. The MVP stores no user data and has no user accounts.
 - **Migrations:** Flyway or Liquibase (_TBD_). The schema is versioned in code; no manual DDL.
 - **Linked sections** (lecture + lab/recitation) and **variable credits** depend on what the data source provides. They're marked TBD in the schema.
+- **What is implemented (2026-10-16):** the schema actually in use is `cse007_snapshot` (CSE 007 only), read through the five `catalog_api` views; the entity diagram above is the original proposal, not the running schema. An append-only `banner_evidence` schema records Banner and user-report evidence apart from the catalog; nothing in it makes a course schedulable. See [database.md](database.md).
 
 ## 6. REST API design
 
