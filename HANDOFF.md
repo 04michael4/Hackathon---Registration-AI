@@ -109,18 +109,43 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Scheduling Engine
 
-**Owner:** _TBD_ · **Status:** ⬜ Not started
+**Owner:** Sunny (per the [README team table](README.md#team-and-responsibilities)) · **Status:** 🟡 Engine types implemented, uncommitted on `feature/engine-core`; solver not started
 
-**Completed:** _none_. The design is proposed in [architecture.md § 7–8](docs/architecture.md#7-scheduling-engine).
+**Scope:** `engine/` only. Per the team-agreed README work plan, the `schedule/` package and `POST /api/schedules/generate` belong to the Backend API module (Marpu). See the discrepancy note below.
 
-**In progress:** _none_.
+**Completed**
+- 2026-10-15: Engine input/output records and the `ScheduleSolver` interface, with no solver logic: `Meeting`, `SectionOption`, `CourseOption`, `Constraints`, `SoftWeights`, `ScheduleProblem`, `ScoredSchedule`, `ScheduleResult`. Compact constructors validate the input (start before end, weights 0–5, `0 ≤ min ≤ max` credits, unique course IDs and CRNs) and copy collections defensively. Days are stored as `EnumSet`, so they always iterate in a fixed order. Documented in [architecture.md § 7](docs/architecture.md#7-scheduling-engine).
+- 2026-10-15: Tests `MeetingTest` (6) and `ScheduleProblemTest` (14): plain JUnit 5, no Spring. Results in the session log below.
+- 2026-10-15: Scoring formula written down in architecture.md § 7: ≤ 20 points per preference, `score = 100 − Σ points`. Approved by the engine owner; **still to be confirmed with Marpu.**
+- 2026-10-15: **Linked sections** (owner decision): one lecture may allow several labs or recitations, and a lecture with linked sections must be taken with exactly one per component type. Modeled as `SectionOption.component` + `parentCrn`; the engine builds the lecture+lab bundles itself.
+- 2026-10-15: **Infeasible input** (owner decision): return diagnostics plus a suggestion of which required course to make optional. No contract change.
+- 2026-10-15: **Rules for the caller** (8 of them) written down in architecture.md § 7. Per the owner, the engine defines them and the Backend API follows. Rule 2 (at most 10 optional courses → `400`) still needs a line in api-contract.md from Marpu.
+
+**In progress:** Sunny, branch `feature/engine-core`. Types-only change waiting for the owner's review, then a PR for Marpu to review, because the engine types are a shared interface.
 
 **Next recommended**
-1. Create the `engine` package with immutable input records (`CourseOption`, `SectionOption`, `Meeting`) and the time-overlap check, plus unit tests.
-2. Add backtracking search, top-K scoring and determinism tests, using hand-made fixtures. No DB is needed.
-3. Then build the `schedule` package and `POST /api/schedules/generate`, per the [contract](docs/api-contract.md#6-post-apischedulesgenerate).
+1. Send Marpu the engine types, the caller rules and the scoring formula (architecture.md § 7). David needs to know the catalog must give each section a component type and its lecture link.
+2. `BacktrackingScheduleSolver implements ScheduleSolver`:
+   - overlap check;
+   - expanding lectures into lecture+lab bundles, and pre-filtering them against blocked times;
+   - a conflict table;
+   - search with fewest-options-first ordering, credit pruning and branch-and-bound;
+   - the node cap and top-K;
+   - scoring, diagnostics, and the "make X optional" suggestion.
+3. Tests from the README plan:
+   - overlap edge cases;
+   - the CSE-017/MATH-021 worked example;
+   - lecture/lab bundles;
+   - infeasibility diagnostics and suggestions;
+   - determinism with shuffled input;
+   - a seeded random catalog (no conflicts, credits in range, every lecture has its labs);
+   - 7 × 10 sections solving in under a second.
 
-**Blockers:** none for steps 1–2.
+**Blockers:** none for step 2. Step 1 needs Marpu.
+
+**Discrepancies found 2026-10-15** (flagged, not edited, because they're outside this module):
+- CLAUDE.md (module table) and architecture.md § 4 list `schedule` under the Scheduling Engine module, but the README team plan gives it to Backend API (Marpu). The owners should pick one and fix the other docs.
+- The repo header, the *Repository state* section and the README "Current phase" line still say Phase 1 isn't merged and `main` is at `8ea194c`. In fact PR #1 was merged, and `main`/`origin/main` are at `098cf09`. Module owners in the *Module ownership* table here are also still _TBD_.
 
 ---
 
@@ -182,6 +207,8 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-15 22:08 EDT | Claude Code for Sunny | Scheduling Engine | Lecture/lab links added to the engine types (`component`, `parentCrn`; one lecture → many labs). Documented the infeasibility suggestion, the 8 caller rules for the Backend API, and the search-size plan in architecture.md § 7–8. `cd backend && ./mvnw -B test` → `Tests run: 23, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
+| 2026-10-15 21:42 EDT | Claude Code for Sunny | Scheduling Engine | Renamed the local branch `Scheduling-Engine` → `feature/engine-core`. Added the engine records and the `ScheduleSolver` interface (types only, no solver), 17 plain-JUnit tests, and architecture.md § 7–8 (engine API, scoring formula). `cd backend && ./mvnw -B test` → `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
 | 2026-10-15 21:30 EDT | Claude Code for @04michael4 | docs | Credit limits updated from Lehigh's overload policy (cap 21, overload flag); updated api-contract.md, architecture.md, README, HANDOFF.md. Docs only. |
 | 2026-10-15 21:22 EDT | Claude Code for @04michael4 | docs | Team agreed the API contract as written; removed "provisional" markers from api-contract.md, architecture.md and HANDOFF.md. Docs only, no code changes. |
 | 2026-10-15 16:45 EDT | Claude Code for @04michael4 | Backend API / docs | Pre-commit checks; marked API contract, credit limits and team roles as provisional; re-ran tests (3/3 pass) and verified health with curl. Committed Phase 1 and pushed to `origin/feature/backend-foundation`; not merged to `main`. |

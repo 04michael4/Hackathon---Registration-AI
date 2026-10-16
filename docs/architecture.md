@@ -117,7 +117,7 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | `common` | ⬜ | Global error handling (`@RestControllerAdvice`), web config such as CORS | Backend API |
 | `course` | ⬜ | Course/section entities, repositories, search service, `CourseController` | Backend API |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
-| `engine` | ⬜ | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. | Scheduling Engine |
+| `engine` | 🟡 types only | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Input/output records and `ScheduleSolver` exist; no solver yet ([§7](#7-scheduling-engine)). | Scheduling Engine |
 | `schedule` | ⬜ | `ScheduleController`, maps `course` data to `engine` input, maps results to DTOs | Scheduling Engine |
 | `ai` | ⬜ | Claude client wrapper, prompts, output validation, `PreferenceController` | AI Integration |
 
@@ -206,9 +206,67 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 ## 7. Scheduling engine
 
-**Status: ⬜ planned.** Module: Scheduling Engine. Package: `engine`.
+**Status: 🟡 types implemented (2026-10-15); solver ⬜ planned.** Module: Scheduling Engine. Package: `engine`.
 
 **Problem:** for each required course, pick exactly one section (plus linked components) so that no hard constraint is violated. Optionally add courses from the optional list. Then rank the feasible combinations by soft-preference penalty.
+
+### Engine API (🟡 implemented, shared interface)
+
+The `schedule` package calls the engine through these types only. They're a [shared interface](../CLAUDE.md#shared-interfaces), so changes need the Backend API owner's review.
+
+| Type | Role |
+|---|---|
+| `ScheduleSolver` | `ScheduleResult solve(ScheduleProblem problem)`. Pure, deterministic, never throws for infeasible input. *(No implementation yet.)* |
+| `ScheduleProblem(courses, constraints, soft, maxResults)` | Complete input. Course IDs unique, CRNs unique across courses, `maxResults ≥ 1`. Input order doesn't matter. |
+| `CourseOption(courseId, required, sections)` | A requested course with **all** its sections (lectures and linked labs/recitations). Required and optional courses share this type; `required` tells them apart. |
+| `SectionOption(crn, courseId, component, parentCrn, credits, meetings)` | One section. `component` is e.g. `LEC`, `LAB`, `REC`. `parentCrn` is `null` for a lecture or standalone section, or the CRN of the lecture a lab or recitation belongs to. An empty `meetings` list conflicts with nothing. |
+| `Meeting(days, start, end)` | Weekly block, `start < end`, no midnight crossing. Used for class meetings and blocked times. |
+| `Constraints(minCredits, maxCredits, blockedTimes)` | Hard constraints. Only checks `0 ≤ min ≤ max`; the 21-credit cap is enforced by the API layer. |
+| `SoftWeights(earliestStart, …Weight, latestEnd, …Weight, daysOff, …Weight, gapsWeight, optionalCoursesWeight)` | Soft preferences, weights 0–5. Times are `null` when unset. |
+| `ScoredSchedule(sections, totalCredits, penalty, score, breakdown)` | One valid schedule. `sections` lists every chosen CRN, including labs: by course ID, then each lecture before its linked sections. |
+| `ScheduleResult(schedules, diagnostics, searchLimitReached)` | Best first. |
+
+**Rules for the caller (`schedule` package, Backend API).** The engine defines these; the Backend API follows them:
+1. Reject invalid requests before calling the engine: credits outside 1–21, `minCredits > maxCredits`, weights outside 0–5, an empty `requiredCourseIds`, `maxResults` outside 1–10.
+2. Pass **at most 10 optional courses**; reject more with `400`. *(This needs a line in api-contract.md, which the Backend API owner maintains.)*
+3. If a course is both required and optional, treat it as required only.
+4. When `includeClosedSections` is false, drop closed sections, including closed labs, before building `CourseOption`s. The engine has no notion of section status, and it handles any lab or lecture left without a partner.
+5. Fill in `component` and `parentCrn` for every section from the catalog's lecture–lab relation. A section with no scheduled time (TBA/online) gets an empty `meetings` list.
+6. Put a course's credits on its lecture and the catalog's own value (usually 0) on its linked sections; the engine adds them up.
+7. Set `overload` from `totalCredits` (> 18), and copy `score` and `breakdown` through unchanged.
+8. Construct the solver with a node cap read from configuration (default 200,000).
+
+**Linked sections (decided 2026-10-15).** One lecture may allow several labs or recitations. A lecture that has linked sections **must** be taken with exactly one of them **per component type**. For example, lecture 010 with labs 011 and 012 and recitations R1 and R2 gives four choices. The engine itself expands each lecture into these bundles. It discards any bundle whose parts overlap each other or a blocked time, and it never picks a linked section without its lecture.
+
+### Search plan and size (⬜ planned)
+
+The engine picks one bundle per required course and, optionally, one bundle per optional course (or skips it). Worst case that's exponential, so the search is bounded:
+- **Pre-filtering:** bundles that clash with blocked times, or within themselves, are removed up front. Bundles of the same course with identical times and credits are interchangeable for scoring, so they're searched once and expanded afterwards.
+- **Conflict table and fewest-options-first ordering** cut a branch at the first clash.
+- **Credit pruning:** credits never go over `maxCredits`. With typical numbers (12 required credits, max 18), at most two optional 3-credit courses can be added, which limits the optional-course blow-up.
+- **Branch-and-bound:** the earliest-start, latest-end and days-off penalties only grow as sections are added, so a partial schedule already worse than the current K-th best is dropped. Gaps don't grow monotonically and aren't used in the bound.
+- **Node cap:** the search stops deterministically at the cap and sets `searchLimitReached`.
+
+**When nothing fits** (decided 2026-10-15): no schedules are returned, and `diagnostics` explains why. For example, a required course with no usable sections; two required courses that conflict in every combination; required credits above `maxCredits`; or `minCredits` that can't be reached. It also gives a **suggestion**: the engine re-runs once with each required course made optional, and reports e.g. *"Making MATH-021 optional gives 5 schedules."* The contract doesn't change, and the engine never moves a required course out on its own. The engine plans one semester only. Choosing *which* courses to take is degree planning, which is out of MVP scope.
+
+### Scoring (⬜ planned; formula agreed for the engine, to confirm with the Backend API owner)
+
+Each **active** soft preference (weight > 0 and a value set) contributes 0–20 penalty points:
+
+```
+points = round(4 × weight × r)        r ∈ [0, 1], weight ∈ 0..5   → at most 20 points
+score  = 100 − Σ points               5 preferences × 20 = 100, so score is always 0–100
+```
+
+| Breakdown key | `r` (raw penalty, normalized) |
+|---|---|
+| `earliestStart` | min(1, weekly class minutes before `earliestStart` ÷ 300) |
+| `latestEnd` | min(1, weekly class minutes after `latestEnd` ÷ 300) |
+| `daysOff` | requested days off that have any class ÷ number of requested days off |
+| `minimizeGaps` | min(1, weekly idle minutes between consecutive same-day classes ÷ 600) |
+| `optionalCourseIds` | optional courses left out ÷ number of optional courses |
+
+`breakdown` holds the points for active preferences only, keyed by the contract's `softPreferences` field names (`SoftWeights.*_KEY`). The caps of 300 and 600 minutes are initial tuning values. Schedules are ranked by the unrounded weighted sum, so rounding can't create artificial ties; remaining ties are broken by the sorted list of CRNs.
 
 **Planned algorithm: backtracking search with pruning and bounded top-K.**
 
@@ -236,15 +294,15 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 | Constraint | Kind | Notes | Status |
 |---|---|---|---|
 | No two chosen sections overlap in time | **Hard** | Core guarantee | ⬜ |
-| Every required course is scheduled exactly once | **Hard** | Linked components (lab/recitation) must be included too, if the data models them | ⬜ |
+| Every required course is scheduled exactly once | **Hard** | A lecture with linked sections is taken with exactly one linked section per component type (lab, recitation). See §7. | ⬜ |
 | Total credits within `[minCredits, maxCredits]` | **Hard** | **Hard cap 21 credits** (team rule); default range 12–18. Above 18 (above 17 for first-semester students) is an overload that needs approval under Lehigh policy, so those schedules are flagged `overload: true`. See [api-contract.md § Credit limits](api-contract.md#credit-limits). | ⬜ |
 | No class during `blockedTimes` | **Hard** | Work, practice, etc. | ⬜ |
 | Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | Depends on enrollment data being available | ⬜ |
 | Prerequisites satisfied | Out of MVP scope | Needs reliable prerequisite data and the student's history. The UI should say we don't check this. | — |
-| Include optional courses | Soft | Weighted; only if credits allow | ⬜ |
+| Include optional courses | Soft | Weighted; only if credits allow. Formulas for all soft preferences: [§7, Scoring](#7-scheduling-engine) | ⬜ |
 | Earliest start / latest end | Soft | Penalty grows with minutes outside the window | ⬜ |
-| Days off | Soft | Penalty per class meeting on a preferred day off | ⬜ |
-| Minimize gaps between classes | Soft | Penalty per idle minute between same-day classes | ⬜ |
+| Days off | Soft | Penalty per requested day off that has any class (one class already costs the day off) | ⬜ |
+| Minimize gaps between classes | Soft | Penalty grows with idle minutes between same-day classes | ⬜ |
 | Travel between campuses for back-to-back classes | Soft (future) | Needs location data | — |
 
 **Why separate the two kinds?** A hard constraint is a rule the result must obey. A soft preference is a ranking signal. Mixing them, for example by giving conflicts a huge penalty, can still let invalid schedules through and makes scores hard to interpret. The weights (0–5) come from the student, either set directly or extracted by the AI and confirmed by the student.
