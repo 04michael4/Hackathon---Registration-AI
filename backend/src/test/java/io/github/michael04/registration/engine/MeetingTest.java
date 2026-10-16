@@ -4,7 +4,9 @@ import static java.time.DayOfWeek.FRIDAY;
 import static java.time.DayOfWeek.MONDAY;
 import static java.time.DayOfWeek.WEDNESDAY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -53,6 +55,30 @@ class MeetingTest {
 	void rejectsStartNotBeforeEnd() {
 		assertThrows(IllegalArgumentException.class, () -> new Meeting(Set.of(MONDAY), NINE, NINE));
 		assertThrows(IllegalArgumentException.class, () -> new Meeting(Set.of(MONDAY), NINE_FIFTY, NINE));
+	}
+
+	@Test
+	void touchingMeetingsDoNotOverlap() {
+		Meeting first = EngineFixtures.meeting("MWF", "10:00", "10:50");
+		Meeting next = EngineFixtures.meeting("MWF", "10:50", "11:40");
+
+		assertFalse(first.overlaps(next));
+		assertFalse(next.overlaps(first));
+	}
+
+	@Test
+	void sameTimeOnDifferentDaysDoesNotOverlap() {
+		assertFalse(EngineFixtures.meeting("MWF", "10:00", "10:50").overlaps(EngineFixtures.meeting("TR", "10:00", "10:50")));
+	}
+
+	@Test
+	void partialContainedAndIdenticalTimesOnASharedDayOverlap() {
+		Meeting base = EngineFixtures.meeting("MW", "10:00", "11:15");
+
+		assertTrue(base.overlaps(EngineFixtures.meeting("W", "11:00", "12:00")));
+		assertTrue(base.overlaps(EngineFixtures.meeting("WF", "10:15", "10:30")));
+		assertTrue(base.overlaps(EngineFixtures.meeting("M", "09:00", "13:00")));
+		assertTrue(base.overlaps(base));
 	}
 
 	@Test

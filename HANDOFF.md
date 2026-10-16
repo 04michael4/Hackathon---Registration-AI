@@ -109,39 +109,54 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Scheduling Engine
 
-**Owner:** Sunny (per the [README team table](README.md#team-and-responsibilities)) · **Status:** 🟡 Engine types implemented, uncommitted on `feature/engine-core`; solver not started
+**Owner:** Sunny (per the [README team table](README.md#team-and-responsibilities)) · **Status:** 🟡 Solver implemented and unit-tested; not yet called by an endpoint. Committed and pushed on `feature/engine-core`.
 
 **Scope:** `engine/` only. Per the team-agreed README work plan, the `schedule/` package and `POST /api/schedules/generate` belong to the Backend API module (Marpu). See the discrepancy note below.
 
 **Completed**
-- 2026-10-15: Engine input/output records and the `ScheduleSolver` interface, with no solver logic: `Meeting`, `SectionOption`, `CourseOption`, `Constraints`, `SoftWeights`, `ScheduleProblem`, `ScoredSchedule`, `ScheduleResult`. Compact constructors validate the input (start before end, weights 0–5, `0 ≤ min ≤ max` credits, unique course IDs and CRNs) and copy collections defensively. Days are stored as `EnumSet`, so they always iterate in a fixed order. Documented in [architecture.md § 7](docs/architecture.md#7-scheduling-engine).
-- 2026-10-15: Tests `MeetingTest` (6) and `ScheduleProblemTest` (14): plain JUnit 5, no Spring. Results in the session log below.
-- 2026-10-15: Scoring formula written down in architecture.md § 7: ≤ 20 points per preference, `score = 100 − Σ points`. Approved by the engine owner; **still to be confirmed with Marpu.**
-- 2026-10-15: **Linked sections** (owner decision): one lecture may allow several labs or recitations, and a lecture with linked sections must be taken with exactly one per component type. Modeled as `SectionOption.component` + `parentCrn`; the engine builds the lecture+lab bundles itself.
-- 2026-10-15: **Infeasible input** (owner decision): return diagnostics plus a suggestion of which required course to make optional. No contract change.
-- 2026-10-15: **Rules for the caller** (8 of them) written down in architecture.md § 7. Per the owner, the engine defines them and the Backend API follows. Rule 2 (at most 10 optional courses → `400`) still needs a line in api-contract.md from Marpu.
+- 2026-10-15: Engine input/output records and the `ScheduleSolver` interface: `Meeting`, `SectionOption`, `CourseOption`, `Constraints`, `SoftWeights`, `ScheduleProblem`, `ScoredSchedule`, `ScheduleResult`. Compact constructors validate the input and copy collections defensively. Committed as `d37eec8` (not pushed).
+- 2026-10-15: **Linked sections** (owner decision): one lecture may allow several labs or recitations, and a lecture with linked sections must be taken with exactly one per component type (`SectionOption.component` + `parentCrn`).
+- 2026-10-15: **Infeasible input** (owner decision): return diagnostics plus "make X optional" suggestions. No contract change.
+- 2026-10-15: **`BacktrackingScheduleSolver`**. It expands lectures into lecture+lab bundles and pre-filters them, then searches with a conflict table, fewest-options-first ordering, credit pruning and branch-and-bound. It also has a deterministic node cap (default 1,000,000), top-K, diagnostics and suggestions. Supporting pieces:
+  - `ScheduleScorer`: the scoring formula, using exact integer arithmetic;
+  - `Bundle` (package-private);
+  - `Meeting.overlaps`;
+  - `CourseOption.excluding`, which removes closed sections safely for the caller.
+  - Documented in [architecture.md § 7–8](docs/architecture.md#7-scheduling-engine), with measured search sizes.
+- 2026-10-15: Engine tests, plain JUnit 5 with no Spring:
+  - `MeetingTest` (9);
+  - `ScheduleProblemTest` (14);
+  - `CourseOptionTest` (4);
+  - `BacktrackingScheduleSolverTest` (25), which includes the README worked example, lecture/lab bundles, every diagnostic, determinism under shuffled input, and 200 seeded random catalogs. Each catalog is checked by an independent validity checker and against a **brute-force solver**: the returned schedules must be exactly the true top K.
+  - Also: 7 × 10 sections solving in under 1 s (`assertTimeout`).
 
-**In progress:** Sunny, branch `feature/engine-core`. Types-only change waiting for the owner's review, then a PR for Marpu to review, because the engine types are a shared interface.
+**In progress:** Sunny, branch `feature/engine-core` (pushed to `origin/feature/engine-core`). The engine is functionally complete; team-agreement items are deferred to the merge, per the owner.
+
+**Merge notes: wiring into Marpu's `schedule` layer on `origin/pre-main`** (checked 2026-10-16 against `9cd9cdf`; not edited, since it's outside this module)
+- `pre-main` defines `schedule/integration/SchedulingEngine` and has **no implementation registered**. An adapter `@Bean` must implement it by calling `new BacktrackingScheduleSolver(nodeCap).solve(...)`. Constructing one per call is cheap, and the solver is stateless.
+- Field mapping, adapter → engine:
+  - `Section.componentType` → `SectionOption.component`.
+  - `Section.lectureLink` → `SectionOption.parentCrn`. This must be **`null` for a lecture** and the **lecture's CRN** for a lab or recitation; confirm that's what `lectureLink` holds.
+  - `Meeting.days` (a List) → a `Set`.
+  - `SoftWeights` field order differs.
+  - Result: `sectionCrns` = the CRNs of `ScoredSchedule.sections()`; `score` = `BigDecimal.valueOf(score)`; `scoreBreakdown` = the `breakdown` values as `BigDecimal`.
+- ⚠️ **Closed sections:** `EngineMapper.prepare` drops `CLOSED` sections one by one. If every lab of a lecture is closed, the lecture would reach the engine with no labs and be treated as standalone, which breaks the "lecture must have its lab" rule. Fix at merge: pass all sections and drop closed ones with `CourseOption.excluding(...)` in the adapter (architecture.md § 7, rule 4).
+- **Node cap:** `pre-main` defaults `scheduling.node-cap` to 200,000, but the engine's default is 1,000,000 (see the § 7 "Search size" table). Pick one.
+- **Optional-course limit:** `pre-main` enforces 10 (matches § 7 rule 2).
+
+**Needs team agreement** (details in architecture.md § 7)
+1. **Marpu:** the 8 caller rules in § 7, especially rule 4 (`excluding` for closed sections), rule 7 (copy `diagnostics` through) and rule 8 (`@Bean` + node-cap config key).
+2. **Marpu:** add "at most N optional courses → `400`" to api-contract.md. The engine owner has to choose N: optional courses drive search cost (see the § 7 "Search size" table).
+3. **Marpu:** the scoring formula (0–20 points per preference, `score = 100 − Σ`), and the per-preference `breakdown` keys, which equal the contract's `softPreferences` field names.
+4. **David:** the catalog must give each section a component type and the CRN of its lecture, so the "lecture must have its lab" rule works. The credits convention is course credits on the lecture and 0 on its labs, unless the catalog says otherwise.
+5. **Michael:** nothing engine-specific. AI output reaches the engine only through `SchedulePreferences`.
 
 **Next recommended**
-1. Send Marpu the engine types, the caller rules and the scoring formula (architecture.md § 7). David needs to know the catalog must give each section a component type and its lecture link.
-2. `BacktrackingScheduleSolver implements ScheduleSolver`:
-   - overlap check;
-   - expanding lectures into lecture+lab bundles, and pre-filtering them against blocked times;
-   - a conflict table;
-   - search with fewest-options-first ordering, credit pruning and branch-and-bound;
-   - the node cap and top-K;
-   - scoring, diagnostics, and the "make X optional" suggestion.
-3. Tests from the README plan:
-   - overlap edge cases;
-   - the CSE-017/MATH-021 worked example;
-   - lecture/lab bundles;
-   - infeasibility diagnostics and suggestions;
-   - determinism with shuffled input;
-   - a seeded random catalog (no conflicts, credits in range, every lecture has its labs);
-   - 7 × 10 sections solving in under a second.
+1. At merge: write the `SchedulingEngine` adapter and resolve the merge notes above, together with Marpu.
+2. After the team agrees: tune the score caps (300/600 min) against real-looking schedules, and decide the optional-course limit.
+3. Optional: merge bundles of one course that have identical times and credits, if the node cap is hit on real data.
 
-**Blockers:** none for step 2. Step 1 needs Marpu.
+**Blockers:** none for the engine itself. Integration needs Marpu's `schedule` layer.
 
 **Discrepancies found 2026-10-15** (flagged, not edited, because they're outside this module):
 - CLAUDE.md (module table) and architecture.md § 4 list `schedule` under the Scheduling Engine module, but the README team plan gives it to Backend API (Marpu). The owners should pick one and fix the other docs.
@@ -207,6 +222,8 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 12:44 EDT | Claude Code for Sunny | Scheduling Engine | Owner asked to commit and push `feature/engine-core`. Added merge notes for `origin/pre-main`'s `SchedulingEngine` boundary (adapter mapping, closed-section risk, node-cap mismatch). Test run before commit: 55/55 pass (see 22:44 entry); no code changed since. |
+| 2026-10-15 22:44 EDT | Claude Code for Sunny | Scheduling Engine | Committed the engine types as `d37eec8` (owner's request; not pushed). Implemented `BacktrackingScheduleSolver`, `ScheduleScorer`, `Bundle`, `Meeting.overlaps` and `CourseOption.excluding`, plus 35 new engine tests (including a brute-force optimality check). Measured search size; default node cap raised to 1,000,000. `cd backend && ./mvnw -B test` → `Tests run: 55, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Solver uncommitted. |
 | 2026-10-15 22:08 EDT | Claude Code for Sunny | Scheduling Engine | Lecture/lab links added to the engine types (`component`, `parentCrn`; one lecture → many labs). Documented the infeasibility suggestion, the 8 caller rules for the Backend API, and the search-size plan in architecture.md § 7–8. `cd backend && ./mvnw -B test` → `Tests run: 23, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
 | 2026-10-15 21:42 EDT | Claude Code for Sunny | Scheduling Engine | Renamed the local branch `Scheduling-Engine` → `feature/engine-core`. Added the engine records and the `ScheduleSolver` interface (types only, no solver), 17 plain-JUnit tests, and architecture.md § 7–8 (engine API, scoring formula). `cd backend && ./mvnw -B test` → `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
 | 2026-10-15 21:30 EDT | Claude Code for @04michael4 | docs | Credit limits updated from Lehigh's overload policy (cap 21, overload flag); updated api-contract.md, architecture.md, README, HANDOFF.md. Docs only. |

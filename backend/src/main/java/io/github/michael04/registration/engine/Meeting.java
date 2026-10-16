@@ -29,4 +29,12 @@ public record Meeting(Set<DayOfWeek> days, LocalTime start, LocalTime end) {
 		days = Collections.unmodifiableSet(EnumSet.copyOf(days));
 	}
 
+	/**
+	 * {@code true} if the two meetings share a day and their times overlap. Touching meetings
+	 * (one ends at 10:50, the other starts at 10:50) do not overlap.
+	 */
+	public boolean overlaps(Meeting other) {
+		return start.isBefore(other.end) && other.start.isBefore(end) && !Collections.disjoint(days, other.days);
+	}
+
 }
