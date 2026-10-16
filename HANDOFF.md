@@ -4,20 +4,85 @@ Live record of project progress. **Read it at the start of every session; update
 
 | | |
 |---|---|
-| **Last updated** | 2026-10-15 22:01 EDT, by a Claude Code session for Michael (@04michael4), on `feature/ai-preference-extractor` |
-| **Current milestone** | Phase 1 (backend foundation) ✅ merged to `main` via PR #1. Phase 2 in progress: AI Integration step 1 committed and pushed on `feature/ai-preference-extractor`, awaiting PR review (not merged to `main`). |
-| **Next milestone** | AI step 2 (Claude), and the other modules' first PRs (see [Next recommended tasks](#next-recommended-tasks)) |
+| **Last updated** | 2026-10-15 23:10 EDT, by a Claude Code session for Michael (@04michael4), on `feature/ai-preference-extractor` |
+| **Current milestone** | Phase 1 ✅ on `main`. Phase 2 in progress: **AI step 2 (Claude provider) live-verified (eval 19/20 = 95%), committed and pushed on `feature/ai-preference-extractor`**, not yet merged into `pre-main`. |
+| **Next milestone** | Integrate the feature branches into **`pre-main`**, the shared integration branch; `main` stays untouched. **Resolve the error-handler conflict first** (see AI Integration, "Integration notes"). |
 
 ## Repository state
 
 | | |
 |---|---|
 | `main` | `098cf09` "docs: finalize API contract and apply Lehigh credit-load policy". Phase 1 was merged via PR #1 (`76a8310`). |
-| AI branch | `feature/ai-preference-extractor`, created from `098cf09`. Step 1 is in the commit "feat(ai): implement validated preference extraction with dummy provider" (run `git log` for the hash), pushed to `origin/feature/ai-preference-extractor`. **Not merged to `main`.** |
+| AI branch | `feature/ai-preference-extractor`, created from `098cf09`. Step 1 is in the commit "feat(ai): implement validated preference extraction with dummy provider" (run `git log` for the hash), pushed to `origin/feature/ai-preference-extractor`. Step 2 is in the commit "feat(ai): integrate Claude API and validate live extraction" on top of it, also pushed. **Not merged into `pre-main` or `main`.** |
+| `pre-main` | **Shared integration branch** (team decision, 2026-10-15). At `533633d` "feat(backend): add common error handling and CORS" (Marpu). `main` must stay untouched. |
 | Other branches | `dev-marpu` (at `76a8310`, no new commits); `feature/backend-foundation` (merged) |
 | Toolchain verified | OpenJDK 21.0.12 (Homebrew), Maven 3.10.0 via wrapper, Spring Boot 4.1.1, macOS |
 
 ## Latest test results
+
+**Run 2026-10-15 23:09 EDT** on `feature/ai-preference-extractor`, immediately before the step 2 commit, with no `ANTHROPIC_API_KEY`, `RUN_LIVE_AI` or `AI_PROVIDER` set, command `cd backend && ./mvnw -B clean test`:
+
+```
+Tests run: 4,  Failures: 0 -- course.CourseCatalogSelectionTest
+Tests run: 2,  Failures: 0 -- health.HealthControllerTest
+Tests run: 4,  Failures: 0 -- common.json.JsonConfigurationTest
+Tests run: 17, Failures: 0 -- ai.AnthropicClaudeGatewayTest      (new: real SDK vs. local fake API)
+Tests run: 10, Failures: 0 -- ai.AiConfigurationTest              (new)
+Tests run: 9,  Failures: 0 -- ai.PreferenceControllerTest         (+2: 429, 502)
+Tests run: 10, Failures: 0 -- ai.ClaudePreferenceExtractorTest    (new)
+Tests run: 15, Failures: 0 -- ai.PreferenceAssemblerTest
+Tests run: 4,  Failures: 0 -- ai.PreferenceExtractionServiceTest
+Tests run: 14, Failures: 0 -- ai.CourseMentionResolverTest
+Tests run: 22, Failures: 0 -- ai.AiEvalDatasetTest                (new: 20 eval cases + 2 checks)
+Tests run: 1,  Failures: 0 -- RegistrationBackendApplicationTests
+Tests run: 112, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS   (Total time: 4.637 s)
+```
+
+`ClaudeLiveEval` did not run. Run explicitly without the opt-in variables, it reports `Skipped: 1`, with no API call.
+
+**Live app check, 22:26 EDT** (packaged jar, `PORT=8091`, no API key; no external calls):
+
+| `AI_PROVIDER` | `POST /api/preferences/extract` |
+|---|---|
+| `claude` | `503`, and the log warns "AI_PROVIDER=claude but ANTHROPIC_API_KEY is not set". The app starts normally. |
+| `dummy` | `200`, fixed example |
+| `none` | `503` |
+
+### Live Claude API verification (2026-10-15, `claude-haiku-5-5`, SDK 2.71.0, run by Michael with his own key)
+
+**Single request, 22:50 EDT** (`AI_PROVIDER=claude`, app bound to 127.0.0.1:8091):
+- Models API: HTTP 200, `claude-haiku-5-5` active, with structured outputs and effort `low` supported.
+- Extraction: **HTTP 200, 16/16 checks**.
+  - Courses `CSE-017`, `MATH-021`.
+  - Hard blocked time Tue/Thu 15:00–18:00.
+  - Soft `earliestStart` 10:00, weight 3.
+  - Default credits 12–18, with warnings.
+- 3.89 s (first request after startup), 1 Claude call, 3,542 input / 197 output tokens, about $0.00045.
+
+**20-case evaluation, 23:01 EDT** (`ClaudeLiveEval`): **19/20 = 95%** (threshold 80%).
+- 20 Claude responses, all `end_turn`: 0 re-asks, 0 refusals, 0 provider errors.
+- 70,713 input / 3,787 output tokens: **about $0.009 in total**.
+- 32.2 s overall, about 1.6 s per case (median 1.33 s, max 3.67 s for the long request).
+- **Failed: `vague-time`.** "I'm not a morning person. CSE 140 and ECO 1." Courses and blocked times were correct, but no `earliestStart` was produced. This is model behavior: the prompt lists that phrase as an example, but also says not to invent times. A soft preference was omitted; nothing was invented. The expectation was left as it is.
+- **Serious errors: none observed.**
+  - 0 invented required courses (all 20 cases check an exact set).
+  - All 4 blocked-time cases exact, and 6 cases correctly had none.
+  - All times exact.
+  - Credit cap and overload rules correct.
+  - Both prompt-injection attempts resisted in the final output.
+
+**Known limits of this verification:**
+- One run only, so variation between runs is unmeasured.
+- `ClaudeLiveEval` saves only failure reasons, not full responses.
+- About 12 cases don't check for invented soft preferences (`absentSoft`).
+- For the injection cases, "ignored by the model" and "set aside by Java as unresolved" look the same.
+- Dummy catalog only.
+- Costs use Haiku 5.5's list price ($0.10 / $0.50 per MTok, per the 2026-10-06 reference).
+
+Results and logs were saved outside the repo, and no API key appears in them (checked).
+
+### Earlier: Step 1 commit
 
 **Run 2026-10-15 22:00 EDT** on `feature/ai-preference-extractor`, immediately before the step 1 commit, command `cd backend && ./mvnw -B clean test`:
 
@@ -156,7 +221,7 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## AI Integration
 
-**Owner:** Michael (@04michael4) · **Status:** 🟡 Step 1 committed and pushed on `feature/ai-preference-extractor` (PR pending, not merged); Claude not connected yet
+**Owner:** Michael (@04michael4) · **Status:** ✅ Steps 1 and 2 committed and pushed on `feature/ai-preference-extractor`. **Live-verified: 1 request 16/16 checks; eval 19/20 = 95%.** Not yet merged into `pre-main`.
 
 **Completed** (2026-10-15, branch `feature/ai-preference-extractor`)
 - `POST /api/preferences/extract`: request validation (400), unknown term (422, checked before any AI call), AI unavailable (503), invalid AI output (502).
@@ -186,14 +251,51 @@ The engine **logic** can be built and unit-tested now, before the database or ca
   - Times arrive as `"15:00"`; days as `"FRIDAY"`, sorted Monday to Sunday.
 - **Sunny:** nothing to integrate yet. Your engine shouldn't use `SchedulePreferences` directly; Marpu's `schedule` package converts it into your engine's own records. Weights are 0–5, and a preference with weight 0 is omitted.
 
-**In progress:** _none_.
+**Step 2: Claude provider** (2026-10-15, uncommitted)
+- **Implemented and tested offline:**
+  - `com.anthropic:anthropic-java` **2.71.0**, pinned. Jackson 2.21 from the SDK sits next to Boot's Jackson 3.1, with no conflicts in `dependency:tree`.
+  - `ClaudePreferenceExtractor`, `ClaudeGateway` / `AnthropicClaudeGateway`, `ClaudeExtraction` (the structured-output schema), `ClaudeProperties`, and the new exceptions `AiRateLimitedException` (429) and `AiProviderException` (502).
+  - System prompt: `backend/src/main/resources/ai/preference-extraction-system-prompt.md`.
+  - `AI_PROVIDER=claude`. Without a key the app starts and returns 503; it never falls back to dummy.
+  - Model `claude-haiku-5-5` by default (`ANTHROPIC_MODEL`), effort `low`, 20 s timeout, 1 SDK retry, one application re-ask for truncated or malformed output, refusal final.
+  - Eval set `backend/src/test/resources/ai-eval/cases.json` (20 cases), checked offline by `AiEvalDatasetTest`.
+  - The live runner `ClaudeLiveEval` runs only on explicit request.
+- **Verified only with fakes:** request shape, response parsing, refusal and truncation handling, and the 429/502/503 mapping.
+- **Live-verified 2026-10-15:** see [Latest test results § Live Claude API verification](#live-claude-api-verification-2026-10-15-claude-haiku-5-5-sdk-2710-run-by-michael-with-his-own-key). Eval 19/20; the only failure is `vague-time`.
+
+**In progress:** _none_. Step 2 is complete.
+
+**Integration notes for merging into `pre-main`** (checked read-only against `origin/pre-main` at `533633d`; nothing merged)
+1. ⚠️ **Error-handler conflict, which must be fixed during integration.** `pre-main`'s `common/GlobalExceptionHandler` has a catch-all `@ExceptionHandler(Exception.class)` that always returns **500** and ignores `@ResponseStatus`. Once merged, the AI exceptions would all become 500 instead of 422 / 429 / 502 / 503:
+   - `ai.UnknownTermException` (422)
+   - `ai.AiRateLimitedException` (429)
+   - `ai.AiProviderException` (502)
+   - `ai.AiOutputInvalidException` (502)
+   - `ai.AiUnavailableException` (503)
+
+   `pre-main` also has its own `common.AiUnavailableException`, which is a different class from `ai.AiUnavailableException`.
+
+   **Options** (agree with Marpu):
+   - (a) The catch-all honors `@ResponseStatus` via `AnnotatedElementUtils.findMergedAnnotation(ex.getClass(), ResponseStatus.class)`.
+   - (b) Add explicit handlers for the AI exceptions.
+   - (c) Move the AI exceptions onto `common` types, adding 429/502 types there.
+
+   **Safety net:** after a merge, `PreferenceControllerTest`'s 422/429/502/503 tests will fail if this isn't resolved, because `@WebMvcTest` loads controller advice.
+2. **Overlapping files**, expect merge conflicts: `backend/pom.xml` (both add `spring-boot-starter-validation`, so keep one), `application.properties` and `.env.example` (keep both sides' keys), and `HANDOFF.md`, `README.md`, `docs/api-contract.md`, `docs/architecture.md` (combine both sides).
+3. **Error body format.** `pre-main` turns on Problem Details (`spring.mvc.problemdetails.enabled=true`). The AI exceptions' messages are generic and safe to show as `detail`.
+4. **Docs still say PRs go to `main`.** `CLAUDE.md` (Git section) and `docs/development-guide.md` still describe PRs into `main`. Update them to `pre-main`; that wasn't done in this session.
 
 **Next recommended**
-1. Step 2: add `com.anthropic:anthropic-java` (pin the version; check Jackson compatibility with Boot 4) and a `ClaudePreferenceExtractor` that returns `RawPreferences` through structured output, with `AI_PROVIDER=claude`.
-2. Evaluation set of 15–20 example sentences, run only with `RUN_LIVE_AI=true`.
-3. Marpu: review and take over the shared stand-ins; David: replace `DummyCourseCatalog` with the database catalog.
+1. Open the AI PR **into `pre-main`** (reviewers: Marpu for the shared stand-ins, `pom.xml` and the error-handler conflict; David for the catalog switch). Resolve integration note 1, then run `./mvnw test` on the merged result.
+2. Optional evaluation improvements, test-only:
+   - save full responses in `ClaudeLiveEval`;
+   - add `absentSoft` checks to the cases missing them;
+   - re-run once (about $0.01) to measure stability.
 
-**Blockers:** step 2 needs an Anthropic API key (each developer's own, in a local `.env` or shell environment, never committed).
+   Decide as a team whether vague morning wording should produce an `earliestStart`, and only then change the prompt or the expectation.
+3. Marpu: take over the shared stand-ins. David: replace `DummyCourseCatalog` with the database catalog.
+
+**Blockers:** none for the AI module. Live runs need a developer's own `ANTHROPIC_API_KEY`, in the shell environment and never committed.
 
 ---
 
@@ -217,10 +319,11 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 ## Next recommended tasks
 
 In priority order, across the team:
-1. Review Phase 1 on `feature/backend-foundation`, then merge it to `main`.
-2. Assign module owners, and fill in the README team table and this file.
+1. ~~Review Phase 1 on `feature/backend-foundation`, then merge it to `main`.~~ Resolved 2026-10-15 (PR #1).
+2. ~~Assign module owners, and fill in the README team table and this file.~~ Resolved 2026-10-15 (README team table).
 3. Decide the course data source (or agree on a synthetic dataset for the hackathon).
 4. Start, in parallel: engine core (no dependencies), frontend scaffold, CI.
+5. Integrate the feature branches into **`pre-main`** (the shared integration branch; `main` stays untouched). For AI, resolve the error-handler conflict first (AI Integration, "Integration notes").
 
 ## Instructions for the next developer or AI agent
 
@@ -238,6 +341,8 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-15 23:10 EDT | Claude Code for Michael | AI Integration | Recorded the live verification (1 request 16/16; eval 19/20 = 95%; failure `vague-time` and evaluation limits documented). Marked endpoint 5 live-verified. Found the `pre-main` error-handler conflict (read-only). Committed and pushed step 2 to `feature/ai-preference-extractor`; not merged. |
+| 2026-10-15 22:30 EDT | Claude Code for Michael | AI Integration | Step 2: Claude provider with the official SDK 2.71.0, structured output, prompt, 429/502/503 mapping, 20-case eval set and opt-in live runner. 112/112 tests pass offline; app modes verified with no key. No live API call made. Uncommitted. |
 | 2026-10-15 22:01 EDT | Claude Code for Michael | AI Integration | Pre-commit checks passed (51/51 tests, diff-check clean, no secrets or artifacts); committed step 1 and pushed `feature/ai-preference-extractor`. Not merged. Claude provider not built. |
 | 2026-10-15 21:58 EDT | Claude Code for Michael | AI Integration | Step 1 cleanup: dummy catalog switchable via `CATALOG_SOURCE`; JSON contract round-trip tests; README AI section corrected; David's replacement steps added. 51/51 tests pass; live-checked dummy 200, none 503, database setting fails clearly. Uncommitted. |
 | 2026-10-15 21:45 EDT | Claude Code for Michael | AI Integration | Step 1 on `feature/ai-preference-extractor`: extract endpoint, resolver, validator, dummy/none providers, shared stand-ins (preferences, catalog, JSON time format). 43/43 tests pass; live-checked 200/400/422/503. Uncommitted. |

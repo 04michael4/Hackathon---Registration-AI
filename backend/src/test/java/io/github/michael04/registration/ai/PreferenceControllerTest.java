@@ -92,6 +92,22 @@ class PreferenceControllerTest {
 	}
 
 	@Test
+	void rateLimitedAiReturns429() throws Exception {
+		given(service.extract(anyString(), anyString())).willThrow(new AiRateLimitedException("rate limited"));
+
+		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
+			.andExpect(status().isTooManyRequests());
+	}
+
+	@Test
+	void providerErrorReturns502() throws Exception {
+		given(service.extract(anyString(), anyString())).willThrow(new AiProviderException("provider error"));
+
+		mockMvc.perform(extract("{\"term\":\"2027-SPRING\",\"text\":\"I need CSE 17\"}"))
+			.andExpect(status().isBadGateway());
+	}
+
+	@Test
 	void invalidAiOutputReturns502() throws Exception {
 		given(service.extract(anyString(), anyString())).willThrow(new AiOutputInvalidException("bad output"));
 

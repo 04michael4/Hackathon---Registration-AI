@@ -251,18 +251,39 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 ## 9. AI integration and validation
 
-**Status: ⬜ planned.** Module: AI Integration. Package: `ai`.
+**Status: 🟡 preference extraction implemented** on `feature/ai-preference-extractor` and tested offline against a fake Anthropic API. **Live Claude responses are not yet verified.** Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
 2. Schedule explanation (`POST /api/schedules/explain`): stretch goal.
 
-**Integration plan:**
-- Use the **official Anthropic Java SDK**, `com.anthropic:anthropic-java`. The version will be pinned when the AI phase starts. Use the SDK rather than hand-rolled HTTP; the SDK brings typed requests and errors, retries and timeouts.
-- **Structured outputs.** Request JSON constrained to a schema derived from a Java record (the SDK's `outputConfig(Class)` support), so responses parse straight into typed objects.
-- **Model** comes from configuration (`ANTHROPIC_MODEL`), never hard-coded. Current candidate: `claude-opus-5-5`; the team will make the final choice based on cost and latency.
-- Hide the SDK behind our own interface, e.g. `PreferenceExtractor`. Tests then use a fake and never call the real API, and the provider can be swapped without touching controllers.
-- To verify when the SDK is added: Spring Boot 4 uses Jackson 3 (`tools.jackson.*`), and the SDK may bring its own Jackson version. Check for dependency conflicts with `./mvnw dependency:tree`.
+**How it's built:**
+
+```mermaid
+flowchart LR
+    PC[PreferenceController] --> PS[PreferenceExtractionService]
+    PS --> PE{{PreferenceExtractor}}
+    PE -.->|AI_PROVIDER=none| UN[Unavailable → 503]
+    PE -.->|dummy| DU[DummyPreferenceExtractor]
+    PE -.->|claude| CL[ClaudePreferenceExtractor<br/>prompt + retry-once]
+    CL --> GW{{ClaudeGateway}}
+    GW --> AG[AnthropicClaudeGateway<br/>SDK, structured output,<br/>error mapping]
+    PS --> PA[PreferenceAssembler<br/>+ CourseMentionResolver]
+```
+
+- **Official Anthropic Java SDK**, `com.anthropic:anthropic-java` **2.71.0**, pinned. It brings Jackson **2.21** (`com.fasterxml.jackson.*`), separate from Spring Boot 4's Jackson **3.1** (`tools.jackson.*`). The two use different packages and coexist; `dependency:tree` shows no conflicts. The SDK uses its own mapper internally, and our REST API uses Boot's.
+- **Structured outputs.** `StructuredOutputConfig.format(ClaudeExtraction.class)` derives a JSON schema from an AI-internal record.
+  - Scalar fields are `Optional`, which becomes nullable in the schema, so the model answers `null` for anything not mentioned instead of inventing a value.
+  - Days are restricted to `MONDAY`…`SUNDAY`.
+  - Course mentions stay raw strings. Java resolves them through `CourseCatalog`, so the model never supplies course IDs.
+- **Model** from `ANTHROPIC_MODEL`. Default: **`claude-haiku-5-5`**, Anthropic's fast, low-cost model recommended for extraction; it's set in `application.properties`, not in code. Effort `low` keeps latency and cost down. Thinking is adaptive, and thinking blocks are skipped when reading the reply.
+- **`ClaudeGateway`** is the only class that touches the SDK. That keeps the extraction logic testable with a simple fake, and SDK upgrades contained in one place.
+- **Retries are bounded and not doubled:**
+  - The SDK retries transient HTTP failures (429, 5xx, connection) once (`max-retries=1`, `timeout=20s` per attempt).
+  - The application re-asks once only for truncated or malformed output.
+  - A refusal is final.
+- **Secrets and privacy:** the key is read only from `ANTHROPIC_API_KEY`. Logs contain outcomes, status codes and token counts, never the key, the prompt or the student's text.
+- **Prompt:** `backend/src/main/resources/ai/preference-extraction-system-prompt.md`. It covers hard vs. soft rules, the weight scale, formats, assumptions, and injection resistance. The student's text is wrapped in `<student_text>`, and an embedded closing tag is neutralized.
 
 **Validation pipeline:**
 
@@ -282,7 +303,7 @@ flowchart LR
 ```
 
 - Matching the schema doesn't make the output correct, so semantic validation is always done in Java.
-- Handle the SDK's non-success outcomes explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. Map them to the `502`/`503`/`429` codes defined in the contract.
+- The SDK's non-success outcomes are handled explicitly: `refusal` and `max_tokens` stop reasons, rate limits, timeouts. They map to the `502`/`503`/`429` codes in [api-contract.md, endpoint 5](api-contract.md#5-post-apipreferencesextract). Implemented and tested offline.
 - **Prompt injection.** Student text is untrusted. The model has **no tools** and no database access. Its only output is a preferences object that is validated and then shown to the student. The worst a malicious prompt can do is produce odd preferences, which the student sees.
 - **If AI is unavailable** (no key, outage), the extract endpoint returns `503`, and the frontend falls back to the manual preference form. Schedule generation still works.
 
