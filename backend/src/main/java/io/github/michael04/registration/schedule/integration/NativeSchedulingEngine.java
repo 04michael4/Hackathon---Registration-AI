@@ -11,9 +11,12 @@ import org.springframework.stereotype.Component;
 
 import io.github.michael04.registration.engine.BacktrackingScheduleSolver;
 import io.github.michael04.registration.engine.CourseOption;
+import io.github.michael04.registration.engine.ElectiveAdvisor;
 import io.github.michael04.registration.engine.ScheduleProblem;
 import io.github.michael04.registration.engine.ScheduleResult;
 import io.github.michael04.registration.engine.SectionOption;
+import io.github.michael04.registration.engine.SelectionChecker;
+import io.github.michael04.registration.engine.SelectionReport;
 
 /**
  * Adapter from the API's {@link SchedulingEngine} boundary to the native engine
@@ -35,14 +38,65 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 
 	@Override
 	public Result solve(Problem problem, int nodeCap) {
-		ScheduleProblem nativeProblem;
+		ScheduleProblem nativeProblem = checked(problem);
+		BacktrackingScheduleSolver solver = new BacktrackingScheduleSolver(nodeCap);
+		ScheduleResult result = solver.solve(nativeProblem);
+		List<ElectiveAdvice> advice = new ElectiveAdvisor(solver).explainElectives(nativeProblem, result).stream()
+			.map(a -> new ElectiveAdvice(a.courseId(), a.status().name(), a.summary(), a.fixes(), a.alternativeCrns()))
+			.toList();
+		Result schedules = fromNative(result);
+		return new Result(schedules.schedules(), schedules.diagnostics(), schedules.searchLimitReached(), advice);
+	}
+
+	@Override
+	public Check check(Problem problem, List<String> crns) {
+		SelectionReport report = new SelectionChecker().check(checked(problem), crns);
+		return new Check(
+				report.sections().stream().map(SectionOption::crn).toList(),
+				report.totalCredits(),
+				BigDecimal.valueOf(report.score()),
+				decimals(report.breakdown()),
+				report.complete(),
+				report.issues().stream()
+					.map(i -> new Issue(i.type().name(), i.severity().name(), i.crns(), i.message()))
+					.toList(),
+				report.candidates().stream()
+					.map(c -> new Candidate(c.crn(), c.courseId(), c.fits(), c.completesLecture(), c.reasons()))
+					.toList());
+	}
+
+	@Override
+	public List<ElectiveFit> suggestElectives(Problem problem, List<String> scheduleCrns, List<Course> candidates,
+			int limit) {
+		ScheduleProblem nativeProblem = checked(problem);
+		List<CourseOption> nativeCandidates;
 		try {
-			nativeProblem = toNative(problem);
+			nativeCandidates = candidates.stream().map(NativeSchedulingEngine::toNative).toList();
 		}
 		catch (IllegalArgumentException ex) {
 			throw new IllegalStateException("Catalog data rejected by the scheduling engine", ex);
 		}
-		return fromNative(new BacktrackingScheduleSolver(nodeCap).solve(nativeProblem));
+		return new ElectiveAdvisor(new BacktrackingScheduleSolver())
+			.suggestElectives(nativeProblem, scheduleCrns, nativeCandidates, limit).stream()
+			.map(f -> new ElectiveFit(f.courseId(), f.crns(), f.totalCredits(), BigDecimal.valueOf(f.score()),
+					decimals(f.breakdown())))
+			.toList();
+	}
+
+	/** Translates, turning catalog data the engine rejects into a safe 500. */
+	private static ScheduleProblem checked(Problem problem) {
+		try {
+			return toNative(problem);
+		}
+		catch (IllegalArgumentException ex) {
+			throw new IllegalStateException("Catalog data rejected by the scheduling engine", ex);
+		}
+	}
+
+	private static Map<String, BigDecimal> decimals(Map<String, Integer> points) {
+		Map<String, BigDecimal> map = new TreeMap<>();
+		points.forEach((key, value) -> map.put(key, BigDecimal.valueOf(value)));
+		return map;
 	}
 
 	/**
@@ -58,10 +112,7 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 	}
 
 	private static ScheduleProblem toNative(Problem problem) {
-		List<CourseOption> courses = problem.courses().stream()
-			.map(course -> new CourseOption(course.courseId(), course.required(),
-					course.sections().stream().map(NativeSchedulingEngine::toNative).toList()))
-			.toList();
+		List<CourseOption> courses = problem.courses().stream().map(NativeSchedulingEngine::toNative).toList();
 		var constraints = new io.github.michael04.registration.engine.Constraints(problem.constraints().minCredits(),
 				problem.constraints().maxCredits(),
 				problem.constraints().blockedTimes().stream().map(NativeSchedulingEngine::toNative).toList());
@@ -74,6 +125,11 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 				soft.gapsWeight(),
 				soft.optionalCourseWeight());
 		return new ScheduleProblem(courses, constraints, weights, problem.maxResults());
+	}
+
+	private static CourseOption toNative(Course course) {
+		return new CourseOption(course.courseId(), course.required(),
+				course.sections().stream().map(NativeSchedulingEngine::toNative).toList());
 	}
 
 	private static SectionOption toNative(Section section) {
@@ -90,13 +146,11 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 	private static Result fromNative(ScheduleResult result) {
 		List<ScoredSchedule> schedules = result.schedules().stream()
 			.map(schedule -> {
-				Map<String, BigDecimal> breakdown = new TreeMap<>();
-				schedule.breakdown().forEach((key, points) -> breakdown.put(key, BigDecimal.valueOf(points)));
 				return new ScoredSchedule(
 						schedule.sections().stream().map(SectionOption::crn).toList(),
 						schedule.totalCredits(),
 						BigDecimal.valueOf(schedule.score()),
-						breakdown);
+						decimals(schedule.breakdown()));
 			})
 			.toList();
 		return new Result(schedules, result.diagnostics(), result.searchLimitReached());

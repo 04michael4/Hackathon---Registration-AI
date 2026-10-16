@@ -207,6 +207,9 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 			if (possibleMax < constraints.minCredits()) {
 				diagnostics.add("These courses add up to at most " + possibleMax
 						+ " credits, below your minimum of " + constraints.minCredits() + ".");
+				int shortfall = constraints.minCredits() - possibleMax;
+				diagnostics.add("Suggestion: add courses worth at least " + shortfall + " more credits (for example as electives)"
+						+ (possibleMax > 0 ? ", or lower your minimum credits to " + possibleMax : "") + ".");
 				ok = false;
 			}
 			return ok;
