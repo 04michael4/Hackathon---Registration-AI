@@ -99,6 +99,10 @@ Only the backend talks to Claude and holds secrets. The frontend is a thin clien
 
 ## Getting started
 
+**CSE 007 database:** A standalone PostgreSQL snapshot using the course screenshots and SuY corrections is available;
+see [course data and connection details](data/cse007-snapshot/README.md).
+The backend is not wired to it yet. Earlier Phase 1 status tables describe backend integration.
+
 These steps are for macOS. Linux works the same way; on Windows use `mvnw.cmd`.
 
 ### 1. Prerequisites
@@ -204,14 +208,14 @@ npm run dev        # http://localhost:3000, talks to the backend at NEXT_PUBLIC_
 
 Four modules, one owner each. Owners review changes to their module and to the shared interfaces it uses.
 
-> ⚠️ **Provisional.** Module owners **haven't been assigned yet**. `_TBD_` entries will be filled in once the team agrees. The module split itself is also a proposal.
+> ⚠️ **Provisional.** Remaining `_TBD_` owners will be filled in once the team agrees. The module split itself is also a proposal.
 
 | Module | Owner | Scope | Code location |
 |---|---|---|---|
 | Backend API | _TBD_ (Phase 1 foundation: @04michael4) | Spring Boot setup, course search endpoints, error handling, shared config | `backend/…/health`, `course`, `common` |
 | Scheduling Engine | _TBD_ | Deterministic solver, schedule endpoints | `backend/…/engine`, `schedule` |
 | AI Integration | _TBD_ | Claude client, prompts, output validation | `backend/…/ai` |
-| Data and Frontend | _TBD_ | Catalog data and import; Next.js UI | `data/`, `backend/…/ingest`, `frontend/` |
+| Data and Frontend | David | Catalog data and import; Next.js UI | `data/`, `backend/…/ingest`, `frontend/` |
 
 ## Git workflow
 

@@ -142,9 +142,76 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Data and Frontend
 
-**Owner:** _TBD_ · **Status:** ⬜ Not started (placeholders: [data/README.md](data/README.md), [frontend/README.md](frontend/README.md))
+**Owner:** David · **Status:** 🟡 Active CSE 007 database fixture implemented and
+verified; backend persistence and frontend are not started.
 
-**Completed:** _none_.
+**2026-10-16 10:45 EDT — Codex for David, database branch verification: completed.**
+Created `feature/data-cse007-snapshot` from merged `main`. Regenerated the active
+screenshot fixture after verifying all eight source hashes, then verified all three
+PostgreSQL schemas against the local loopback server. Actual result lines:
+`PASS: 1 course, 5 sections, 9 meetings; 3 feasible pairs; 1 after 10; 0 with Friday morning blocked`;
+`PASS: PDF fixture: 1 course, 6 sections, 9 meetings, 4 links; 3 time-feasible pairs, 1 after 10, 0 Friday-free; credits, TBA, provenance and 9 rejection checks passed`;
+`PASS: SuY corrections: 2 valid lecture/lab choices at 4 credits; 3 nullable requirement rows; 0 open issues; 5 selection scenarios and 8 rejection checks passed`.
+The local database server was stopped after verification. `backend/.\mvnw.cmd test`
+failed before running tests with `Cannot start maven from wrapper` / `Cannot index
+into a null array`; no Java test success is claimed.
+
+**2026-10-15 22:07 EDT — Codex, screenshot-based CSE 007 database: completed.**
+Inspected all seven supplied `Images for courses` PNGs. The active dataset is now
+`data/cse007-snapshot/fixture.json`, loaded as schema `cse007_snapshot` in the local
+`registration_demo` database (127.0.0.1:55432). Includes Spring 2027 term 202710,
+lecture 010/CRN 12275, labs 060/13132 and 062/12638, five per-day meetings, Brian
+Chen, eight attributes, the confirmed 010/060 pair and the lab-060 seat snapshot.
+`source_asset` preserves all file paths/hashes and transcription-check times;
+capture time/URL remain unknown. All rows are static screenshot observations.
+
+`database.sql` is a standalone pgAdmin-compatible import. Fresh creation,
+transactional stable-ID reimport, sample queries and an isolated rollback of the
+complete SQL bundle were verified. Actual results:
+`PASS: 7 screenshot hashes verified; generated V2__seed.sql and database.sql`
+`PASS: screenshot dataset: 3 sections, 5 meetings, 1 confirmed link; 4 provisional credits; source conflicts retained; 6 rejection checks passed`.
+`git diff --check` passed. Backend `.\mvnw.cmd test` again failed before tests with
+`Cannot start maven from wrapper` / `Cannot index into a null array`; no Java test
+success is claimed. The backend remains unconnected.
+
+Open data issues: lab-060 credits conflict (list 0 vs detail 4), lab-062 link
+target unknown, full lecture component group unknown, unreadable prerequisite
+rules, ambiguous FLEX delivery and missing locations/date ranges for 010/062.
+These are stored in `data_issue` rather than inferred. Seat counts are explicitly
+not live. Earlier demo schemas remain archival; README points to this snapshot.
+No work in progress. Files remain uncommitted on `main`.
+
+**2026-10-15 21:46 EDT — Codex, PDF-aligned CSE 007 fixture: completed and SQL-verified.**
+Read all six pages of `Course Scheduling App — Proposed Database Structure.pdf`.
+Added `data/cse007-pdf/fixture.json`, ordered schema/seed SQL, standard-library
+seed generator, examples and dataset checks. Loaded schema `cse007_pdf_demo` in
+the existing local database. Uses UUIDs, code `CSE-007`, section credits (4 + 0),
+meeting provenance, one TBA case and synthetic profile/preferences. The earlier
+`cse007_demo` remains intact. Prerequisite and generated-schedule tables are empty;
+eligibility is unknown and scoring remains a team decision. No HTTP contract or
+backend implementation changes. PDF-reader dependencies are ignored in Git.
+
+Verification (fresh load, then transactional seed reimport and query):
+`PASS: PDF fixture: 1 course, 6 sections, 9 meetings, 4 links; 3 time-feasible pairs, 1 after 10, 0 Friday-free; credits, TBA, provenance and 9 rejection checks passed`.
+`git diff --check` passed. Reattempted `backend/.\mvnw.cmd test`: failed before
+tests with `Cannot start maven from wrapper` / `Cannot index into a null array`.
+Java/backend tests are not verified in this session. JSON warning names/preference
+shape are fixture proposals; reconcile the provisional API contract before wiring
+the backend. Changes remain uncommitted on `main`. No work in progress.
+
+**2026-10-15 21:02 EDT — Codex, CSE 007 demo:** Created standalone PostgreSQL
+schema/seed scripts and local database `registration_demo` on 127.0.0.1:55432.
+One catalog-sourced course, five simulated sections, nine meetings and four lab links.
+Setup, provenance, queries and expected scenarios are in `data/README.md`.
+Backend integration remains unimplemented; no API changes. Cluster files are git-ignored.
+Verified with `psql -f data/cse007/create.sql`:
+`PASS: 1 course, 5 sections, 9 meetings; 3 feasible pairs; 1 after 10; 0 with Friday morning blocked`.
+Backend tests attempted with `.\mvnw.cmd test`: failed before tests with
+`Cannot start maven from wrapper` / `Cannot index into a null array`.
+Only Java 17 found on PATH; backend requires 21. No claim of passing Java tests.
+Repository discrepancy: current branch is `main`, commit `76a8310` (merged Phase 1),
+whereas earlier handoff says unmerged. Existing entries preserved. Changes uncommitted.
+Next: connect the course API to this dataset when its DTO contract is agreed.
 
 **In progress:** _none_.
 
@@ -181,6 +248,10 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 10:45 EDT | Codex for David | Data | Created `feature/data-cse007-snapshot`; regenerated the active seed with 8 verified source hashes and reran all three PostgreSQL verification suites successfully. Maven wrapper still fails before tests. |
+| 2026-10-15 22:07 EDT | Codex | Data | Rebuilt active CSE 007 data from all 7 supplied screenshots: 3 sections, 5 meetings, 1 confirmed link and explicit unresolved fields. Imported cse007_snapshot; hashes, reimport, full SQL bundle and 6 rejection checks passed. Backend Maven wrapper still fails before tests. |
+| 2026-10-15 21:46 EDT | Codex | Data | Read the 6-page database PDF; created JSON and PostgreSQL fixture in cse007_pdf_demo with UUIDs, section credits, TBA and synthetic preferences. Fresh load and stable-ID reimport verified; 9 rejection checks passed. Maven wrapper still fails before tests. |
+| 2026-10-15 21:02 EDT | Codex | Data | Created and SQL-verified local CSE 007 PostgreSQL demo; setup in data/README.md. Maven wrapper failed before tests; Java 17 on PATH. Backend not connected. |
 | 2026-10-15 16:45 EDT | Claude Code for @04michael4 | Backend API / docs | Pre-commit checks; marked API contract, credit limits and team roles as provisional; re-ran tests (3/3 pass) and verified health with curl. Committed Phase 1 and pushed to `origin/feature/backend-foundation`; not merged to `main`. |
 | 2026-10-15 16:40 EDT | Claude Code for @04michael4 | Backend API / docs | Wrote README, CLAUDE.md, AGENTS.md, HANDOFF.md, architecture.md, api-contract.md, development-guide.md, ADR-0001. Re-ran tests: 3/3 pass; health verified with curl. Nothing committed. |
 | 2026-10-15 16:27 EDT | Claude Code for @04michael4 | Backend API | Phase 1 backend foundation: Spring Boot 4.1.1 skeleton, `/api/health`, tests (3/3 pass), `.gitignore`, `.env.example`. Nothing committed. |

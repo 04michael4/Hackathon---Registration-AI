@@ -144,6 +144,41 @@ Rules:
 
 ## 5. Database architecture
 
+**Active screenshot dataset (2026-10-15):** `data/cse007-snapshot/` supersedes the
+synthetic fixtures for CSE-007. Schema `cse007_snapshot` stores the supplied Spring
+2027 sections, actual CRNs and term code, per-image provenance, attributes,
+non-live enrollment observations and explicit data issues. Source files replace
+unavailable source URLs. `Hackathon Ideas - SuY.pdf` supplies user corrections:
+lecture 010 contributes 4 credits and requires exactly one zero-credit lab, 060
+or 062; all sections are in person; three nullable requirement rows explicitly
+record no CSE-007 prerequisites/corequisites/enrollment restrictions per user.
+V3 adds requirement/group tables and source-backed review resolution; V4 applies
+the corrections while retaining V1/V2 history. Lecture location is TBD and its
+date range is an explicit demo term default; lab 062 room 11/dates come from SuY.
+`data_issue` has six resolved and two accepted items, with no open review flags.
+Future requirement expressions can hold JSONB course/AND/OR rules; evaluation is
+not implemented. Seat precision is out of demo scope and snapshot counts are not
+used as scheduling constraints. These are user-confirmed demo facts, not a live
+institutional eligibility verification.
+UUIDs and same-course/term foreign keys are retained. See its README for schema
+details and import commands. This is standalone storage; the backend/API remains
+unconnected. The two earlier schemas below are archival synthetic fixtures.
+
+**Standalone demo (2026-10-15):** `data/cse007/` contains versioned PostgreSQL schema/seed
+scripts for one catalog-sourced CSE 007 course and simulated term sections, meetings and
+lecture/lab links. It runs separately in the `cse007_demo` schema; see `data/README.md`.
+No Spring persistence dependency, repository, migration runner or endpoint integration has
+been added. The full application database design below remains planned.
+
+**PDF-aligned fixture (2026-10-15):** `data/cse007-pdf/fixture.json` and its schema/seed
+scripts use the supplied PDF's UUID-based physical fields. The separate
+`cse007_pdf_demo` schema contains CSE-007, simulated sections/meetings/links, and one
+synthetic profile/preference. Prerequisite and generated-schedule tables remain
+empty because eligibility and scoring are unresolved. See its README for the
+additional join-table term consistency field and dataset checks. These storage
+fields do not change the provisional REST contract; reconcile IDs and DTOs before
+backend integration. The earlier text-ID demo remains available for reference.
+
 **Status: ⬜ planned.** Phase 1 has no database, by design; see [§15, decision 10](#15-phase-1-decisions-implemented).
 
 ```mermaid

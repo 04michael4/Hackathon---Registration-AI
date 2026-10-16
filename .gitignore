@@ -39,3 +39,6 @@ pnpm-debug.log*
 ### OS ###
 .DS_Store
 Thumbs.db
+
+# Temporary PDF reader installed for local document inspection.
+tmp/pdf-tools/
