@@ -147,8 +147,8 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `PORT` | Backend | No | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `1000000` |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
-| `CATALOG_SOURCE` | Backend | No | `dummy`: made-up courses, no database. `database` is reserved for the PostgreSQL catalog (not built yet). |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
+| `CATALOG_SOURCE` | Backend | No | `dummy`: made-up courses, no database. `database`: read-only PostgreSQL catalog via the `catalog_api` views (CSE 007 only so far; the API term `2027-SPRING` maps to Banner `202710` through `app.catalog.terms`). |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
