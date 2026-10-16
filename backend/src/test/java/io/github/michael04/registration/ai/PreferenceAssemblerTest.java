@@ -7,6 +7,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.github.michael04.registration.ai.RawPreferences.RawTimeBlock;
 import io.github.michael04.registration.common.preferences.HardConstraints;
@@ -81,6 +83,46 @@ class PreferenceAssemblerTest {
 		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").credits(12, 18).build());
 
 		assertThat(r.warnings()).noneMatch(w -> w.contains("overload"));
+	}
+
+	/** Regression: "at least 19 credits" used to become 18–18 because the maximum defaulted to 18. */
+	@ParameterizedTest(name = "minimum only {0} -> {1}-{2}")
+	@CsvSource({
+		// min, expected min, expected max, overload warning, cap warning
+		"15, 15, 18, false, false",
+		"19, 19, 19, true,  false",
+		"20, 20, 20, true,  false",
+		"21, 21, 21, true,  false",
+		"24, 21, 21, true,  true",
+	})
+	void minimumOnlyRaisesTheDefaultMaximumInsteadOfLoweringTheMinimum(int min, int expectedMin, int expectedMax,
+			boolean overloadWarning, boolean capWarning) {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").credits(min, null).build());
+
+		assertThat(r.preferences().hardConstraints().minCredits()).isEqualTo(expectedMin);
+		assertThat(r.preferences().hardConstraints().maxCredits()).isEqualTo(expectedMax);
+		assertThat(r.warnings().stream().anyMatch(w -> w.contains("overload"))).isEqualTo(overloadWarning);
+		assertThat(r.warnings().stream().anyMatch(w -> w.contains("capped at the 21-credit maximum"))).isEqualTo(capWarning);
+		assertThat(r.warnings()).noneMatch(w -> w.contains("was above the maximum"))
+			.noneMatch(w -> w.startsWith("Credit range not mentioned"));
+	}
+
+	@Test
+	void maximumOnlyIsUnchanged() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").credits(null, 20).build());
+
+		assertThat(r.preferences().hardConstraints().minCredits()).isEqualTo(12);
+		assertThat(r.preferences().hardConstraints().maxCredits()).isEqualTo(20);
+		assertThat(r.warnings()).anyMatch(w -> w.contains("overload"));
+	}
+
+	@Test
+	void bothGivenIsUnchanged() {
+		ExtractPreferencesResponse r = assembler.assemble(TERM, raw().courses("CSE 17").credits(19, 20).build());
+
+		assertThat(r.preferences().hardConstraints().minCredits()).isEqualTo(19);
+		assertThat(r.preferences().hardConstraints().maxCredits()).isEqualTo(20);
+		assertThat(r.warnings()).anyMatch(w -> w.contains("overload")).noneMatch(w -> w.contains("capped"));
 	}
 
 	@Test

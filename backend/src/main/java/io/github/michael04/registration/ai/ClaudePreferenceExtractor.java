@@ -54,12 +54,20 @@ public final class ClaudePreferenceExtractor implements PreferenceExtractor, Aut
 	}
 
 	/**
-	 * Wraps the student's text in tags the prompt treats as data. A closing tag inside the text is
-	 * neutralized so the text can't "escape" the wrapper.
+	 * Wraps the student's text in tags the prompt treats as data. Every {@code &}, {@code <} and {@code >}
+	 * in the text is escaped, so no spelling of a tag (upper case, extra spaces, nested, repeated) can close
+	 * the wrapper early; the only real tags left are the wrapper's own.
+	 *
+	 * <p>This is one layer of prompt-injection defense, not the whole of it: the reply is still constrained
+	 * by the structured-output schema and validated in Java ({@link PreferenceAssembler}).
 	 */
 	static String userMessage(String studentText) {
-		String safe = studentText == null ? "" : studentText.replace("</student_text>", "</student_text_>");
-		return "<student_text>\n" + safe + "\n</student_text>";
+		return "<student_text>\n" + escapeMarkup(studentText == null ? "" : studentText) + "\n</student_text>";
+	}
+
+	/** Escapes {@code &} first, so {@code &lt;} typed by a student stays literal and nothing is double-decoded. */
+	static String escapeMarkup(String text) {
+		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 
 	static String loadSystemPrompt() {

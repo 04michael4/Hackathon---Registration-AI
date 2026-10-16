@@ -98,7 +98,18 @@ public class PreferenceAssembler {
 			result.warnings.add("Credit range not mentioned; used defaults "
 					+ CreditLimits.DEFAULT_MIN + "–" + CreditLimits.DEFAULT_MAX);
 		}
-		int max = requestedMax == null ? CreditLimits.DEFAULT_MAX : requestedMax;
+		// Only a minimum given ("at least 19"): raise the default maximum to meet it instead of lowering the minimum.
+		boolean onlyMinimum = requestedMax == null && requestedMin != null;
+		int max;
+		if (requestedMax != null) {
+			max = requestedMax;
+		}
+		else if (requestedMin != null) {
+			max = Math.max(CreditLimits.DEFAULT_MAX, requestedMin);
+		}
+		else {
+			max = CreditLimits.DEFAULT_MAX;
+		}
 		if (max > CreditLimits.HARD_CAP) {
 			result.warnings.add("Requested " + max + " credits; capped at the " + CreditLimits.HARD_CAP + "-credit maximum");
 			max = CreditLimits.HARD_CAP;
@@ -113,7 +124,10 @@ public class PreferenceAssembler {
 			min = Math.min(CreditLimits.DEFAULT_MIN, max);
 		}
 		if (min > max) {
-			result.warnings.add("Minimum of " + min + " credits was above the maximum; set minimum to " + max);
+			// With only a minimum, max was derived from it, so this means the minimum hit the hard cap (already warned).
+			if (!onlyMinimum) {
+				result.warnings.add("Minimum of " + min + " credits was above the maximum; set minimum to " + max);
+			}
 			min = max;
 		}
 		if (CreditLimits.isOverload(max)) {
