@@ -1,0 +1,7 @@
+staging.db
+__pycache__/
+# real Banner-derived data and instructor names stay local: redistribution is not verified
+banner/*.csv
+banner/progress_manifest.json
+banner/section_details.md
+export/local_only_*
