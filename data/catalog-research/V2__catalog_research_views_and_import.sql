@@ -102,6 +102,21 @@ WHERE NOT EXISTS (SELECT 1 FROM catalog_research.tier_policy_decision x WHERE x.
 COMMENT ON VIEW catalog_research.active_tier_policy_decision IS 'Latest decision per subject. is_active = an ALLOW whose observed Banner schedule type still equals the stored one. A policy decision is not Registrar certification.';
 
 -- ---------------------------------------------------------------------------------------------------------
+-- prerequisite_banner_check: for every stored prerequisite expression, the course numbers in the expression against the course numbers in
+-- Banner's own prerequisite text for the same CRNs. A row here means the two lists differ. It checks WHICH courses appear, not the AND/OR shape.
+-- ---------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW catalog_research.prerequisite_banner_check AS
+SELECT r.term_code, r.offering_id,
+	COALESCE((SELECT array_agg(DISTINCT right(p #>> '{}', 3) ORDER BY right(p #>> '{}', 3)) FROM jsonb_path_query(r.expression, 'strict $.**.course') p), '{}') AS expression_numbers,
+	COALESCE((SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(rs.source_text, '(\d{3}) (?:Undergraduate|Graduate)', 'g') m), '{}') AS banner_numbers
+FROM catalog_research.eligibility_rule r
+JOIN catalog_research.requirement_status rs ON rs.term_code = r.term_code AND rs.offering_id = r.offering_id AND rs.requirement_type = 'PREREQUISITE'
+WHERE r.rule_kind = 'PREREQUISITE' AND r.parse_status = 'STRUCTURED' AND rs.evidence_level = 'BANNER'
+	AND COALESCE((SELECT array_agg(DISTINCT right(p #>> '{}', 3) ORDER BY right(p #>> '{}', 3)) FROM jsonb_path_query(r.expression, 'strict $.**.course') p), '{}')
+		IS DISTINCT FROM COALESCE((SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(rs.source_text, '(\d{3}) (?:Undergraduate|Graduate)', 'g') m), '{}');
+COMMENT ON VIEW catalog_research.prerequisite_banner_check IS 'Structured prerequisites whose course numbers differ from Banner''s own prerequisite text. Should be empty.';
+
+-- ---------------------------------------------------------------------------------------------------------
 -- Research tier, derived (never stored, so it cannot drift):
 --   READY        served by catalog_api today (the verified snapshot);
 --   BLOCKED      stored data disagrees with evidence, or the topic-identity scheme is undecided, or a section type other than
@@ -153,15 +168,15 @@ LEFT JOIN catalog_promoted.promotion_readiness r ON o.data_source = 'BANNER_EVID
 LEFT JOIN catalog_live.course_offering live ON live.term_code = o.term_code AND live.course_id = o.offering_id AND live.schedulable;
 COMMENT ON VIEW catalog_research.offering_status IS 'Stored / approved-to-serve / eligibility, side by side. registration_eligibility_guaranteed is always false.';
 
--- What is still unresolved, per offering: the registration information we could not turn into a verified fact.
+-- What is still unresolved, per offering: the registration information we could not turn into a checkable fact. (NONE_LISTED and
+-- USER_CONFIRMED_NONE are the reviewer's decision that nothing applies, so they are not listed.)
 CREATE OR REPLACE VIEW catalog_research.unresolved_requirement AS
 SELECT DISTINCT rs.term_code, rs.offering_id, rs.requirement_type, rs.status,
 	CASE rs.status WHEN 'UNKNOWN' THEN 'no source states it'
-		WHEN 'BANNER_NO_INFORMATION' THEN 'Banner is silent; that is not proof that nothing applies'
 		WHEN 'TEXT_ONLY' THEN 'stated in words only; not a rule the application can check'
 		ELSE 'stated as a rule; the application does not enforce it today' END AS why
 FROM catalog_research.requirement_status rs
-WHERE rs.status <> 'USER_CONFIRMED_NONE';
+WHERE rs.status NOT IN ('USER_CONFIRMED_NONE', 'NONE_LISTED');
 
 -- ---------------------------------------------------------------------------------------------------------
 -- Catalog-shaped candidate views: the same columns and types the adapter reads from catalog_api / catalog_live, over EVERY stored
@@ -307,13 +322,13 @@ BEGIN
 			WHEN rl.n > 0 THEN CASE WHEN rl.structured THEN 'RULE_DEFINED' ELSE 'TEXT_ONLY' END
 			WHEN bn.n > 0 THEN 'TEXT_ONLY'
 			WHEN o.data_source = 'SNAPSHOT' AND sn.assessment_status = 'USER_CONFIRMED_NONE' THEN 'USER_CONFIRMED_NONE'
-			WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'BANNER_NO_INFORMATION'
+			WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'NONE_LISTED'
 			ELSE 'UNKNOWN' END,
 		CASE
 			WHEN bn.n > 0 THEN 'BANNER'
 			WHEN rl.n > 0 THEN rl.evidence_level
 			WHEN o.data_source = 'SNAPSHOT' AND sn.assessment_status = 'USER_CONFIRMED_NONE' THEN 'USER_CLARIFICATION'
-			WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'BANNER'
+			WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'USER_CLARIFICATION'
 			ELSE 'NONE' END,
 		CASE WHEN rl.n > 0 OR bn.n > 0 THEN COALESCE(bn.txt, rl.txt) END
 	FROM catalog_research.offering o

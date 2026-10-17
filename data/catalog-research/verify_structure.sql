@@ -8,9 +8,9 @@ BEGIN
 			WHERE n.nspname = 'catalog_research' AND c.relkind IN ('r', 'v'))
 		IS DISTINCT FROM ARRAY['active_tier_policy_decision:v', 'candidate_course_offering:v', 'candidate_section_meeting:v', 'candidate_section_offering:v',
 			'course_alias:r', 'credit_exclusion:r', 'eligibility_rule:r', 'evidence_mismatch:v', 'import_run:r', 'offering:r', 'offering_status:v',
-			'offering_tier:v', 'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_meeting:r', 'tier_policy_decision:r',
+			'offering_tier:v', 'prerequisite_banner_check:v', 'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_meeting:r', 'tier_policy_decision:r',
 			'unresolved_requirement:v'] THEN
-		RAISE EXCEPTION 'catalog_research must contain exactly 10 tables and 8 views';
+		RAISE EXCEPTION 'catalog_research must contain exactly 10 tables and 9 views';
 	END IF;
 	-- Policy decisions and import runs are append-only (update/delete and truncate are refused).
 	IF (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -75,5 +75,5 @@ BEGIN
 			WHERE a.attrelid = 'catalog_live.section_meeting'::regclass AND a.attnum > 0 AND NOT a.attisdropped) THEN
 		RAISE EXCEPTION 'a candidate view no longer has the column names and types of its catalog_live counterpart';
 	END IF;
-	RAISE NOTICE 'PASS: catalog_research (10 tables, 8 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
+	RAISE NOTICE 'PASS: catalog_research (10 tables, 9 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
 END $$;

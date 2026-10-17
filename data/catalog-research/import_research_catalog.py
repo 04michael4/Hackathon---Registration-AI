@@ -198,6 +198,44 @@ def run_psql(sql):
     return result.returncode, (result.stdout + result.stderr).strip()
 
 
+def load_prerequisite_expressions(path):
+    """Hand-structured prerequisite expressions (see prerequisite_expressions.json): {offeringId: expression}."""
+    out = {}
+    for entry in json.loads(Path(path).read_text(encoding="utf-8"))["expressions"]:
+        if entry["offeringId"] in out:
+            raise InputError(f"two hand-structured expressions for {entry['offeringId']}")
+        check_expression(entry["expression"], entry["offeringId"])
+        out[entry["offeringId"]] = entry["expression"]
+    return out
+
+
+def check_expression(node, where):
+    if not isinstance(node, dict):
+        raise InputError(f"{where}: an expression node must be an object")
+    if "course" in node:
+        if not COURSE_ID.match(node["course"]) or set(node) - {"course", "concurrent"} or not isinstance(node.get("concurrent", False), bool):
+            raise InputError(f"{where}: bad course node {node!r}")
+    elif node.get("op") in ("AND", "OR") and isinstance(node.get("args"), list) and len(node["args"]) >= 2 and set(node) == {"op", "args"}:
+        for arg in node["args"]:
+            check_expression(arg, where)
+    else:
+        raise InputError(f"{where}: bad expression node {node!r}")
+
+
+def apply_prerequisite_expressions(payload, expressions):
+    """Attach a hand-structured expression only to a prerequisite the parser left as text; never override a parsed one, never invent one."""
+    by_id = {o["offeringId"]: o for o in payload["offerings"]}
+    for offering_id, expression in expressions.items():
+        o = by_id.get(offering_id)
+        if o is None:
+            raise InputError(f"hand-structured expression for {offering_id}, which is not in the input")
+        if not o["prerequisiteText"]:
+            raise InputError(f"{offering_id} has no prerequisite statement to structure")
+        if o["prerequisiteExpression"] is not None and o["prerequisiteExpression"] != expression:
+            raise InputError(f"{offering_id}: the parser already produced a different expression")
+        o["prerequisiteExpression"] = expression
+
+
 def load_decisions(path, term_code):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     out = []
@@ -221,6 +259,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--input", required=True, help="research export JSON (outside the repository)")
     ap.add_argument("--decisions", default=str(HERE / "policy_decisions.json"))
+    ap.add_argument("--prerequisite-expressions", default=str(HERE / "prerequisite_expressions.json"))
     ap.add_argument("--term-code", default="202710")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
@@ -228,6 +267,7 @@ def main(argv=None):
         refuse_shared_database()
         raw = Path(args.input).read_bytes()
         payload = normalize(json.loads(raw), args.term_code)
+        apply_prerequisite_expressions(payload, load_prerequisite_expressions(args.prerequisite_expressions))
         decisions = load_decisions(args.decisions, args.term_code)
     except (InputError, KeyError, ValueError, OSError) as exc:
         sys.exit("import refused: " + str(exc))
