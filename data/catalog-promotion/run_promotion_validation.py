@@ -7,7 +7,7 @@ like the shared one (registration_cse007_local) unless ALLOW_SHARED_DATABASE=yes
 
 What it does:
   1. Installs the promotion layer for real in the test database (one committing transaction) and reinstalls it.
-  2. Runs 12 scenarios on SYNTHETIC courses (fake CRNs 94xxx-99xxx). Each scenario imports synthetic Banner captures through
+  2. Runs 13 scenarios on SYNTHETIC courses (fake CRNs 94xxx-99xxx). Each scenario imports synthetic Banner captures through
      the real collector importer, records approvals as a person would, promotes, and checks what catalog_live serves. Every
      scenario runs inside a transaction that is ALWAYS rolled back.
   3. Mutation checks: weakens one gate at a time in a rolled-back copy and requires at least one scenario to FAIL.
@@ -140,12 +140,31 @@ CREATE FUNCTION pg_temp.nblockers(p_course text) RETURNS int LANGUAGE sql AS $$
 CREATE FUNCTION pg_temp.state(p_course text) RETURNS text LANGUAGE sql AS $$
 	SELECT state FROM catalog_promoted.promotion_readiness WHERE course_id = p_course $$;
 -- a recorded clarification from a person (the supporting evidence the gates require)
-CREATE FUNCTION pg_temp.clarify(p_label text) RETURNS uuid LANGUAGE sql AS $$
+-- It is also what load_synthetic_fixture.py commits, so it must give the same answer on a fresh database and after the fixture
+-- exists: reuse the committed row only if it is exactly what this helper writes, otherwise fail explicitly.
+CREATE FUNCTION pg_temp.clarify(p_label text) RETURNS uuid LANGUAGE plpgsql AS $$
+DECLARE
+	v_sha text := encode(sha256(convert_to(p_label, 'UTF8')), 'hex');
+	v_row banner_evidence.evidence_source%ROWTYPE;
+	v_id uuid;
+BEGIN
+	SELECT * INTO v_row FROM banner_evidence.evidence_source
+	WHERE source_kind = 'USER_CLARIFICATION' AND page_kind = 'OTHER' AND term_code = '202710' AND subject_crn IS NULL AND content_sha256 = v_sha;
+	IF FOUND THEN
+		IF v_row.captured_on IS DISTINCT FROM DATE '2026-10-17' OR v_row.captured_by_role IS DISTINCT FROM 'USER'
+			OR v_row.inspected_by_claude IS DISTINCT FROM false OR v_row.sanitization_note IS DISTINCT FROM 'synthetic test clarification'
+			OR v_row.provenance_note IS DISTINCT FROM 'synthetic: ' || p_label THEN
+			RAISE EXCEPTION 'an evidence source with this natural key exists but is not the expected synthetic clarification (%)', p_label
+				USING ERRCODE = 'integrity_constraint_violation';
+		END IF;
+		RETURN v_row.source_id;
+	END IF;
 	INSERT INTO banner_evidence.evidence_source (source_kind, page_kind, term_code, captured_on, captured_by_role, inspected_by_claude,
 		content_sha256, sanitization_note, provenance_note)
-	VALUES ('USER_CLARIFICATION', 'OTHER', '202710', DATE '2026-10-17', 'USER', false, encode(sha256(convert_to(p_label, 'UTF8')), 'hex'),
-		'synthetic test clarification', 'synthetic: ' || p_label)
-	ON CONFLICT DO NOTHING RETURNING source_id $$;
+	VALUES ('USER_CLARIFICATION', 'OTHER', '202710', DATE '2026-10-17', 'USER', false, v_sha, 'synthetic test clarification', 'synthetic: ' || p_label)
+	RETURNING source_id INTO v_id;
+	RETURN v_id;
+END $$;
 CREATE FUNCTION pg_temp.approve(p_course text, p_type text, p_subject text, p_value text, p_support uuid DEFAULT NULL) RETURNS bigint LANGUAGE sql AS $$
 	SELECT catalog_promoted.record_approval('202710', p_course, p_type, p_subject, p_value, 'probe-reviewer', 'probe: reviewed the current evidence', p_support) $$;
 -- the recorded clarification used as supporting evidence (set by the scenario; usable inside quoted statements)
@@ -218,6 +237,23 @@ def served(course):
 
 def scenarios():
     out = []
+    # 0. The supporting-evidence helper gives the same answer on a fresh database and after the synthetic fixture was committed.
+    shared_label = "a person confirmed this with a registrar-level source"
+    out.append(("supporting-evidence helper is order independent (fresh database, or the synthetic fixture already loaded)", "\n".join([
+        "SELECT set_config('t.c1', pg_temp.clarify('order independence label')::text, true);",
+        "SELECT set_config('t.c2', pg_temp.clarify('order independence label')::text, true);",
+        probe("asking twice for one clarification returns the same source", "current_setting('t.c1') = current_setting('t.c2')"),
+        probe("it is the expected synthetic user clarification", "(SELECT source_kind || captured_by_role || inspected_by_claude::text || provenance_note FROM banner_evidence.evidence_source "
+              "WHERE source_id = current_setting('t.c1')::uuid) = 'USER_CLARIFICATIONUSERfalsesynthetic: order independence label'"),
+        f"SELECT set_config('t.c3', pg_temp.clarify('{shared_label}')::text, true);",
+        probe("the label every scenario and the fixture loader use resolves to the one committed row, if there is one, else to a new row",
+              f"current_setting('t.c3')::uuid = (SELECT source_id FROM banner_evidence.evidence_source WHERE source_kind = 'USER_CLARIFICATION' "
+              f"AND content_sha256 = encode(sha256(convert_to('{shared_label}', 'UTF8')), 'hex'))"),
+        "INSERT INTO banner_evidence.evidence_source (source_kind, page_kind, term_code, captured_on, captured_by_role, inspected_by_claude, content_sha256, "
+        "sanitization_note, provenance_note) VALUES ('USER_CLARIFICATION', 'OTHER', '202710', DATE '2026-10-17', 'USER', false, "
+        "encode(sha256(convert_to('tampered label', 'UTF8')), 'hex'), 'synthetic test clarification', 'written by someone else');",
+        reject("an existing source with the same key but different content is refused, not silently reused", "SELECT pg_temp.clarify('tampered label')"),
+    ]), None))
     lo = capture_set("098", lecture_only_crns("980"))  # CRNs 98001, 98002
     C = "CSE-098"
     crns = ["98001", "98002"]
@@ -374,10 +410,15 @@ def scenarios():
     cx = capture_set("003", [sec("93001", "010", "Lecture", "2", "2", meet("Monday,Wednesday", "09:20 AM", "10:35 AM"))])
     X = "CSE-003"
     out.append(("CSE 007 is unchanged; a catalog credit exclusion with CSE 007 blocks CSE 003", import_sql(cx) + "\n" + SUP + "\n".join([
-        probe("catalog_live equals catalog_api for the verified snapshot", " AND ".join(
-            f"(SELECT count(*) FROM (SELECT * FROM catalog_live.{v} EXCEPT SELECT * FROM catalog_api.{v}) a) = 0 AND (SELECT count(*) FROM (SELECT * FROM catalog_api.{v} EXCEPT SELECT * FROM catalog_live.{v}) b) = 0"
+        probe("catalog_live serves every catalog_api row unchanged", " AND ".join(
+            f"(SELECT count(*) FROM (SELECT * FROM catalog_api.{v} EXCEPT SELECT * FROM catalog_live.{v}) b) = 0"
             for v in ("course_offering", "section_offering", "section_meeting"))),
-        probe("exactly the three CSE 007 sections and five meetings", "(SELECT count(*) FROM catalog_live.section_offering) = 3 AND (SELECT count(*) FROM catalog_live.section_meeting) = 5 AND (SELECT count(*) FROM catalog_live.course_offering) = 1"),
+        probe("anything else catalog_live serves is marked PROMOTED (none when no course was promoted before this run)",
+              "NOT EXISTS (SELECT 1 FROM catalog_live.course_offering c LEFT JOIN catalog_live.offering_source o USING (course_id) "
+              "WHERE c.course_id NOT IN (SELECT course_id FROM catalog_api.course_offering) AND o.source IS DISTINCT FROM 'PROMOTED')"),
+        probe("exactly the three CSE 007 sections and five meetings, and CSE 007 is the only SNAPSHOT course",
+              "(SELECT count(*) FROM catalog_live.section_offering WHERE course_id = 'CSE-007') = 3 AND (SELECT count(*) FROM catalog_live.section_meeting "
+              "WHERE crn IN (SELECT crn FROM catalog_api.section_offering)) = 5 AND (SELECT count(*) FROM catalog_live.offering_source WHERE source = 'SNAPSHOT') = 1"),
         probe("the catalog names CSE 007 as excluding CSE 003 and the blocker says so", f"pg_temp.has('{X}', 'CREDIT_EXCLUSION_UNENFORCED:CSE-007')"),
         approve_lecture_only(X, ["93001"], skip=("CREDITS", "CREDIT_EXCLUSION")),
         f"SELECT pg_temp.approve('{X}', 'CREDITS', '93001', '2');",
@@ -495,6 +536,8 @@ def main():
     before_catalog = query("SELECT coalesce(md5(string_agg(c.relname || pg_get_viewdef(c.oid), ',' ORDER BY c.relname)), 'none') FROM pg_class c "
                            "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'catalog_api' AND c.relkind = 'v'")
     before_evidence = query("SELECT count(*) FROM banner_evidence.evidence_source")
+    before_promotions = query("SELECT count(*) FROM catalog_promoted.promotion") if query("SELECT to_regclass('catalog_promoted.promotion') IS NOT NULL") == "t" else "0"
+    before_approvals = query("SELECT count(*) FROM catalog_promoted.approval") if query("SELECT to_regclass('catalog_promoted.approval') IS NOT NULL") == "t" else "0"
     print("== 1. Install (one committing transaction), then reinstall")
     code, out = psql(["-f", str(HERE / "install.sql")])
     check(code == 0 and "PASS: catalog_promoted" in out, "install.sql committed with its structure checks")
@@ -543,8 +586,8 @@ def main():
                           "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'catalog_api' AND c.relkind = 'v'")
     check(after_catalog == before_catalog, "the five catalog_api views are unchanged")
     check(query("SELECT count(*) FROM banner_evidence.evidence_source") == before_evidence, "no evidence row was added or changed by the scenarios")
-    check(query("SELECT count(*) FROM catalog_promoted.promotion") == "0" and query("SELECT count(*) FROM catalog_promoted.approval") == "0",
-          "no promotion or approval persisted from the scenarios (all rolled back)")
+    check(query("SELECT count(*) FROM catalog_promoted.promotion") == before_promotions and query("SELECT count(*) FROM catalog_promoted.approval") == before_approvals,
+          "no promotion or approval persisted from the scenarios (all rolled back; rows that existed before the run, such as the synthetic fixture, are unchanged)")
     print("\nALL PROMOTION CHECKS PASSED")
 
 
