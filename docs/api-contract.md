@@ -543,6 +543,13 @@ Explanations require `AI_PROVIDER=claude` and a configured key. In `none` or dev
 
 ---
 
+## Demo-only endpoints (not part of the contract)
+
+With `CATALOG_SOURCE=demo` (a local, feature-flagged Spring 2027 demo catalog; see README section 4b) the backend also serves `GET /api/demo/offerings`,
+`POST /api/demo/schedules/generate` and the page `GET /demo`. They exist only in that mode, are additions (endpoints 1-9 are unchanged and also run on the
+demo catalog), and are not a commitment: they may change or disappear after the demo. The demo response adds per-course warnings
+(`UNVERIFIED` / `UNRESOLVED` / `OVERRIDE_REQUIRED`) and never reports a course as eligible.
+
 ## Change log
 
 | Date | Change | By |

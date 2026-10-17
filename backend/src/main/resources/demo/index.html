@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spring 2027 CSE schedule demo</title>
+<style>
+	:root { --bg: #f6f7f9; --fg: #1d2330; --muted: #5d6677; --card: #fff; --line: #d9dde5; --accent: #1f5fbf; --warn: #9a5b00; --warnbg: #fff4e0; --info: #3d4a63; --bad: #a12626; }
+	@media (prefers-color-scheme: dark) { :root { --bg: #14171d; --fg: #e8ebf1; --muted: #9aa3b5; --card: #1d222b; --line: #333b49; --accent: #6aa3ff; --warn: #ffc56b; --warnbg: #3a2e14; --info: #aab6cf; --bad: #ff8a8a; } }
+	* { box-sizing: border-box; }
+	body { margin: 0; font: 14px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+	header { padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+	h1 { font-size: 18px; margin: 0 0 4px; }
+	.caution { color: var(--warn); background: var(--warnbg); padding: 8px 12px; border-radius: 6px; margin: 10px 16px 0; }
+	main { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 16px; padding: 16px; }
+	@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+	.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+	label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 2px; }
+	input, select, button { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+	button.primary { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; width: 100%; margin-top: 12px; padding: 9px; }
+	.row { display: flex; gap: 8px; } .row > * { flex: 1; min-width: 0; }
+	#list { max-height: 56vh; overflow: auto; margin-top: 8px; border-top: 1px solid var(--line); }
+	.off { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 2px; border-bottom: 1px solid var(--line); align-items: center; }
+	.off .t { font-weight: 600; } .off .m { color: var(--muted); font-size: 12px; grid-column: 1 / 2; }
+	.chip { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--line); color: var(--info); margin-right: 4px; }
+	.chip.warn { color: var(--warn); border-color: var(--warn); } .chip.bad { color: var(--bad); border-color: var(--bad); }
+	.grid { margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 44px repeat(5, 1fr); }
+	.gh { padding: 4px; text-align: center; font-weight: 600; border-bottom: 1px solid var(--line); background: var(--bg); }
+	.col { position: relative; border-left: 1px solid var(--line); height: 600px; }
+	.hour { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); font-size: 10px; color: var(--muted); padding-left: 2px; }
+	.blk { position: absolute; left: 2px; right: 2px; border-radius: 4px; padding: 2px 4px; font-size: 11px; overflow: hidden; color: #fff; line-height: 1.2; }
+	table { border-collapse: collapse; width: 100%; margin: 6px 0; } th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 13px; }
+	.w { margin: 4px 0; padding: 5px 8px; border-radius: 6px; font-size: 13px; background: var(--warnbg); color: var(--warn); }
+	.w.info { background: transparent; color: var(--info); border: 1px solid var(--line); } .w.ok { background: transparent; color: var(--info); border: 1px dashed var(--line); }
+	.sched { margin-bottom: 18px; } .tag { font-size: 12px; color: var(--muted); }
+	#error { color: var(--bad); margin-top: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+	<h1>Spring 2027 CSE proposed-schedule demo</h1>
+	<div class="tag" id="source"></div>
+</header>
+<div class="caution" id="caution">Loading&hellip;</div>
+<main>
+	<section class="card">
+		<strong>1. Your profile (optional)</strong>
+		<div class="row">
+			<div><label for="standing">Class standing</label><select id="standing"><option value="">Unknown</option><option>FR</option><option>SO</option><option>JR</option><option>SR</option><option>GR</option></select></div>
+			<div><label for="level">Level</label><select id="level"><option value="">Unknown</option><option value="UG">Undergraduate</option><option value="GR">Graduate</option></select></div>
+		</div>
+		<div class="row">
+			<div><label for="college">College</label><select id="college"><option value="">Unknown</option><option value="EN">Engineering (EN)</option><option value="AS">Arts &amp; Sciences (AS)</option></select></div>
+			<div><label for="majors">Major codes</label><input id="majors" placeholder="e.g. CSE, CRSC"></div>
+		</div>
+		<div class="tag" style="margin-top:6px">Missing information never means eligible: it only shows up as "unresolved".</div>
+		<strong style="display:block;margin-top:14px">2. Pick courses</strong>
+		<input id="filter" placeholder="Filter by code or title" style="width:100%;margin-top:6px">
+		<div id="list"></div>
+		<strong style="display:block;margin-top:14px">3. Credits</strong>
+		<div class="row"><div><label for="min">Minimum</label><input id="min" type="number" min="1" max="21" value="1"></div><div><label for="max">Maximum</label><input id="max" type="number" min="1" max="21" value="21"></div></div>
+		<button class="primary" id="go">Generate timetables</button>
+		<div id="error"></div>
+	</section>
+	<section id="out" class="card"><span class="tag">Choose courses and generate. Results appear here.</span></section>
+</main>
+<script>
+const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
+const COLORS = ['#1f5fbf','#a14a1f','#2f7d4f','#7a3fa0','#b0324e','#0f7f8a','#6b6b1f','#4a4f9a','#8a5a2b','#2b6f6f'];
+const state = { offerings: [], pick: {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const t = s => s.slice(0, 5);
+const mins = s => +s.slice(0, 2) * 60 + +s.slice(3, 5);
+
+function profile() {
+	const majors = $('majors').value.split(',').map(s => s.trim()).filter(Boolean);
+	return { classStanding: $('standing').value || null, level: $('level').value || null, college: $('college').value || null, majors };
+}
+function profileQuery() {
+	const p = profile(), q = new URLSearchParams();
+	if (p.classStanding) q.set('classStanding', p.classStanding);
+	if (p.level) q.set('level', p.level);
+	if (p.college) q.set('college', p.college);
+	p.majors.forEach(m => q.append('majors', m));
+	return q.toString();
+}
+function meetingText(sec) {
+	if (!sec.meetings.length) return 'time to be arranged';
+	return sec.meetings.map(m => m.days.map(d => d.slice(0, 3)).join('/') + ' ' + t(m.start) + '-' + t(m.end)).join('; ');
+}
+async function loadOfferings() {
+	const r = await fetch('/api/demo/offerings?' + profileQuery());
+	if (!r.ok) throw new Error('Could not load offerings (' + r.status + ')');
+	const d = await r.json();
+	state.offerings = d.offerings;
+	$('caution').textContent = d.caution + ' Warnings below are not registration rules.';
+	$('source').textContent = d.term + ' · ' + d.offerings.length + ' offerings · ' + d.source;
+	renderList();
+}
+function renderList() {
+	const f = $('filter').value.toLowerCase();
+	$('list').innerHTML = state.offerings.filter(v => !f || (v.offering.offeringId + ' ' + v.offering.title).toLowerCase().includes(f)).map(v => {
+		const o = v.offering, cur = state.pick[o.offeringId] || '';
+		const labs = o.sections.filter(s => s.component === 'LAB').length;
+		const chips = [];
+		if (labs) chips.push('<span class="chip">lecture + 1 of ' + labs + ' lab' + (labs > 1 ? 's' : '') + '</span>');
+		if (v.status === 'OVERRIDE_REQUIRED') chips.push('<span class="chip bad">override may be required</span>');
+		if (o.arrangedMeeting) chips.push('<span class="chip warn">extra meeting TBA</span>');
+		if (o.administrativeType !== 'Lecture' && o.administrativeType !== 'Lab') chips.push('<span class="chip warn">' + esc(o.administrativeType) + '</span>');
+		if (o.prerequisiteNote) chips.push('<span class="chip warn">prerequisite not verified</span>');
+		const times = o.sections.filter(s => s.component === 'LECTURE').map(meetingText).join(' | ');
+		return '<div class="off"><div class="t">' + esc(o.offeringId) + ' · ' + esc(o.title) + ' <span class="tag">(' + o.credits + ' cr)</span></div>' +
+			'<select data-id="' + esc(o.offeringId) + '"><option value="">—</option><option value="want"' + (cur === 'want' ? ' selected' : '') + '>Want</option><option value="nice"' + (cur === 'nice' ? ' selected' : '') + '>Nice to have</option></select>' +
+			'<div class="m">' + esc(times) + '<br>' + chips.join('') + '</div></div>';
+	}).join('');
+	document.querySelectorAll('#list select').forEach(s => s.onchange = () => { state.pick[s.dataset.id] = s.value; });
+}
+function warnHtml(ws) {
+	const byCourse = {};
+	ws.forEach(w => { (byCourse[w.courseId] = byCourse[w.courseId] || []).push(w); });
+	return Object.entries(byCourse).map(([id, list]) => '<div><strong>' + esc(id) + '</strong>' + list.map(w =>
+		'<div class="w ' + (w.severity === 'INFO' ? (w.outcome === 'SATISFIED' ? 'ok' : 'info') : '') + '"><span class="tag">' + esc(w.outcome) + ' · ' + esc(w.source) + '</span> ' + esc(w.text) + '</div>').join('') + '</div>').join('');
+}
+function gridHtml(sections) {
+	const start = 8 * 60, end = 18 * 60, h = 600, ids = [...new Set(sections.map(s => s.courseId))];
+	const lines = x => [8,10,12,14,16].map(q => '<div class="hour" style="top:' + ((q * 60 - start) / (end - start) * h) + 'px">' + x(q) + '</div>').join('');
+	let cols = '<div class="col" style="border-left:0">' + lines(q => q + ':00') + '</div>';
+	DAYS.forEach(day => {
+		let blocks = '';
+		sections.forEach(s => s.meetings.forEach(m => {
+			if (!m.days.includes(day)) return;
+			const top = (mins(m.start) - start) / (end - start) * h, height = Math.max(18, (mins(m.end) - mins(m.start)) / (end - start) * h - 2);
+			blocks += '<div class="blk" style="top:' + top + 'px;height:' + height + 'px;background:' + COLORS[ids.indexOf(s.courseId) % COLORS.length] + '">' +
+				esc(s.courseId) + (s.component === 'LAB' ? ' LAB' : '') + '<br>' + t(m.start) + '-' + t(m.end) + '</div>';
+		}));
+		cols += '<div class="col">' + lines(() => '') + blocks + '</div>';
+	});
+	return '<div class="grid"><div class="gh"></div>' + DAYS.map(d => '<div class="gh">' + d.slice(0, 3) + '</div>').join('') + cols + '</div>';
+}
+function render(d) {
+	let html = '<div class="tag">' + esc(d.caution) + '</div>';
+	if (!d.schedules.length) html += '<p><strong>No conflict-free timetable exists for this selection and credit range.</strong></p>';
+	d.diagnostics.forEach(x => { html += '<div class="w info">' + esc(x) + '</div>'; });
+	d.schedules.forEach(s => {
+		html += '<div class="sched"><h3>Timetable ' + s.rank + ' · ' + s.totalCredits + ' credits' + (s.overload ? ' (overload)' : '') + ' · <span class="chip ' + (s.status === 'OVERRIDE_REQUIRED' ? 'bad' : 'warn') + '">eligibility ' + esc(s.status) + '</span></h3>' +
+			gridHtml(s.sections) +
+			'<table><tr><th>Course</th><th>CRN</th><th>Part</th><th>Cr</th><th>Meets</th></tr>' + s.sections.map(x =>
+				'<tr><td>' + esc(x.courseId) + ' · ' + esc(x.title) + '</td><td>' + esc(x.crn) + '</td><td>' + esc(x.component) + '</td><td>' + x.credits + '</td><td>' + esc(x.meetings.length ? x.meetings.map(m => m.days.map(q => q.slice(0, 3)).join('/') + ' ' + t(m.start) + '-' + t(m.end) + (m.location && m.location !== 'TBA' ? ' @ ' + m.location : '')).join('; ') : 'time to be arranged') + '</td></tr>').join('') + '</table>' +
+			'<details' + (s.rank === 1 ? ' open' : '') + '><summary>Warnings (' + s.warnings.length + ')</summary>' + warnHtml(s.warnings) + '</details></div>';
+	});
+	$('out').innerHTML = html;
+}
+async function generate() {
+	$('error').textContent = '';
+	const want = Object.keys(state.pick).filter(k => state.pick[k] === 'want'), nice = Object.keys(state.pick).filter(k => state.pick[k] === 'nice');
+	if (!want.length) { $('error').textContent = 'Pick at least one course marked "Want".'; return; }
+	const body = { courseIds: want, optionalCourseIds: nice, minCredits: +$('min').value || 1, maxCredits: +$('max').value || 21, maxResults: 5, profile: profile() };
+	const r = await fetch('/api/demo/schedules/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+	const d = await r.json().catch(() => ({}));
+	if (!r.ok) { $('error').textContent = (d.detail || d.title || 'Request failed') + ' (' + r.status + ')'; return; }
+	render(d);
+}
+['standing','level','college','majors'].forEach(id => $(id).addEventListener('change', () => loadOfferings().catch(e => { $('error').textContent = e.message; })));
+$('filter').addEventListener('input', renderList);
+$('go').addEventListener('click', () => generate().catch(e => { $('error').textContent = e.message; }));
+loadOfferings().catch(e => { $('caution').textContent = e.message; });
+</script>
+</body>
+</html>

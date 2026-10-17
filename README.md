@@ -150,6 +150,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `200000`; positive 32-bit integer |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
 | `DB_CATALOG_SCHEMA` | Backend, only when `CATALOG_SOURCE=database` | No | `catalog_api` (the verified snapshot). `catalog_live` also serves approved, still-valid promoted courses (see [data/catalog-promotion](data/catalog-promotion/README.md)); no other value is accepted |
+| `DEMO_FIXTURE_PATH` | Backend, only when `CATALOG_SOURCE=demo` | Only in demo mode | Path of the local Spring 2027 demo fixture (kept outside the repository; see section 4b) |
 | `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. Synthetic catalogs are test-only and absent from the application JAR. |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
@@ -193,6 +194,28 @@ PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=<local superuser> python3 -I data/ca
 PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registration_spring2027 \
   python3 -I data/catalog-research/verify_local_database.py --input ~/.registration-demo/spring-2027.json
 ```
+
+### 4b. Spring 2027 demo (local, feature-flagged)
+
+`CATALOG_SOURCE=demo` runs the existing schedule service and engine on a local fixture of the 42 researched Spring 2027 CSE offerings,
+with eligibility warnings and a one-page UI. It is **not** the production path: it never touches PostgreSQL, the promotion gates or
+`catalog_live`, and everything it shows is a *proposed* option, not a registration and not Registrar-certified. The fixture holds real
+CRNs and times, so it is built locally and kept **outside the repository** (never committed):
+
+```bash
+# 1. Build the fixture from the exported research workbook and a read-only SCRATCH copy of the collected Banner evidence
+#    (PG* variables point at the scratch copy; the shared database is refused). Or reuse a fixture someone already built.
+python3 -I data/catalog-promotion/tools/build_demo_fixture.py --workbook ~/Downloads/TRACKER.xlsx --db --out ~/.registration-demo/spring-2027.json
+# 2. Run the demo
+cd backend && CATALOG_SOURCE=demo DEMO_FIXTURE_PATH=~/.registration-demo/spring-2027.json AI_PROVIDER=none ./mvnw spring-boot:run
+# 3. Open http://localhost:8080/demo   (API: GET /api/demo/offerings, POST /api/demo/schedules/generate)
+```
+
+`POST /api/demo/schedules/generate` takes `courseIds` (wanted), optional `optionalCourseIds`, `minCredits`/`maxCredits` and an optional
+`profile` (`classStanding` FR/SO/JR/SR/GR, `level` UG/GR, `college`, `majors`). The response is the engine's timetables plus per-course
+warnings (`UNVERIFIED`, `UNRESOLVED`, `OVERRIDE_REQUIRED`); a missing profile field is never read as eligible. The shared
+`/api/schedules/*` and `/api/courses` endpoints also run on the demo catalog, unchanged. Tests: `./mvnw test -Dtest='Demo*Test'` (synthetic
+fixture) and, with the fixture present, `DEMO_FIXTURE_PATH=... ./mvnw test -Dtest=DemoRealFixtureTest`.
 
 ### 5. Run the backend
 
