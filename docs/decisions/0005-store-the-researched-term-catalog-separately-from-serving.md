@@ -9,7 +9,7 @@
 ## Decision
 1. **Store, approve and register are three different facts.** `catalog_research` records what was researched, with an evidence level on every row. Approval to serve stays in `catalog_promoted` / `catalog_live`. Registration eligibility is never stated.
 2. **`catalog_research` is read-only toward every other layer and unread by them.** The serving path is unchanged; the adapter allow-list is unchanged.
-3. **Unknown stays unknown.** `UNKNOWN`, `BANNER_NO_INFORMATION`, `USER_CONFIRMED_NONE`, `TEXT_ONLY` and `RULE_DEFINED` are distinct statuses; an unparsed prerequisite is kept as text, never guessed into a rule.
+3. **Unknown stays unknown.** `UNKNOWN`, `NONE_LISTED` (Banner lists nothing; the designated reviewer treats that as none, user-supplied and not Registrar certification), `USER_CONFIRMED_NONE`, `TEXT_ONLY` and `RULE_DEFINED` are distinct statuses; an unparsed prerequisite is kept as text, never guessed into a rule.
 4. **Every Banner-sourced row is cross-checked against the collected evidence, and every snapshot row against `catalog_api`.** The importer aborts on any difference.
 5. **The tier is derived, not stored** (`READY` = served by `catalog_api`; `BLOCKED` = evidence mismatch, undecided topic identity, or an unsupported section type without an active policy decision; otherwise `CONDITIONAL`).
 6. **A section-type policy decision is an append-only `TEAM_POLICY` row** with CHECK constraints that forbid claiming Registrar certification or a registration guarantee. It makes CSE 217-010 `CONDITIONAL`; it does not change `promotion_readiness`, which still blocks the course until the serving requirements in ADR-0004 hold.

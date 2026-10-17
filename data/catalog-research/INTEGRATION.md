@@ -16,10 +16,10 @@ banner_evidence -> catalog_promoted -> catalog_live  unchanged (evidence -> appr
 function references it; `verify_structure.sql` asserts both. The backend's schema allow-list is still `catalog_api` / `catalog_live`
 (`DB_CATALOG_SCHEMA=catalog_research` fails at startup, checked 2026-10-17).
 
-## 2. Added (10 tables, 8 views, 3 functions; schema `catalog_research`)
+## 2. Added (10 tables, 9 views, 3 functions; schema `catalog_research`)
 Tables: `import_run`, `offering`, `section`, `section_meeting`, `section_arranged_meeting`, `requirement_status`, `eligibility_rule`,
 `credit_exclusion`, `course_alias`, `tier_policy_decision`. Views: `evidence_mismatch`, `active_tier_policy_decision`, `offering_tier`,
-`offering_status`, `unresolved_requirement`, `candidate_course_offering`, `candidate_section_offering`, `candidate_section_meeting`.
+`offering_status`, `unresolved_requirement`, `prerequisite_banner_check`, `candidate_course_offering`, `candidate_section_offering`, `candidate_section_meeting`.
 Functions: `import_term` and `record_tier_policy_decision` (the only writers; closed to `PUBLIC`) and the `reject_change` trigger.
 
 ## 3. Reproduce (isolated local database only)
