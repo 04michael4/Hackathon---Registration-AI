@@ -285,7 +285,8 @@ def main():
     check(david_fingerprint() == before_david, "David's 11 tables: identical row counts and content hashes")
     check(catalog_views_fingerprint() == before_views, "the five catalog_api views are unchanged")
     schemas = query("SELECT string_agg(nspname, ',' ORDER BY nspname) FROM pg_namespace WHERE nspname !~ '^(pg_|information_schema)'")
-    check(schemas == "banner_evidence,catalog_api,cse007_snapshot,public", "schemas: " + schemas)
+    check(schemas in ("banner_evidence,catalog_api,cse007_snapshot,public", "banner_evidence,catalog_api,catalog_live,catalog_promoted,cse007_snapshot,public"),
+          "schemas: " + schemas)
     print("\nALL CHECKS PASSED")
 
 

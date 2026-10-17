@@ -559,6 +559,12 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 **Blockers:** real data depends on step 1.
 
+**Catalog promotion layer (ported onto `pre-main` 5aa3e82, uncommitted; see [data/catalog-promotion](data/catalog-promotion/README.md) and [ADR-0003](docs/decisions/0003-promote-evidence-through-approvals-into-catalog-live.md))**
+- 🟡 Implemented on synthetic data only: `catalog_promoted` (approvals, immutable promotions, read-only `promotion_readiness`) and `catalog_live` (verified snapshot plus still-valid promoted courses). **No real course is approved or promoted.** The backend reads it only with `DB_CATALOG_SCHEMA=catalog_live` (default `catalog_api`, unchanged behavior). The new `application.properties` key needs review by the Backend API owner.
+- Verified 2026-10-16 in an isolated local PostgreSQL 17 database (not the shared one), on this tree: default `./mvnw -B test` 696 run, 0 failures, 0 errors, 20 skipped; `./mvnw -B -Pdatabase-it verify` 19 integration tests, 0 failures (`ScheduleDatabaseIT` 16, `SourceCatalogDatabaseIT`, `SchedulingNodeCapDatabaseIT`, `ProductionPackagingIT`); `LiveCatalogIntegrationTest` 8 and `DefaultSchemaHidesPromotedCoursesIntegrationTest` 2 pass as the read-only role with the real engine (CSE 007 gives its two schedules); promotion scenarios (12 scenarios, all mutation checks) and structure checks pass.
+- `DatabaseCatalogIntegrationTest.theConnectionIsReadOnlyAndRefusesWrites` failed for a least-privilege role (it expected "read-only transaction", the role gets "permission denied" first). Its two assertions now accept either message (the same narrow change as in PR #7); the write must still throw. Rerun 2026-10-16: 10/10 pass as both the read-only role and the database owner.
+- All 40 collected Banner courses are `BLOCKED` in `promotion_readiness` (unenforced prerequisites/restrictions, unapproved credits, standalone status, cross-listing and credit-exclusion). Proposed next step: [ADR-0004](docs/decisions/0004-proposed-class-standing-eligibility.md) (not implemented).
+
 ---
 
 ## Next recommended tasks

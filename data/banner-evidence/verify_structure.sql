@@ -55,7 +55,8 @@ BEGIN
 	IF bad IS NOT NULL THEN
 		RAISE EXCEPTION 'a foreign key crosses the banner_evidence boundary: %', bad;
 	END IF;
-	-- ... views read only banner_evidence relations, and no other schema's view reads banner_evidence.
+	-- ... banner_evidence views read only banner_evidence relations, and no view outside banner_evidence reads it, EXCEPT the
+	-- promotion layer's own views (catalog_promoted), which exist to read evidence and never write it.
 	SELECT string_agg(vn.nspname || '.' || v.relname || ' reads ' || dn.nspname || '.' || d.relname, ', ') INTO bad
 	FROM pg_class v JOIN pg_namespace vn ON vn.oid = v.relnamespace
 	JOIN pg_rewrite rw ON rw.ev_class = v.oid
@@ -63,7 +64,8 @@ BEGIN
 	JOIN pg_class d ON d.oid = dep.refobjid AND d.oid <> v.oid
 	JOIN pg_namespace dn ON dn.oid = d.relnamespace
 	WHERE v.relkind = 'v' AND dn.nspname NOT IN ('pg_catalog', 'information_schema')
-		AND (vn.nspname = 'banner_evidence') <> (dn.nspname = 'banner_evidence');
+		AND (vn.nspname = 'banner_evidence') <> (dn.nspname = 'banner_evidence')
+		AND NOT (vn.nspname = 'catalog_promoted' AND dn.nspname = 'banner_evidence');
 	IF bad IS NOT NULL THEN
 		RAISE EXCEPTION 'a view crosses the banner_evidence boundary: %', bad;
 	END IF;
