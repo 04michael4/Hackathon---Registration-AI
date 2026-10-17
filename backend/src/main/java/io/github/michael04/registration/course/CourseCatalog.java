@@ -7,15 +7,14 @@ import java.util.Optional;
  * Read access to the course catalog for one term.
  *
  * <p>Owned by the Backend API module (Marpu). Section data comes separately from {@link SectionCatalog}.
- * Implementations: {@link DummyCourseCatalog} is the explicit AI development stand-in;
- * {@code persistence.DatabaseCourseCatalog} provides authoritative database reads and also implements
- * {@link SectionCatalog} and {@link CourseReadCatalog}. Course endpoints never use the dummy.
+ * Production implementation: {@link io.github.michael04.registration.course.persistence.JdbcCourseCatalog},
+ * backed by the authoritative read-only catalog_api views. Synthetic implementations live only in test sources.
  */
 public interface CourseCatalog {
 
 	/**
-	 * Selects the active implementation: {@code dummy} (default, {@link DummyCourseCatalog})
-	 * or {@code database} (PostgreSQL-backed catalog). Set via env var {@code CATALOG_SOURCE}.
+	 * Selects {@code database} in production. Tests can explicitly select their test-only {@code dummy} fixture.
+	 * Set via env var {@code CATALOG_SOURCE}; database failures never fall back to synthetic data.
 	 */
 	String SOURCE_PROPERTY = "app.catalog.source";
 

@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-16):** This feature branch implements read-only PostgreSQL Course APIs and Schedule generation through the native solver, verified with real HTTP and deterministic catalog data. Schedule explanation reloads catalog facts and validates the selection with the engine before invoking Claude; its provider integration is tested offline. The default app still starts without a database or AI key. Frontend, ingestion automation and features labeled ⬜ remain planned. [HANDOFF.md](../HANDOFF.md) and the [verification record](course-schedule-verification.md) distinguish executed checks from deployment work.
+> **Status at a glance (2026-10-16):** Final Schedule integration uses the authoritative pre-main Hikari/JDBC catalogs, Data views and native solver. Production defaults to database with no synthetic catalog fallback. Test-only fixtures remain offline; opt-in tests execute real PostgreSQL/HTTP/solver paths. See [final integration evidence](schedule-final-integration.md).
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -115,10 +115,10 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | ✅ | Course controller/service/response records; `CourseReadCatalog`; existing AI/Schedule read interfaces; opt-in `persistence.DatabaseCourseCatalog` and JDBC repository; source-schema/PostgreSQL/HTTP verified | Backend API (+ Data) |
+| `course` | Implemented | Existing Course API/read interfaces and authoritative PostgreSQL catalogs; demo catalogs now test-only | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
-| `schedule` | ✅ | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` calls the existing native solver with the shared PostgreSQL catalog; real HTTP verified. | Backend API |
+| `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine. Endpoints: `generate` (with `electiveAdvice`), `check` (manual mode), `suggest-electives`. | Backend API |
 | `ai` | ✅ | Claude client wrapper, prompt, output validation (`PreferenceAssembler`), `PreferenceController`; `none`/`dummy`/`claude` providers | AI Integration |
 
 Allowed dependencies (arrows point from a package to what it may use):
@@ -145,74 +145,29 @@ Rules:
 
 ## 5. Database architecture
 
-**Status: ✅ read-only PostgreSQL integration implemented and verified.** Database mode is opt-in; the default development application still starts without a database.
+**Implemented:** PostgreSQL through pre-main's existing `CatalogDatabaseConfiguration` (HikariCP),
+`JdbcCatalogDao` (`JdbcClient`), `JdbcCourseCatalog`, `JdbcSectionCatalog`, `CatalogProperties` and `TermMapping`.
+No JPA/Spring Data implementation exists; this integration does not introduce one or add a second datasource.
 
-**Course API update (2026-10-16).** `CATALOG_SOURCE=database` enables read-only JDBC access to the Data
-module's `cse007_snapshot` table contract. `CatalogPersistenceConfiguration` supplies a PostgreSQL
-data source, JDBC template and transaction manager; `CatalogRepository` uses parameterized queries
-and enforced read-only transactions. `DatabaseCourseCatalog` implements `CourseCatalog`, `SectionCatalog`
-and the richer `CourseReadCatalog`, so Course, Schedule and AI share the same selected data source.
-No JPA entities existed to preserve, and the adapter adds no schema or startup writes. This narrowly
-uses `spring-jdbc` and the PostgreSQL JDBC driver, managed by the existing Boot parent.
+The local draft is reconciled with this implementation. `JdbcCourseMetadataCatalog` uses that same Hikari datasource to read term names/capture dates, descriptions and instructor names from the existing qualified Data tables. `CourseService` adds only those display fields to certified courses/sections; eligibility, status, credits and lecture links still come from the authoritative catalogs/views. `SectionLookupCatalog` resolves explanation CRNs through those same catalogs. The older independent datasource, repository and catalog are retained under src/test only and excluded from the production JAR. No schema/view or engine algorithm is changed.
 
-Course API responses retain numeric credits and null descriptions/locations. Historical seat snippets
-remain UNKNOWN, and unknown source capture dates remain null. Meetings and lecture links are loaded
-in bulk for the selected courses; instructor strings are not split on name commas. The repository can
-read prerequisite/corequisite JSON and assessment states, although the public Course response has no
-such fields and the MVP does not evaluate student eligibility. Scheduling fails safely on credits or
-component rules the current native boundary cannot express. Production source migrations/data remain
-owned by Data and are not silently copied from another branch. Synthetic PostgreSQL/HTTP tests run under
-`-Pdatabase-it`; original source-schema verification is a separate explicit command requiring the source SQL path.
-Ordinary tests remain database-free. See the [verification record](course-schedule-verification.md).
+Data owns `data/cse007-snapshot/` (V1-V4 tables/seed) and `data/catalog-api/V1__catalog_api_views.sql`.
+The authoritative tables include `source_asset`, `term`, `course`, `section`, `meeting`, `section_link`,
+`section_component_group`, `course_requirement` and evidence/issue records. Scheduling and discovery read
+`catalog_api.course_offering`, `section_offering` and `section_meeting`; helper views enforce certified whole
+credits, confirmed lecture links/component rules and fail-closed readiness. Migrations and seeds are unchanged.
 
-```mermaid
-erDiagram
-    TERM ||--o{ COURSE : offers
-    COURSE ||--o{ SECTION : has
-    SECTION ||--o{ MEETING : meets
-    SECTION }o--o{ INSTRUCTOR : "taught by"
-    TERM {
-        string id PK "e.g. 2027-SPRING"
-        string name
-        date catalog_snapshot_date
-    }
-    COURSE {
-        bigint id PK
-        string term_id FK
-        string subject
-        string number
-        string title
-        numeric credits
-        text description
-    }
-    SECTION {
-        bigint id PK
-        bigint course_id FK
-        string crn UK
-        string section_code
-        string status
-        string link_group "lecture/lab pairing, TBD"
-    }
-    MEETING {
-        bigint id PK
-        bigint section_id FK
-        string days "e.g. MONDAY,WEDNESDAY"
-        time start_time
-        time end_time
-        string location
-    }
-    INSTRUCTOR {
-        bigint id PK
-        string name
-    }
-```
+API term `2027-SPRING` maps explicitly to Banner `202710` using `app.catalog.terms`. Database variables are
+`DB_URL`, `DB_USERNAME`, optional `DB_PASSWORD` (otherwise PGPASSFILE). The bounded lazy Hikari pool sets
+server-enforced read-only sessions and a statement timeout. No production startup DDL/seed writes occur.
+Database query/connectivity errors become `CatalogUnavailableException`, rendered as safe 503 by shared advice.
 
-Design choices:
-- **PostgreSQL**, because the catalog is relational (term → course → section → meeting), and search needs joins and indexes. Postgres's text-search features (`pg_trgm`, `tsvector`) can power fuzzy course search later without adding another service.
-- **A course is stored per term** (one row per offering), not as a single row shared across terms. This is simpler for the MVP, because the catalog changes between terms.
-- **Read-mostly.** Data is imported from snapshots in `data/`, and students never write catalog data. The MVP stores no user data and has no user accounts.
-- **Migrations:** Flyway or Liquibase (_TBD_). The schema is versioned in code; no manual DDL.
-- **Linked sections** (lecture + lab/recitation) and **variable credits** depend on what the data source provides. They're marked TBD in the schema.
+Production `app.catalog.source=${CATALOG_SOURCE:database}` requires DB_URL/DB_USERNAME; there is no fallback
+catalog. The original hardcoded catalogs now live in src/test and are selected only by the Maven test profile.
+Ordinary tests remain DB-free; `-Pdatabase-it` adds real PostgreSQL/native-solver/random-port HTTP tests.
+Their fixture loader imports the unchanged Data SQL in fresh, validated loopback test databases, never drops
+schemas/databases and retains fixtures for inspection. Only synthetic availability tests overlay the view in
+their dedicated test database; original-source verification uses all views unchanged and reports UNKNOWN status.
 
 ## 6. REST API design
 
@@ -225,11 +180,14 @@ The full specification is in **[api-contract.md](api-contract.md)**. The design 
 
 ## 7. Scheduling engine
 
-**Status: 🟡 implemented (2026-10-15).** Unit-tested (plain JUnit), but not yet wired into an endpoint. Module: Scheduling Engine. Package: `engine`. Implementation: [`BacktrackingScheduleSolver`](../backend/src/main/java/io/github/michael04/registration/engine/BacktrackingScheduleSolver.java).
-
-**Schedule API integration status (2026-10-16).** `NativeSchedulingEngine` and the pure Java solver arrived through PR #4 in `pre-main` while this task was running. A new dedicated feature branch from that integrated base preserves the existing algorithm and scoring. `DatabaseCourseCatalog` now supplies course and section data, and actual HTTP/PostgreSQL tests execute the real solver. An independent native invocation verifies returned scores, breakdowns and order unchanged. Source-schema tests use David's unmodified SQL in a disposable database schema.
-
-The API-owned `SchedulingEngine` boundary remains the translation point. `NativeSchedulingEngine.checkSelection` also delegates to the existing pure `SelectionChecker` for grounded explanations; `ai` consumes the backend mapping/adapter, while `schedule` and `engine` still never depend on `ai`. No native algorithm or scoring code was modified.
+**Implemented and integrated.** `ScheduleController.generate` validates the request before
+`ScheduleService.generate` resolves normalized course IDs through `JdbcCourseCatalog` and sections through
+`JdbcSectionCatalog` / `JdbcCatalogDao`. `EngineMapper.prepare` maps and filters actual catalog data.
+`NativeSchedulingEngine.solve` translates to the existing `ScheduleProblem` and calls
+`new BacktrackingScheduleSolver(nodeCap).solve(problem)`. `EngineMapper.response` preserves score, breakdown,
+rank order, credits, diagnostics and limit flag; only overload is derived as totalCredits > 18.
+The existing manual-mode/check/elective endpoints remain intact. No second engine, scoring formula or
+production repository was added. Real database/HTTP tests and a direct native-solver cross-check pass.
 
 **Caller rules implemented by the API:**
 - Bean Validation rejects credit bounds outside 1–21 or `min > max`, weights outside 0–5, empty required selections, `maxResults` outside 1–10, invalid times/days, and **more than 10 original optional entries**, before any catalog or engine call. Numeric JSON input is not clamped or rounded.
@@ -237,13 +195,13 @@ The API-owned `SchedulingEngine` boundary remains the translation point. `Native
 - `includeClosedSections=false` excludes closed lectures, labs, recitations and other components. `true` retains closed sections; term/course eligibility still applies. Preserve component types and opaque lecture associations; retain UNKNOWN availability. Unscheduled sections use empty meetings lists. Duplicate identical section rows collapse; contradictory rows and malformed scheduled meetings are internal errors, not guessed data.
 - Pass required courses with no eligible sections to the engine for infeasibility diagnostics. Conflict solving, blocked-time exclusion, linked-component selection, credit feasibility, ranking and scoring remain engine responsibilities.
 - Map engine results in their returned order. Copy score/breakdown without rescaling, rounding or adding missing values. Derive overload only from the returned `totalCredits > 18`; resolve display metadata from the same prepared snapshot. Unknown result CRNs or missing scores/breakdowns fail safely with 500.
-- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` (explicit completion-task default) through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
+- Bind `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` (explicit final-integration API default 200,000) through validated Spring configuration and pass it to the adapter. It must be a positive 32-bit integer; invalid values fail startup. No controller/service constant or second property duplicates the cap.
 
 **Update 2026-10-16 (engine integration).** The native engine now exists (`engine` package, sections below). `schedule.integration.NativeSchedulingEngine` is the adapter: it translates the boundary records to engine records and back, and passes score, breakdown, credits, CRNs, diagnostics and the cap flag through unchanged. Two caller rules were settled with the engine owner:
 - **`lectureLink`** is the lecture's CRN (or `null` for a lecture).
 - **Closed sections:** `EngineMapper` removes closed sections with `CourseOption.excluding`, so a lecture whose labs are all closed is removed too.
 
-`ScheduleEngineIntegrationTest` covers the whole path with the real engine. The opt-in production PostgreSQL catalog is now implemented and verified.
+`ScheduleEngineIntegrationTest` covers the whole path with the real engine. Production JDBC catalogs from pre-main are now used and real PostgreSQL/HTTP verified.
 
 `CourseCatalog` and the shared preference record shapes are retained from `origin/feature/ai-preference-extractor` (`c6c7121`); `SectionCatalog` adds section lookups without breaking that catalog interface. The `ai` package uses these shared records and `CourseCatalog`; `engine` and `schedule` never depend on `ai`. `ObjectProvider` lets the application start before adapters are registered; absent dependencies return a shared, sanitized 503. This is distinct from a real engine result with no feasible schedules (200). There is no synthetic production catalog or solver result. The normal test suite needs no database, AI service or secrets.
 
@@ -268,13 +226,13 @@ The `schedule` package calls the engine through these types only. They're a [sha
 
 **Rules for the caller (`schedule` package, Backend API).** The engine defines these; the Backend API follows them:
 1. Reject invalid requests before calling the engine: credits outside 1–21, `minCredits > maxCredits`, weights outside 0–5, an empty `requiredCourseIds`, `maxResults` outside 1–10.
-2. Pass **at most 10 optional courses**; reject more original entries with `400` before deduplication. This completion task explicitly supersedes the integration branch's earlier eight-course API limit. Enforced by `ScheduleRequestValidator.MAX_OPTIONAL_COURSES`.
+2. Pass **at most 10 optional courses**; reject more original entries with 400 before normalization. This explicit final-integration requirement supersedes the earlier eight-entry API setting.
 3. If a course is both required and optional, treat it as required only.
 4. When `includeClosedSections` is false, remove closed sections with **`course.excluding(s -> closed)`**, not by filtering the list yourself. `excluding` also removes a lecture that lost all its labs (or all its recitations), because it can't be taken alone. *(Done in `EngineMapper`, 2026-10-16.)*
 5. Fill in `component` and `parentCrn` for every section from the catalog's lecture–lab relation. A section with no scheduled time (TBA/online) gets an empty `meetings` list.
 6. Put a course's credits on its lecture and the catalog's own value (usually 0) on its linked sections; the engine adds them up.
 7. Set `overload` from `totalCredits` (> 18), and copy `score`, `breakdown` and `diagnostics` through unchanged.
-8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, whose API default is explicitly 200,000 for this task; see "Search size".)*
+8. Read the node cap from configuration. *(Done: `NativeSchedulingEngine` builds a `BacktrackingScheduleSolver(nodeCap)` per call from `scheduling.node-cap`, whose API default is 200,000 for final integration; see "Search size".)*
 
 **Linked sections (decided 2026-10-15).** One lecture may allow several labs or recitations. A lecture that has linked sections **must** be taken with exactly one of them **per component type**. For example, lecture 010 with labs 011 and 012 and recitations R1 and R2 gives four choices. The engine expands each lecture into these bundles itself. It discards any bundle whose parts overlap each other or a blocked time, and it never picks a linked section without its lecture.
 
@@ -310,7 +268,7 @@ Measured on an Apple M5 Pro (JDK 25 running Java 21 bytecode). Synthetic catalog
 | 5 required + 5 optional | 30 ms / 19 of 20 | 124 ms / 6 of 20 | 183 ms / 0 of 20 |
 | 4 required + 10 optional | 33 ms / 20 of 20 | 162 ms / 20 of 20 | 626 ms / 16 of 20 |
 
-**Historical engine-owner decision (2026-10-16):** 1,000,000 nodes/eight optional courses. **Superseded for the HTTP API by this completion task's explicit 200,000-node default and ten-optionals limit.** The native class's own default remains 1M; the API always passes its configured value. Above about 5 optional courses with many sections each, a search can still stop at the cap. Its results are then valid but flagged `searchLimitReached`.
+**Historical engine-owner decision (2026-10-16):** 1M nodes/eight optional courses. **Superseded for this HTTP integration by the explicit 200,000-node default/ten-original-optionals requirements.** The native class default remains 1M and is overridden by API configuration. Above about 5 optional courses with many sections each, a search can still stop at the cap. Its results are then valid but flagged `searchLimitReached`.
 
 **Optional courses drive the cost.** Each optional course multiplies the choices by (sections + 1). Required courses are cheap, because conflicts and the credit cap prune them hard. Real catalogs usually have far fewer sections per course than these synthetic ones. Options if the cap is hit too often in practice:
 - lower the optional-course limit (rule 2);
@@ -362,7 +320,7 @@ Decisions (owner, 2026-10-16):
 
 Tests check that every schedule the solver generates passes the checker with zero issues and the identical score, so the two modes never disagree.
 
-**Proposed endpoint (not implemented or part of the current public API):** `POST /api/schedules/check`, with request `{ term, preferences, crns: string[] }`. The response would be the `SelectionReport` fields above plus `overload`, with `breakdown` as `scoreBreakdown` like `generate`. The implemented explanation service uses selection checking internally without adding a public check route. The frontend can load section times from the implemented `GET /api/courses/{courseId}`.
+**Endpoint (implemented 2026-10-16):** `POST /api/schedules/check`, endpoint 8 in api-contract.md. It has no elective limit.
 
 **Not engine scope:** listing a major's required courses automatically. That needs degree-requirement data and the student's major and completed courses (see HANDOFF).
 
@@ -382,9 +340,7 @@ Tests check that every schedule the solver generates passes the checker with zer
 
 To stay fast, the fix checks re-solve only the required courses plus that one elective, relaxing one thing at a time. The student's minimum credits are ignored in those checks, because the other electives are left out. A "raise your maximum to N" fix can exceed the API's 21-credit cap; the API layer should drop or reword it.
 
-**Proposed API (for the Backend API owner):**
-- Add `electiveAdvice` to the `generate` response.
-- Add `POST /api/schedules/suggest-electives` with `{ term, preferences, crns, q?/subject? }`. It searches the catalog for candidates and returns the suggestions.
+**API (implemented 2026-10-16):** `electiveAdvice` in the `generate` response, and `POST /api/schedules/suggest-electives` (endpoint 9), with candidates from the catalog narrowed like course search.
 
 **Determinism rules.** The same input and catalog snapshot always give the same output, and tests check that shuffling the input changes nothing:
 - No randomness and no wall-clock limits. A time limit would make results depend on machine speed.
@@ -421,7 +377,7 @@ To stay fast, the fix checks re-solve only the required courses plus that one el
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
-2. Schedule explanation (`POST /api/schedules/explain`): implemented via `ScheduleExplanationService`, reloaded database sections, engine selection validation and `AnthropicScheduleExplainer`. Only Claude mode with a key enables model calls; no dummy production explanation is returned.
+2. Schedule explanation (`POST /api/schedules/explain`): implemented via `ScheduleExplanationService`, authoritative `SectionLookupCatalog`, the existing `SchedulingEngine.check` selection validator and `AnthropicScheduleExplainer`. Only Claude mode with a key enables model calls; no dummy production explanation is returned.
 
 **How it's built:**
 

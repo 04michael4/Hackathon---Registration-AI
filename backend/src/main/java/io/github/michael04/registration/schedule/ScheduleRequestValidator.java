@@ -6,8 +6,8 @@ import jakarta.validation.ConstraintValidatorContext;
 /** Cross-field rules and constraints on generic preference values. Numeric ranges use Bean Validation. */
 public class ScheduleRequestValidator implements ConstraintValidator<ValidScheduleRequest, GenerateScheduleRequest> {
 	/**
-	 * Original-list limit explicitly required by the Course/Schedule completion task.
-	 * Search remains deterministically bounded by the configured node cap.
+	 * Original-entry limit required by final integration. The separately configured node cap bounds search;
+	 * capped results remain valid but are not claimed exhaustive (see architecture.md § 7).
 	 */
 	static final int MAX_OPTIONAL_COURSES = 10;
 

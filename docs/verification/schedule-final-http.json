@@ -1,0 +1,1140 @@
+{
+  "verifiedAt": "2026-10-16T23:11:52.835514+00:00",
+  "baseUrl": "http://127.0.0.1:65311",
+  "pipeline": "authoritative pre-main Hikari/JDBC/catalog_api/native solver; isolated persisted fixtures",
+  "passed": 14,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "authoritative course detail",
+      "method": "GET",
+      "path": "/api/courses/CSE-007?term=2027-SPRING",
+      "request": null,
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "courseId": "CSE-007",
+        "subject": "CSE",
+        "number": "007",
+        "title": "Introduction to Programming",
+        "credits": 4,
+        "description": null,
+        "sections": [
+          {
+            "crn": "12275",
+            "sectionCode": "010",
+            "componentType": "LECTURE",
+            "lectureLink": null,
+            "credits": 4,
+            "instructors": [],
+            "status": "OPEN",
+            "meetings": [
+              {
+                "days": [
+                  "MONDAY"
+                ],
+                "start": "09:20",
+                "end": "10:35",
+                "location": "TBD"
+              },
+              {
+                "days": [
+                  "THURSDAY"
+                ],
+                "start": "14:00",
+                "end": "14:50",
+                "location": "Synthetic extra meeting"
+              }
+            ]
+          },
+          {
+            "crn": "12638",
+            "sectionCode": "062",
+            "componentType": "LAB",
+            "lectureLink": "12275",
+            "credits": 0,
+            "instructors": [],
+            "status": "CLOSED",
+            "meetings": [
+              {
+                "days": [
+                  "WEDNESDAY",
+                  "FRIDAY"
+                ],
+                "start": "10:45",
+                "end": "12:00",
+                "location": "Asa Packer Campus | 019 Packard Lab | Room 11"
+              }
+            ]
+          },
+          {
+            "crn": "13132",
+            "sectionCode": "060",
+            "componentType": "LAB",
+            "lectureLink": "12275",
+            "credits": 0,
+            "instructors": [],
+            "status": "OPEN",
+            "meetings": [
+              {
+                "days": [
+                  "WEDNESDAY",
+                  "FRIDAY"
+                ],
+                "start": "09:20",
+                "end": "10:35",
+                "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+              }
+            ]
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "feasible real lecture/lab pair",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 4,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "13132",
+                "courseId": "CSE-007",
+                "sectionCode": "060",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+                  }
+                ]
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "closed lab included only on request",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": true,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 4,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "12638",
+                "courseId": "CSE-007",
+                "sectionCode": "062",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "10:45",
+                    "end": "12:00",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 11"
+                  }
+                ]
+              }
+            ],
+            "scoreBreakdown": {}
+          },
+          {
+            "rank": 2,
+            "score": 100,
+            "totalCredits": 4,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "13132",
+                "courseId": "CSE-007",
+                "sectionCode": "060",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+                  }
+                ]
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "multiple required courses avoid time conflict",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007",
+              "MATH-021"
+            ],
+            "minCredits": 8,
+            "maxCredits": 8,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 8,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "13132",
+                "courseId": "CSE-007",
+                "sectionCode": "060",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+                  }
+                ]
+              },
+              {
+                "crn": "40101",
+                "courseId": "MATH-021",
+                "sectionCode": "020",
+                "title": "Synthetic integration MATH-021",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "TUESDAY"
+                    ],
+                    "start": "10:30",
+                    "end": "11:45",
+                    "location": "Synthetic room"
+                  }
+                ]
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "hard blocked time yields normal infeasibility",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": [
+              {
+                "days": [
+                  "MONDAY"
+                ],
+                "start": "00:00",
+                "end": "23:59"
+              }
+            ]
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [],
+        "diagnostics": [
+          "CSE-007: every section overlaps your blocked times."
+        ],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "actual overload at 18",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "OVR-018"
+            ],
+            "minCredits": 18,
+            "maxCredits": 18,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 18,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "60018",
+                "courseId": "OVR-018",
+                "sectionCode": "010",
+                "title": "Synthetic integration OVR-018",
+                "credits": 18,
+                "meetings": []
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "actual overload at 19",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "OVR-019"
+            ],
+            "minCredits": 19,
+            "maxCredits": 19,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 19,
+            "overload": true,
+            "sections": [
+              {
+                "crn": "60019",
+                "courseId": "OVR-019",
+                "sectionCode": "010",
+                "title": "Synthetic integration OVR-019",
+                "credits": 19,
+                "meetings": []
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "actual overload at 21",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "OVR-021"
+            ],
+            "minCredits": 21,
+            "maxCredits": 21,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 21,
+            "overload": true,
+            "sections": [
+              {
+                "crn": "60021",
+                "courseId": "OVR-021",
+                "sectionCode": "010",
+                "title": "Synthetic integration OVR-021",
+                "credits": 21,
+                "meetings": []
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": []
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "TBA optional course and duplicate normalization",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007",
+              "CSE-007"
+            ],
+            "minCredits": 7,
+            "maxCredits": 7,
+            "blockedTimes": []
+          },
+          "softPreferences": {
+            "optionalCourseIds": {
+              "value": [
+                "CSE-007",
+                "ENGL-001",
+                "ENGL-001"
+              ],
+              "weight": 0
+            }
+          }
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 7,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "13132",
+                "courseId": "CSE-007",
+                "sectionCode": "060",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+                  }
+                ]
+              },
+              {
+                "crn": "40200",
+                "courseId": "ENGL-001",
+                "sectionCode": "010",
+                "title": "Synthetic integration ENGL-001",
+                "credits": 3,
+                "meetings": []
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": [
+          {
+            "courseId": "ENGL-001",
+            "status": "IN_TOP_SCHEDULE",
+            "summary": "ENGL-001 is in your top suggestion.",
+            "fixes": [],
+            "alternativeCrns": []
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "exactly ten optional entries accepted",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {
+            "optionalCourseIds": {
+              "value": [
+                "OPT-100",
+                "OPT-101",
+                "OPT-102",
+                "OPT-103",
+                "OPT-104",
+                "OPT-105",
+                "OPT-106",
+                "OPT-107",
+                "OPT-108",
+                "OPT-109"
+              ],
+              "weight": 0
+            }
+          }
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "schedules": [
+          {
+            "rank": 1,
+            "score": 100,
+            "totalCredits": 4,
+            "overload": false,
+            "sections": [
+              {
+                "crn": "12275",
+                "courseId": "CSE-007",
+                "sectionCode": "010",
+                "title": "Introduction to Programming",
+                "credits": 4,
+                "meetings": [
+                  {
+                    "days": [
+                      "MONDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "TBD"
+                  },
+                  {
+                    "days": [
+                      "THURSDAY"
+                    ],
+                    "start": "14:00",
+                    "end": "14:50",
+                    "location": "Synthetic extra meeting"
+                  }
+                ]
+              },
+              {
+                "crn": "13132",
+                "courseId": "CSE-007",
+                "sectionCode": "060",
+                "title": "Introduction to Programming",
+                "credits": 0,
+                "meetings": [
+                  {
+                    "days": [
+                      "WEDNESDAY",
+                      "FRIDAY"
+                    ],
+                    "start": "09:20",
+                    "end": "10:35",
+                    "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+                  }
+                ]
+              }
+            ],
+            "scoreBreakdown": {}
+          }
+        ],
+        "diagnostics": [],
+        "searchLimitReached": false,
+        "electiveAdvice": [
+          {
+            "courseId": "OPT-100",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-100 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-100."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-101",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-101 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-101."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-102",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-102 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-102."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-103",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-103 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-103."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-104",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-104 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-104."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-105",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-105 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-105."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-106",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-106 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-106."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-107",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-107 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-107."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-108",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-108 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-108."
+            ],
+            "alternativeCrns": []
+          },
+          {
+            "courseId": "OPT-109",
+            "status": "CANNOT_FIT",
+            "summary": "With OPT-109 added, no schedule fits. Your required courses need at least 5 credits, above your maximum of 4.",
+            "fixes": [
+              "Raise your maximum credits to 5.",
+              "Take CSE-007 in another semester; it blocks OPT-109."
+            ],
+            "alternativeCrns": []
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "eleven original optional entries rejected",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {
+            "optionalCourseIds": {
+              "value": [
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007",
+                "CSE-007"
+              ],
+              "weight": 0
+            }
+          }
+        }
+      },
+      "expectedStatus": 400,
+      "actualStatus": 400,
+      "response": {
+        "detail": "Request validation failed",
+        "instance": "/api/schedules/generate",
+        "status": 400,
+        "title": "Bad Request",
+        "type": "about:blank",
+        "requestId": "8185d6b9-dbba-4d70-a18c-8e9cc169a9a1",
+        "errors": [
+          {
+            "field": "preferences.softPreferences.optionalCourseIds.value",
+            "message": "must contain at most 10 optional courses"
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "invalid credit bound",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 22,
+            "maxCredits": 22,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 400,
+      "actualStatus": 400,
+      "response": {
+        "detail": "Request validation failed",
+        "instance": "/api/schedules/generate",
+        "status": 400,
+        "title": "Bad Request",
+        "type": "about:blank",
+        "requestId": "6bb17216-5850-4773-be2b-7d5c1e5e933a",
+        "errors": [
+          {
+            "field": "preferences.hardConstraints.maxCredits",
+            "message": "must be less than or equal to 21"
+          },
+          {
+            "field": "preferences.hardConstraints.minCredits",
+            "message": "must be less than or equal to 21"
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "unknown course",
+      "method": "POST",
+      "path": "/api/schedules/generate",
+      "request": {
+        "term": "2027-SPRING",
+        "maxResults": 10,
+        "includeClosedSections": false,
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-999"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 422,
+      "actualStatus": 422,
+      "response": {
+        "detail": "One or more selected courses are unknown in this term",
+        "instance": "/api/schedules/generate",
+        "status": 422,
+        "title": "Unprocessable Content",
+        "type": "about:blank",
+        "requestId": "b8a6a3ea-8f0f-463e-9a3b-91a7ceb4ffbd"
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "manual endpoint regression",
+      "method": "POST",
+      "path": "/api/schedules/check",
+      "request": {
+        "term": "2027-SPRING",
+        "crns": [
+          "12275",
+          "13132"
+        ],
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4,
+            "blockedTimes": []
+          },
+          "softPreferences": {}
+        }
+      },
+      "expectedStatus": 200,
+      "actualStatus": 200,
+      "response": {
+        "term": "2027-SPRING",
+        "sections": [
+          {
+            "crn": "12275",
+            "courseId": "CSE-007",
+            "sectionCode": "010",
+            "title": "Introduction to Programming",
+            "credits": 4,
+            "meetings": [
+              {
+                "days": [
+                  "MONDAY"
+                ],
+                "start": "09:20",
+                "end": "10:35",
+                "location": "TBD"
+              },
+              {
+                "days": [
+                  "THURSDAY"
+                ],
+                "start": "14:00",
+                "end": "14:50",
+                "location": "Synthetic extra meeting"
+              }
+            ]
+          },
+          {
+            "crn": "13132",
+            "courseId": "CSE-007",
+            "sectionCode": "060",
+            "title": "Introduction to Programming",
+            "credits": 0,
+            "meetings": [
+              {
+                "days": [
+                  "WEDNESDAY",
+                  "FRIDAY"
+                ],
+                "start": "09:20",
+                "end": "10:35",
+                "location": "Asa Packer Campus | 019 Packard Lab | Room 112"
+              }
+            ]
+          }
+        ],
+        "totalCredits": 4,
+        "overload": false,
+        "score": 100,
+        "scoreBreakdown": {},
+        "complete": true,
+        "issues": [],
+        "candidates": []
+      },
+      "passed": true,
+      "failures": []
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.UUID;
+
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import io.github.michael04.registration.course.FixtureDatabase;
+import io.github.michael04.registration.schedule.AuthoritativeCatalogFixture;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -27,11 +27,10 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 	properties = {"app.catalog.source=database", "app.ai.provider=claude"})
 class ScheduleExplanationDatabaseIT {
-	static final FixtureDatabase DB = new FixtureDatabase("course_api_" + UUID.randomUUID().toString().replace("-", ""));
+	static final AuthoritativeCatalogFixture DB = new AuthoritativeCatalogFixture(true);
 	static final FakeAnthropicServer SERVER = new FakeAnthropicServer();
-	static { DB.prepare(); }
 	static final String REQUEST = """
-		{"term":"TEST-2027","crns":["12275","13132"],"preferences":{"hardConstraints":{
+		{"term":"2027-SPRING","crns":["12275","13132"],"preferences":{"hardConstraints":{
 		"requiredCourseIds":["CSE-007"],"minCredits":4,"maxCredits":4}}}
 		""";
 	static final String OUTPUT = """
@@ -40,15 +39,14 @@ class ScheduleExplanationDatabaseIT {
 		""";
 	@DynamicPropertySource static void configuration(DynamicPropertyRegistry r) {
 		r.add("app.catalog.database.url", () -> DB.url);
-		r.add("app.catalog.database.username", () -> DB.user);
+		r.add("app.catalog.database.username", () -> DB.username);
 		r.add("app.catalog.database.password", () -> DB.password);
-		r.add("app.catalog.database.schema", () -> DB.schema);
 		r.add("app.ai.anthropic.api-key", () -> "local-fake-key");
 		r.add("app.ai.anthropic.base-url", SERVER::baseUrl);
 		r.add("app.ai.anthropic.timeout", () -> "5s");
 		r.add("app.ai.anthropic.max-retries", () -> "0");
 	}
-	@AfterAll static void clean() throws Exception { SERVER.close(); DB.clean(); }
+	@AfterAll static void clean() throws Exception { SERVER.close(); }
 	@BeforeEach void clearQueue() { SERVER.clearQueued(); }
 	@Value("${local.server.port}") int port;
 	@Autowired JsonMapper json;
@@ -77,9 +75,9 @@ class ScheduleExplanationDatabaseIT {
 		var facts = json.readTree(content.isString() ? content.asString() : content.get(0).get("text").asString());
 		assertThat(facts.get("totalCredits").asInt()).isEqualTo(4);
 		assertThat(facts.get("score").asInt()).isEqualTo(100);
-		assertThat(facts.get("sections").get(0).get("title").asString()).isEqualTo("Synthetic Introduction to Programming");
+		assertThat(facts.get("sections").get(0).get("title").asString()).isEqualTo("Introduction to Programming");
 	}
-	@ParameterizedTest @ValueSource(strings = {"{}", "{", "{\"term\":\"TEST-2027\",\"crns\":[],\"preferences\":{}}"})
+	@ParameterizedTest @ValueSource(strings = {"{}", "{", "{\"term\":\"2027-SPRING\",\"crns\":[],\"preferences\":{}}"})
 	void invalidBodiesNeverInvokeTheAi(String body) throws Exception {
 		int before = SERVER.requests().size();
 		send(body, 400);
@@ -87,7 +85,7 @@ class ScheduleExplanationDatabaseIT {
 	}
 	@Test void unknownTermOrCrnNeverCostsAnAiCall() throws Exception {
 		int before = SERVER.requests().size();
-		send(REQUEST.replace("TEST-2027", "UNKNOWN"), 422);
+		send(REQUEST.replace("2027-SPRING", "UNKNOWN"), 422);
 		send(REQUEST.replace("13132", "99999"), 422);
 		assertThat(SERVER.requests()).hasSize(before);
 	}
@@ -102,6 +100,14 @@ class ScheduleExplanationDatabaseIT {
 		SERVER.enqueue(FakeAnthropicServer.message("end_turn", "{}"), FakeAnthropicServer.message("end_turn", "{}"));
 		send(REQUEST, 502);
 		assertThat(SERVER.requests()).hasSize(before + 2);
+	}
+	@Test void timeConflictsAreRejectedByTheRealCheckerBeforeAi() throws Exception {
+		int before = SERVER.requests().size();
+		String conflicting = REQUEST.replace("\"13132\"", "\"13132\",\"40100\"")
+			.replace("\"CSE-007\"", "\"CSE-007\",\"MATH-021\"")
+			.replace("\"minCredits\":4,\"maxCredits\":4", "\"minCredits\":8,\"maxCredits\":8");
+		send(conflicting, 422);
+		assertThat(SERVER.requests()).hasSize(before);
 	}
 	@Test void malformedThenValidOutputSucceedsOnTheSecondAttempt() throws Exception {
 		int before = SERVER.requests().size();

@@ -7,7 +7,7 @@ import javax.sql.DataSource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -15,8 +15,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import io.github.michael04.registration.course.CourseCatalog;
 
-/** Database access is opt-in; importing this configuration never runs DDL or seed scripts. */
-@Configuration
+/** Historical draft fixture configuration, retained only for isolated legacy repository tests. */
+@TestConfiguration
 @ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "database")
 @EnableConfigurationProperties(CatalogDatabaseProperties.class)
 @EnableTransactionManagement

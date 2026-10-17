@@ -16,7 +16,7 @@ import io.github.michael04.registration.course.SectionCatalog;
 import io.github.michael04.registration.course.SectionLookupCatalog;
 import io.github.michael04.registration.schedule.EngineMapper;
 import io.github.michael04.registration.schedule.GenerateScheduleRequest;
-import io.github.michael04.registration.schedule.integration.NativeSchedulingEngine;
+import io.github.michael04.registration.schedule.integration.SchedulingEngine;
 import jakarta.validation.Validator;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -25,14 +25,14 @@ public class ScheduleExplanationService {
 	private final ObjectProvider<CourseCatalog> catalogs;
 	private final ObjectProvider<SectionCatalog> sections;
 	private final ObjectProvider<SectionLookupCatalog> lookups;
-	private final NativeSchedulingEngine engine;
+	private final SchedulingEngine engine;
 	private final EngineMapper mapper;
 	private final Validator validator;
 	private final JsonMapper json;
 	private final ScheduleExplainer explainer;
 
 	public ScheduleExplanationService(ObjectProvider<CourseCatalog> catalogs, ObjectProvider<SectionCatalog> sections,
-			ObjectProvider<SectionLookupCatalog> lookups, NativeSchedulingEngine engine, EngineMapper mapper,
+			ObjectProvider<SectionLookupCatalog> lookups, SchedulingEngine engine, EngineMapper mapper,
 			Validator validator, JsonMapper json, ScheduleExplainer explainer) {
 		this.catalogs = catalogs;
 		this.sections = sections;
@@ -64,7 +64,7 @@ public class ScheduleExplanationService {
 			.orElseThrow(() -> new UnprocessableException("One or more courses are unknown in this term")));
 		var prepared = mapper.prepare(generation, required, courses,
 			available(sections).sectionsFor(request.term(), ids.stream().toList()));
-		var checked = engine.checkSelection(prepared.problem(), crns);
+		var checked = engine.check(prepared.problem(), crns.stream().toList());
 		if (!checked.complete()) throw new UnprocessableException("Selected sections do not form a complete feasible schedule");
 		var facts = new TreeMap<String, Object>();
 		facts.put("term", request.term());
@@ -72,7 +72,7 @@ public class ScheduleExplanationService {
 				s.credits(), s.meetings())).toList());
 		facts.put("totalCredits", checked.totalCredits());
 		facts.put("score", checked.score());
-		facts.put("scoreBreakdown", checked.breakdown());
+		facts.put("scoreBreakdown", checked.scoreBreakdown());
 		facts.put("preferences", request.preferences());
 		return explainer.explain(json.writeValueAsString(facts));
 	}

@@ -1,20 +1,10 @@
 package io.github.michael04.registration.course;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.math.BigDecimal;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,105 +12,87 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import io.github.michael04.registration.common.json.JsonConfiguration;
 
+/** Endpoints 3 and 4 over the demo catalogs. */
 @WebMvcTest(CourseController.class)
-@Import({CourseService.class, JsonConfiguration.class})
+@Import({CourseService.class, DummyCourseCatalog.class, DummySectionCatalog.class, JsonConfiguration.class})
 class CourseControllerTest {
+
 	@Autowired MockMvc mvc;
-	@MockitoBean CourseReadCatalog catalog;
 
-	@Test
-	void termsUseTheDocumentedEnvelopeAndDate() throws Exception {
-		when(catalog.terms()).thenReturn(List.of(new CourseResponses.TermResponse("202710", "Spring 2027", LocalDate.of(2026, 10, 1))));
-		mvc.perform(get("/api/terms")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.items[0].term").value("202710"))
-			.andExpect(jsonPath("$.items[0].catalogSnapshotDate").value("2026-10-01"));
+	private ResultActions get200(String url) throws Exception {
+		return mvc.perform(get(url)).andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 	}
 
 	@Test
-	void searchPreservesFieldsAndPassesPaginationAndFiltersToTheCatalog() throws Exception {
-		when(catalog.termExists("202710")).thenReturn(true);
-		when(catalog.search("202710", "Data structures", "CSE", 1, 2)).thenReturn(new CourseResponses.PageResponse(
-			List.of(new CourseResponses.SummaryResponse("CSE-017", "CSE", "017", "Data structures", new BigDecimal("3.5"), 4)), 1, 2, 3, 2));
-		mvc.perform(get("/api/courses").param("term", "202710").param("q", "Data structures")
-			.param("subject", "CSE").param("page", "1").param("size", "2"))
-			.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].number").value("017"))
-			.andExpect(jsonPath("$.items[0].credits").value(3.5)).andExpect(jsonPath("$.items[0].sectionCount").value(4))
-			.andExpect(jsonPath("$.page").value(1)).andExpect(jsonPath("$.totalItems").value(3));
-		verify(catalog).search("202710", "Data structures", "CSE", 1, 2);
+	void searchByCodeIgnoresSpacingCaseAndLeadingZeros() throws Exception {
+		for (String q : new String[] {"CSE 17", "cse017", "CSE-017"}) {
+			mvc.perform(get("/api/courses").param("term", "2027-SPRING").param("q", q)).andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[*].courseId", contains("CSE-017")))
+				.andExpect(jsonPath("$.items[0].subject").value("CSE"))
+				.andExpect(jsonPath("$.items[0].number").value("017"))
+				.andExpect(jsonPath("$.items[0].title").value("Programming and Data Structures"))
+				.andExpect(jsonPath("$.items[0].credits").value(3))
+				.andExpect(jsonPath("$.items[0].sectionCount").value(3));
+		}
 	}
 
 	@Test
-	void omittedSearchOptionsUseDefaultsAndEmptyMatchesRemain200() throws Exception {
-		when(catalog.termExists("202710")).thenReturn(true);
-		when(catalog.search("202710", null, null, 0, 20)).thenReturn(new CourseResponses.PageResponse(List.of(), 0, 20, 0, 0));
-		mvc.perform(get("/api/courses").param("term", "202710")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.size").value(20))
+	void searchByTitleWordsAndSubject() throws Exception {
+		get200("/api/courses?term=2027-SPRING&q=calculus").andExpect(jsonPath("$.items[*].courseId", contains("MATH-021", "MATH-022")));
+		get200("/api/courses?term=2027-SPRING&subject=cse").andExpect(jsonPath("$.totalItems").value(3));
+		mvc.perform(get("/api/courses").param("term", "2027-SPRING").param("q", "nothing matches")).andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
 			.andExpect(jsonPath("$.totalPages").value(0));
 	}
 
 	@Test
-	void detailPreservesInstructorAndGroupsDaysWithContractTimes() throws Exception {
-		when(catalog.termExists("202710")).thenReturn(true);
-		when(catalog.detail("202710", "CSE-007")).thenReturn(Optional.of(new CourseResponses.DetailResponse(
-			"CSE-007", "CSE", "007", "Programming", new BigDecimal("4.0"), "Java and OOP",
-			List.of(new CourseResponses.SectionResponse("12275", "010", List.of("Chen, Brian"), CatalogSection.Status.UNKNOWN,
-				List.of(new CourseResponses.MeetingResponse(List.of(DayOfWeek.MONDAY), LocalTime.of(9, 20), LocalTime.of(10, 35), null)))))));
-		mvc.perform(get("/api/courses/CSE-007").param("term", "202710")).andExpect(status().isOk())
-			.andExpect(jsonPath("$.description").value("Java and OOP"))
-			.andExpect(jsonPath("$.sections[0].instructors[0]").value("Chen, Brian"))
-			.andExpect(jsonPath("$.sections[0].status").value("UNKNOWN"))
-			.andExpect(jsonPath("$.sections[0].meetings[0].start").value("09:20"));
+	void searchPagesThroughAllCourses() throws Exception {
+		get200("/api/courses?term=2027-SPRING&size=3&page=2")
+			.andExpect(jsonPath("$.items[*].courseId", contains("MATH-022", "PHY-011")))
+			.andExpect(jsonPath("$.page").value(2))
+			.andExpect(jsonPath("$.size").value(3))
+			.andExpect(jsonPath("$.totalItems").value(8))
+			.andExpect(jsonPath("$.totalPages").value(3));
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/api/courses", "/api/courses?term=", "/api/courses?term=202710&page=-1",
-		"/api/courses?term=202710&size=0", "/api/courses?term=202710&size=101", "/api/courses?term=202710&page=1.5",
-		"/api/courses?term=202710&size=nope", "/api/courses?term=202710&subject=CSE1", "/api/courses?term=202710&subject=",
-		"/api/courses/CSE-007", "/api/courses/not-a-course?term=202710"})
-	void invalidParametersNeverReachCatalog(String url) throws Exception {
+	@ValueSource(strings = {"/api/courses", "/api/courses?term=", "/api/courses?term=2027-SPRING&size=101",
+			"/api/courses?term=2027-SPRING&size=0", "/api/courses?term=2027-SPRING&page=-1",
+			"/api/courses/CSE-017", "/api/courses/CSE-017?term="})
+	void invalidRequestsReturn400(String url) throws Exception {
 		mvc.perform(get(url)).andExpect(status().isBadRequest())
-			.andExpect(content().contentTypeCompatibleWith("application/problem+json"))
-			.andExpect(header().exists("X-Request-Id"));
-		verifyNoInteractions(catalog);
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"/api/courses?term=2030-FALL", "/api/courses/CSE-017?term=2030-FALL",
+			"/api/courses/NOPE-999?term=2027-SPRING"})
+	void unknownTermOrCourseReturns404(String url) throws Exception {
+		mvc.perform(get(url)).andExpect(status().isNotFound());
 	}
 
 	@Test
-	void oversizedSearchTextNeverReachesCatalog() throws Exception {
-		mvc.perform(get("/api/courses").param("term", "202710").param("q", "a".repeat(101)))
-			.andExpect(status().isBadRequest());
-		verifyNoInteractions(catalog);
+	void detailListsEverySectionWithItsLectureLink() throws Exception {
+		get200("/api/courses/PHY-011?term=2027-SPRING")
+			.andExpect(jsonPath("$.courseId").value("PHY-011"))
+			.andExpect(jsonPath("$.credits").value(4))
+			.andExpect(jsonPath("$.sections.length()").value(8))
+			.andExpect(jsonPath("$.sections[0].crn").value("48001"))
+			.andExpect(jsonPath("$.sections[0].componentType").value("LECTURE"))
+			.andExpect(jsonPath("$.sections[0].lectureLink").doesNotExist())
+			.andExpect(jsonPath("$.sections[1].crn").value("48002"))
+			.andExpect(jsonPath("$.sections[2].crn").value("48011"))
+			.andExpect(jsonPath("$.sections[2].componentType").value("LAB"))
+			.andExpect(jsonPath("$.sections[2].lectureLink").value("48001"))
+			.andExpect(jsonPath("$.sections[2].meetings[0].days", contains("TUESDAY")))
+			.andExpect(jsonPath("$.sections[2].meetings[0].start").value("13:00"))
+			.andExpect(jsonPath("$.sections[2].status").value("OPEN"));
 	}
 
-	@Test
-	void unknownTermIs404ForCourseSearch() throws Exception {
-		mvc.perform(get("/api/courses").param("term", "unknown")).andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.detail").value("Term is not available"));
-	}
-
-	@Test
-	void unknownCourseIs404ForAKnownTerm() throws Exception {
-		when(catalog.termExists("202710")).thenReturn(true);
-		when(catalog.detail("202710", "CSE-999")).thenReturn(Optional.empty());
-		mvc.perform(get("/api/courses/CSE-999").param("term", "202710")).andExpect(status().isNotFound());
-	}
-
-	@Test
-	void databaseFailuresAreSanitized() throws Exception {
-		when(catalog.terms()).thenThrow(new DataAccessResourceFailureException("SQL and database-password-secret"));
-		mvc.perform(get("/api/terms")).andExpect(status().isInternalServerError())
-			.andExpect(content().string(not(containsString("database-password-secret"))))
-			.andExpect(content().string(not(containsString("DataAccessResourceFailureException"))))
-			.andExpect(header().exists("X-Request-Id"));
-	}
-
-	@Test
-	void unsupportedMethodsUseShared405() throws Exception {
-		mvc.perform(post("/api/courses")).andExpect(status().isMethodNotAllowed());
-	}
 }

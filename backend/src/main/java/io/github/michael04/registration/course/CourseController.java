@@ -11,8 +11,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/** Course search and course detail, endpoints 3 and 4 in docs/api-contract.md. */
 @RestController
 public class CourseController {
+
 	private final CourseService service;
 
 	public CourseController(CourseService service) {
@@ -25,19 +27,18 @@ public class CourseController {
 	}
 
 	@GetMapping("/api/courses")
-	public CourseResponses.PageResponse search(
-			@RequestParam @NotBlank String term,
+	public CourseSearchResponse search(@RequestParam @NotBlank String term,
 			@RequestParam(required = false) @Size(max = 100) String q,
-			@RequestParam(required = false) @Pattern(regexp = "[A-Za-z]+", message = "must be a subject code") String subject,
+			@RequestParam(required = false) @Size(max = 10) @Pattern(regexp = "[A-Za-z]+") String subject,
 			@RequestParam(defaultValue = "0") @Min(0) int page,
 			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 		return service.search(term, q, subject, page, size);
 	}
 
 	@GetMapping("/api/courses/{courseId}")
-	public CourseResponses.DetailResponse detail(
-			@PathVariable @Pattern(regexp = "[A-Z]+-[0-9]+", message = "must be a course ID such as CSE-007") String courseId,
+	public CourseDetailResponse detail(@PathVariable @NotBlank @Size(max = 20) @Pattern(regexp = "[A-Z]+-[0-9]+") String courseId,
 			@RequestParam @NotBlank String term) {
 		return service.detail(term, courseId);
 	}
+
 }

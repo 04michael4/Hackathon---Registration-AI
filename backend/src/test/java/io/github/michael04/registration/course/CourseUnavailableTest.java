@@ -11,14 +11,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** The AI development dummy must never supply invented production Course API responses. */
-@SpringBootTest(properties = "app.catalog.source=dummy")
+/** The production Course API must return a safe 503, with no synthetic fallback, when PostgreSQL is down. */
+@SpringBootTest(properties = {"app.catalog.source=database",
+	"app.catalog.database.url=jdbc:postgresql://127.0.0.1:1/catalog-down-test",
+	"app.catalog.database.username=reader-test-user", "app.catalog.database.connection-timeout=300ms"})
 @AutoConfigureMockMvc
 class CourseUnavailableTest {
 	@Autowired MockMvc mvc;
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/api/terms", "/api/courses?term=202710", "/api/courses/CSE-007?term=202710"})
+	@ValueSource(strings = {"/api/terms", "/api/courses?term=2027-SPRING", "/api/courses/CSE-007?term=2027-SPRING"})
 	void unavailableDatabaseReturns503(String url) throws Exception {
 		mvc.perform(get(url)).andExpect(status().isServiceUnavailable())
 			.andExpect(content().contentTypeCompatibleWith("application/problem+json"));

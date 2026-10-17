@@ -2,7 +2,7 @@
 
 This file is the **source of truth** for the HTTP interface between the frontend and the backend. Change it in the same PR as the code that changes the contract (see [CLAUDE.md § Shared interfaces](../CLAUDE.md#shared-interfaces)).
 
-> ✅ **Agreed by the team (2026-10-15), updated 2026-10-16.** All seven documented routes are implemented on this feature branch. Course and Schedule generation are verified with PostgreSQL, real HTTP and the native solver. Schedule explanation is verified through the official SDK against a local provider fake; live provider quality was not evaluated. Changes follow the [shared-interface rules](../CLAUDE.md#shared-interfaces).
+> ✅ **Agreed by the team (2026-10-15), integration updated 2026-10-16.** Schedule generation uses the authoritative PostgreSQL catalogs and native solver from pre-main and is verified through real HTTP. Demo catalogs are test-only. Endpoint status labels below distinguish implemented routes from planned work. Changes follow the [shared-interface rules](../CLAUDE.md#shared-interfaces).
 
 **Status legend**
 
@@ -15,12 +15,14 @@ This file is the **source of truth** for the HTTP interface between the frontend
 | # | Method | Path | Purpose | Status | Responsible module |
 |---|---|---|---|---|---|
 | 1 | GET | [`/api/health`](#1-get-apihealth) | Liveness check | ✅ Implemented, verified | Backend API |
-| 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | ✅ Implemented; PostgreSQL and real HTTP verified | Backend API (+ Data) |
-| 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ✅ Implemented; PostgreSQL and real HTTP verified | Backend API (+ Data) |
-| 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ✅ Implemented; PostgreSQL and real HTTP verified | Backend API (+ Data) |
+| 2 | GET | [`/api/terms`](#2-get-apiterms) | List terms with catalog data | Implemented; authoritative DB/HTTP tests | Backend API (+ Data) |
+| 3 | GET | [`/api/courses`](#3-get-apicourses) | **Course search** | ✅ Implemented, verified | Backend API (+ Data) |
+| 4 | GET | [`/api/courses/{courseId}`](#4-get-apicoursescourseid) | Course detail with sections | ✅ Implemented, verified | Backend API (+ Data) |
 | 5 | POST | [`/api/preferences/extract`](#5-post-apipreferencesextract) | **AI preference extraction** | ✅ Implemented, live-verified (eval 19/20 = 95%); PR #2 into `pre-main` pending review | AI Integration |
-| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ✅ PostgreSQL and native-solver HTTP verified | Backend API + Scheduling Engine |
-| 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | ✅ Implemented; database/engine/SDK pipeline verified with a local AI provider fake | AI Integration |
+| 6 | POST | [`/api/schedules/generate`](#6-post-apischedulesgenerate) | **Schedule generation** | ✅ Authoritative PostgreSQL/native solver/real HTTP verified | Backend API + Scheduling Engine |
+| 7 | POST | [`/api/schedules/explain`](#7-post-apischedulesexplain) | AI explanation of a schedule | Implemented; DB/engine/SDK with offline AI fixture | AI Integration |
+| 8 | POST | [`/api/schedules/check`](#8-post-apischedulescheck) | **Manual mode**: check placed sections, fit hints | ✅ Implemented, verified | Backend API + Scheduling Engine |
+| 9 | POST | [`/api/schedules/suggest-electives`](#9-post-apischedulessuggest-electives) | Electives that fit a schedule | ✅ Implemented, verified | Backend API + Scheduling Engine |
 
 ---
 
@@ -140,13 +142,13 @@ Content-Type: application/json
 
 `catalogSnapshotDate` tells users how fresh the data is, since we use catalog snapshots, not live registrar data.
 
-Terms are ordered by their opaque term IDs. `catalogSnapshotDate` is the source's actual `captured_at` date in America/New_York, or **null** when capture time is unknown. A transcription verification date is not substituted for the capture date. An empty catalog returns `{"items":[]}`.
+Terms use the configured API-to-Banner mapping (for example 2027-SPRING, not raw 202710) and are ordered by API term ID; unmapped database terms are not advertised. `catalogSnapshotDate` is the source's actual `captured_at` date in America/New_York, or **null** when capture time is unknown. A transcription verification date is not substituted for the capture date. An empty catalog returns `{"items":[]}`.
 
 ---
 
 ## 3. `GET /api/courses`
 
-**Status: ✅ Implemented and PostgreSQL/HTTP verified.** Module: Backend API (endpoint), Data (catalog content). Uses the same database catalog as AI/Schedule; the development dummy is not a Course API provider.
+**Status: ✅ Implemented, verified (2026-10-16).** Code: `course.CourseController` / `CourseService`; tests `CourseControllerTest`, `CourseServiceTest`. Production uses the authoritative database catalog. Demo catalogs exist only in test sources. `sectionCount` counts lectures and standalone sections (linked labs and recitations aren't counted separately). `503` if no catalog is configured. Module: Backend API (endpoint), Data (catalog content).
 
 **Purpose:** search the catalog for one term by code or title.
 
@@ -168,7 +170,7 @@ Terms are ordered by their opaque term IDs. `catalogSnapshotDate` is the source'
 | `number` | string | String, to preserve leading zeros (`"017"`) |
 | `title` | string | Course title |
 | `credits` | number | Credit hours. _Variable-credit representation TBD._ |
-| `sectionCount` | int | Number of sections offered this term |
+| `sectionCount` | int | Number of lectures/standalone sections this term (not linked components) |
 
 **Example**
 
@@ -187,13 +189,13 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 **Status codes:** `200` (an empty `items` array if nothing matches); `400` if `term` is missing or `size > 100`; `404` if the term is unknown.
 
-`term` must be nonblank, `q` is at most 100 characters, `subject` contains letters only (case-insensitive), `page >= 0`, and `size` is 1–100. Invalid values return 400 before catalog access. Code matching ignores spaces and hyphens and is case-insensitive; all whitespace-separated title words must match. SQL wildcard characters in `q` are literal text. Results are ordered by course ID; there is no public sort parameter or credit filter. Out-of-range pages return empty `items`, preserving the actual total. `sectionCount` includes every component/status in the requested term. Missing catalog configuration returns 503; unexpected database failures return sanitized 500 Problem Details.
+`term` must be nonblank, `q` is at most 100 characters, `subject` contains letters only (case-insensitive), `page >= 0`, and `size` is 1–100. Invalid values return 400 before catalog access. Code matching ignores spaces and hyphens and is case-insensitive; all whitespace-separated title words must match. SQL wildcard characters in `q` are literal text. Results are ordered by course ID; there is no public sort parameter or credit filter. Out-of-range pages return empty `items`, preserving the actual total. `sectionCount` counts lectures/standalone sections, preserving pre-main behavior; linked labs and recitations are listed in course detail but are not counted separately. Missing catalog configuration returns 503; database query/connectivity failures return sanitized 503 Problem Details; other unexpected failures return 500.
 
 ---
 
 ## 4. `GET /api/courses/{courseId}`
 
-**Status: ✅ Implemented and PostgreSQL/HTTP verified.** Module: Backend API (+ Data). Reads actual course metadata and sections from the configured database.
+**Status: ✅ Implemented, verified (2026-10-16).** Sections are ordered by CRN and **also include `componentType`, `lectureLink` (the lecture's CRN for a lab/recitation, `null` for a lecture) and `credits`**, so the manual-mode calendar can pair lectures with labs. Stored descriptions and instructor names are reloaded through the same read-only datasource; absent descriptions remain null and absent instructors remain an empty list. `503` if no catalog is configured. Module: Backend API (+ Data).
 
 **Query parameters:** `term` (required).
 
@@ -225,11 +227,11 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 
 Course IDs use uppercase subject letters, a hyphen, and digits; malformed IDs return 400. Sections are ordered by CRN. A stored instructor name is preserved as a single list item (commas within a name are not split); absent instructors produce an empty list. Meeting days with the same start/end/location are grouped and sorted Monday–Sunday. TBA/asynchronous sections have empty meetings, and null descriptions/locations remain null.
 
-Only an explicit stored `OPEN`, `CLOSED` or `UNKNOWN` availability label is used. Truncated historical seat-count snippets remain `UNKNOWN`; they are never inferred to be current availability. Course credits retain the database's numeric precision. Prerequisite/corequisite expressions and assessment states are retained in the repository; this established response shape has no prerequisite fields, and the MVP does not evaluate student eligibility. Component types, credits and lecture links are preserved internally for scheduling without adding undocumented public response fields.
+Only an explicit stored `OPEN`, `CLOSED` or `UNKNOWN` availability label is used. Truncated historical seat-count snippets remain `UNKNOWN`; they are never inferred to be current availability. The authoritative readiness views expose only certified whole-credit courses; unknown/fractional or uncertified courses remain hidden rather than rounded or guessed. Prerequisite/corequisite expressions and assessment states remain in Data tables; this response has no prerequisite fields and the MVP does not evaluate student eligibility. Section componentType, credits and lectureLink remain public as defined by pre-main, alongside the retained description/instructors fields.
 
 **Status codes:** `200`; `400` if `term` is missing; `404` if the course or term is unknown.
 
-Missing catalog configuration returns 503, and unexpected database failures return sanitized 500 Problem Details. Course reads never write catalog data. The current native engine boundary requires integral known section credits; unsupported fractional/unknown scheduling credits fail safely rather than being rounded or invented.
+Missing catalog configuration returns 503, and database query/connectivity failures return sanitized 503 Problem Details; other unexpected failures return 500. Course reads never write catalog data. The current native boundary requires integral known section credits; authoritative readiness views exclude unsupported courses before scheduling.
 
 ---
 
@@ -274,7 +276,7 @@ The endpoint, validation, course-name resolution and error codes all work, and t
 
 Error responses never include provider messages, student text, keys, exception names or stack traces. Integration tests plant a marker in every exception and request and assert it never appears.
 
-Course resolution uses the configured catalog. Database mode shares the authoritative PostgreSQL provider with Course and Schedule APIs; development dummy mode has one synthetic term, `2027-SPRING`.
+Course resolution uses the configured authoritative database catalog. Test-only fixtures retain the synthetic `2027-SPRING` catalog for offline tests.
 
 **Purpose:** turn a student's free-text description of what they want into a structured `SchedulePreferences` object (the same shape that [`/api/schedules/generate`](#6-post-apischedulesgenerate) accepts). The frontend shows the result to the student for **review and editing before** they generate schedules. The AI proposes; the student confirms.
 
@@ -389,7 +391,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 
 ## 6. `POST /api/schedules/generate`
 
-**Status: ✅ Implemented and verified through PostgreSQL, actual HTTP and the native solver.** `ScheduleService` uses `DatabaseCourseCatalog`, `EngineMapper` and `NativeSchedulingEngine`. `CATALOG_SOURCE=database` and a provisioned catalog are required for actual course data; unavailable dependencies still return a safe 503.
+**Status: Implemented and real PostgreSQL/native-solver/HTTP verified (2026-10-16).** Production defaults to the authoritative database catalog from pre-main. Hardcoded Course/Section providers are test-only. No AI is called by generation.
 
 **Purpose:** run the deterministic scheduling engine and return up to `maxResults` conflict-free schedules, ranked by how well they satisfy the soft preferences. **This endpoint never calls the AI.** The same request against the same catalog snapshot always returns the same response.
 
@@ -407,7 +409,7 @@ curl -X POST http://localhost:8080/api/preferences/extract \
 1. Validate the original request before catalog lookups or engine invocation. `term` must be nonblank; `preferences` and `hardConstraints` are required. Required course IDs must form a nonempty list of nonblank strings.
 2. Both credit bounds must be integers in **1–21**, with `minCredits <= maxCredits`; violations return **HTTP 400**. Omitted/null bounds use 12 and 18. `maxResults` is an integer in **1–10**, default 5. Numeric strings and fractional numbers are rejected, not rounded or clamped.
 3. Every supplied preference must include its value (except `minimizeGaps`) and an integer weight in **0–5**, including 0. Omitted preferences are inactive. Missing/null weights and invalid days/times return 400. Blocked times require nonempty valid days and `start < end`; times use `HH:mm`.
-4. **Requests containing more than 10 optional courses receive HTTP 400.** This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
+4. **Requests containing more than 10 optional courses receive HTTP 400.** This final integration task explicitly supersedes the earlier eight-entry API setting. This counts entries in `preferences.softPreferences.optionalCourseIds.value` **before** de-duplication or required/optional overlap removal, even when the weight is zero. Oversized requests are never truncated. Optional IDs must be nonblank strings.
 5. De-duplicate by stable course ID. A course in both lists remains required and is removed from optional selections. Prepare courses sorted by ID and sections sorted by CRN. Unknown terms or selected course IDs return 422.
 6. Exclude sections outside the requested term or selected courses. With `includeClosedSections=false` (also the default when null), exclude **every CLOSED component**, including lectures, labs, and recitations. OPEN and UNKNOWN remain eligible. With `true`, closed status alone does not exclude a section. **A lecture that loses every section of one linked component type** (e.g. all its labs are closed) **is excluded too**, along with its remaining linked sections, because it can't be taken alone. This uses the engine's own rule, `CourseOption.excluding`. Preserve component types and lecture links; never infer links. **`lectureLink` is the CRN of the lecture a lab or recitation must be taken with, and `null` for a lecture or standalone section.** A blank or self-referencing `lectureLink` is malformed catalog data: the request fails with a safe `500` rather than scheduling that lab as a standalone section. A lecture with linked sections is always scheduled with exactly one of them per component type. TBA/online sections without scheduled times have empty meetings lists. A course with no eligible sections is passed to the engine for normal infeasibility diagnostics.
 
@@ -427,6 +429,7 @@ The solver owns blocked-time exclusion, conflict solving, linked-component selec
 | `schedules[].scoreBreakdown` | object | Engine-provided penalty values copied unchanged, e.g. `{ "earliestStart": 0, "daysOff": 4 }`; no missing entries are invented |
 | `diagnostics` | string[] | When results are empty or limited: why, e.g. which required courses conflict |
 | `searchLimitReached` | boolean | `true` if the engine stopped at its exploration cap. The results are still valid but might not be the global best. |
+| `electiveAdvice` | object[] | One entry per typed elective (`softPreferences.optionalCourseIds`): `{ courseId, status, summary, fixes[], alternativeCrns[] }`. `status` is `IN_TOP_SCHEDULE`, `IN_OTHER_SUGGESTION`, `FITS_WITH_CHANGES` or `CANNOT_FIT`; `fixes` are sentences such as "Take MATH-021 20001 instead of 20002." Empty when no electives were typed. |
 
 **Example**
 
@@ -459,13 +462,13 @@ curl -X POST http://localhost:8080/api/schedules/generate \
 }
 ```
 
-**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for the validation rules above, including reversed credit bounds and more than 10 optional courses. `422` for unknown course IDs or term. `503` while catalog/engine adapters are unavailable. `500` for unexpected internal failures, using the safe shared error body.
+**Status codes:** `200`, including when `schedules` is empty because the constraints are infeasible; `diagnostics` then explains why. `400` for the validation rules above, including reversed credit bounds and more than 10 optional courses. `422` for unknown course IDs or term. `503` when required catalog services or the configured database are unavailable; no dummy fallback. `500` for unexpected internal failures, using the safe shared error body.
 
 **Error handling:** infeasibility is a normal result, not an error. Validation runs before the engine, so the engine only ever receives well-formed input.
 
 **Result mapping:** preserve engine schedule and section ordering; assign ranks starting at 1. Copy `totalCredits`, score, breakdown, diagnostics, and `searchLimitReached` from the result. Derive overload solely from each result's actual `totalCredits > 18`: 18 is false, 19 and 21 are true, regardless of the requested maximum. Section display details come from the same prepared catalog snapshot. Unknown returned CRNs or missing score/breakdown are internal integration failures, not invented data.
 
-**Exploration configuration:** `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` defaults to **200,000**, as explicitly required by this completion task. It overrides the engine class's own 1M default on every request. Values must be positive 32-bit integers; invalid values fail startup. There is no request-level override. Real-engine database/HTTP tests prove custom propagation with a cap of one and the returned `searchLimitReached` flag. The optional-course limit is **10**, superseding the earlier integration branch's eight-course API limit; capped results remain valid and explicitly flagged.
+**Exploration configuration:** `scheduling.node-cap=${SCHEDULING_NODE_CAP:200000}` defaults to 200,000 for this final integration task, superseding the earlier 1M API setting. It is passed to the real solver on every generation request. Values must be positive 32-bit integers; invalid values fail startup. A real database/HTTP test with cap 1 verifies the returned limit flag. The native class default remains unchanged; API configuration overrides it.
 
 ---
 
@@ -491,11 +494,62 @@ Explanations require `AI_PROVIDER=claude` and a configured key. In `none` or dev
 
 ---
 
+## 8. `POST /api/schedules/check`
+
+**Status: ✅ Implemented, verified (2026-10-16).** Module: Backend API (endpoint) + Scheduling Engine (`SelectionChecker`). Tests: `ManualModeEndpointsTest`.
+
+**Purpose:** manual mode. The student places sections on a calendar. This endpoint checks the placement against the hard rules and preferences, and tells the UI what to grey out and what to highlight. **There's no elective limit.** It checks placements instead of searching combinations.
+
+**Request**
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `term` | string | yes | Known term (else `422`) |
+| `preferences` | `SchedulePreferences` | yes | As for endpoint 6; `minCredits ≤ maxCredits` |
+| `courseIds` | string[] | no | Extra courses on the board (e.g. electives found by search), at most 30. Required and optional courses from `preferences` are always included. |
+| `crns` | string[] | yes | The placed sections, at most 60. An unknown CRN is reported as an issue, not rejected. |
+| `includeClosedSections` | boolean | no | Default `false` |
+
+**Response** (`200 OK`)
+
+| Field | Type | Description |
+|---|---|---|
+| `sections` | object[] | The placed sections, as in endpoint 6 |
+| `totalCredits`, `overload` | number, boolean | As in endpoint 6 |
+| `score`, `scoreBreakdown` | number, object | Same scoring as generated schedules |
+| `complete` | boolean | `true` when there are no issues: a usable schedule |
+| `issues` | object[] | `{ type, severity, crns[], message }`. `severity` `CONFLICT` (show red): `TIME_CONFLICT`, `BLOCKED_TIME`, `DUPLICATE_COURSE`, `DUPLICATE_COMPONENT`, `OVER_MAX_CREDITS`, `UNKNOWN_SECTION`. `INCOMPLETE` (show a prompt): `MISSING_LINKED_SECTION` (e.g. "CSE-007 lecture 12275 needs a LAB."), `LINKED_WITHOUT_LECTURE`, `REQUIRED_COURSE_MISSING`, `UNDER_MIN_CREDITS`. |
+| `candidates` | object[] | One per unplaced section of the courses in play: `{ crn, courseId, fits, completesLecture, reasons[] }`. Grey out where `fits` is `false` and show `reasons`. Highlight where `completesLecture` is `true` (the labs a placed lecture still needs). |
+
+**Status codes:** `200`; `400` for validation errors; `422` for an unknown term or course; `503` if no catalog is configured.
+
+---
+
+## 9. `POST /api/schedules/suggest-electives`
+
+**Status: ✅ Implemented, verified (2026-10-16).** Module: Backend API + Scheduling Engine (`ElectiveAdvisor`). Tests: `ManualModeEndpointsTest`.
+
+**Purpose:** "which electives fit my schedule?" It returns catalog courses that can be added to the schedule `crns` **as it is** (no conflicts, no blocked times, within the credit maximum), with the exact sections to add, best first.
+
+**Request:** `{ term, preferences, courseIds?, crns, q?, subject?, limit?, includeClosedSections? }`.
+- `crns` is the current schedule. Every CRN must belong to the required/optional courses or `courseIds`, else `422`.
+- `q` and `subject` narrow the catalog like endpoint 3.
+- `limit` is 1–20, default 5.
+- At most 50 catalog courses (by course ID) are considered per request.
+
+**Response** (`200 OK`): `{ term, suggestions: [ { courseId, title, sections[], totalCredits, overload, score, scoreBreakdown } ] }`. `sections` is a lecture plus one linked section per component. `score` and `scoreBreakdown` are the schedule's time-preference score after adding the elective.
+
+**Status codes:** `200` (empty `suggestions` if nothing fits); `400`; `422` for an unknown term, course or schedule CRN; `503` if no catalog is configured.
+
+---
+
 ## Change log
 
 | Date | Change | By |
 |---|---|---|
-| 2026-10-16 | Complete database-backed Course/Schedule integration and implement the existing explanation route. Per the explicit completion-task requirements, the API accepts ten optional entries and defaults to 200,000 nodes, superseding the earlier 8/1M API settings. Native algorithm/scoring remain unchanged. Frontend, Data, AI and engine consumers should review these documented semantics. | Codex, Backend API |
+| 2026-10-16 | Resolve local draft/pre-main conflicts: keep authoritative database/catalog/native engine and manual/elective fields; retain terms and explanation routes plus display metadata on the same datasource. Preserve pre-main API term IDs, lecture-only sectionCount and readiness filtering. Old draft datasource is test-only. Consumer review requested for reconciled representations. | Codex, Backend API |
+| 2026-10-16 | Final Schedule integration reuses pre-main PostgreSQL catalogs and native solver. Move hardcoded catalogs to test-only sources; production defaults to database. Explicit task requirements restore ten original optional entries (11 returns 400) and the 200000 API node cap; native scoring/algorithm and public response fields unchanged. Backend/Data/frontend/AI/engine consumers should review these config/contract changes. | Codex, Backend API |
+| 2026-10-16 | Implemented endpoints 3 and 4 (sections also carry `componentType`, `lectureLink`, `credits`); added endpoints 8 (`/api/schedules/check`, manual mode) and 9 (`/api/schedules/suggest-electives`); added `electiveAdvice` to endpoint 6. The default `CATALOG_SOURCE=dummy` now includes demo sections, so endpoint 6 works with no database. All additive. **Backend API, frontend and Data owners: please review.** | Claude Code for Sunny (at the engine owner's request; Backend API and Data areas) |
 | 2026-10-16 | A blank or self-referencing `lectureLink` is now rejected as malformed catalog data (`500`) instead of being treated as a standalone section. Addresses the Backend API owner's integration review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Optional-course limit lowered from 10 to **8** (more than 8 → 400). Default `scheduling.node-cap` raised from 200,000 to **1,000,000**. Engine-owner decisions; **contract change**, so the Backend API and frontend owners must review. | Claude Code for Sunny, Scheduling Engine |
 | 2026-10-16 | Native scheduling engine integrated behind `SchedulingEngine`. `lectureLink` defined as the lecture's CRN (was opaque). With `includeClosedSections=false`, a lecture whose labs (or recitations) are all closed is now excluded as well. **Contract change:** the Backend API and Data owners must review. | Claude Code for Sunny, Scheduling Engine |

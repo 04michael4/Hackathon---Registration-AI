@@ -4,6 +4,8 @@ Verified locally on 2026-10-16. This report records the earlier completion draft
 
 The final consolidation was completed separately on `feature/backend-schedule-final-integration` and pushed to `pre-main` at `5aa3e82`. This older draft retains its independent persistence implementation for review; it is not the final production integration. The user authorized committing all remaining draft files locally. A fresh pre-commit `./mvnw -B test` run passed all 588 tests with zero failures, errors or skips. No additional push is part of this commit task.
 
+For the subsequently resolved combination of this draft and pre-main, see [merge verification](merge-resolution.md). The architecture and counts below are the original draft checkpoint.
+
 ## Git and scope
 
 - Feature branch: `feature/backend-course-schedule-completion-integrated`.

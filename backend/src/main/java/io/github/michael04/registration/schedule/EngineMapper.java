@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import org.springframework.stereotype.Component;
 
 import io.github.michael04.registration.common.preferences.CreditLimits;
+import io.github.michael04.registration.common.preferences.SchedulePreferences;
 import io.github.michael04.registration.common.preferences.SoftPreferences;
 import io.github.michael04.registration.course.CatalogSection;
 import io.github.michael04.registration.course.CourseSummary;
@@ -26,11 +27,27 @@ import io.github.michael04.registration.schedule.integration.SchedulingEngine;
 @Component
 public class EngineMapper {
 
+	/** Input for {@code generate}, which also enforces the optional-course limit (it multiplies the search). */
 	public PreparedInput prepare(GenerateScheduleRequest request, Set<String> required,
 			Map<String, CourseSummary> courses, List<CatalogSection> sections) {
+		var input = prepare(request.term(), request.preferences(), request.includeClosedSections(), request.maxResults(),
+			required, courses, sections);
+		if (input.problem().courses().stream().filter(course -> !course.required()).count()
+				> ScheduleRequestValidator.MAX_OPTIONAL_COURSES) {
+			throw new IllegalArgumentException("Too many optional courses for the engine");
+		}
+		return input;
+	}
+
+	/**
+	 * The same preparation without the optional-course limit, for manual mode and elective suggestions,
+	 * which check placements instead of searching combinations.
+	 */
+	public PreparedInput prepare(String term, SchedulePreferences preferences, boolean includeClosedSections,
+			int maxResults, Set<String> required, Map<String, CourseSummary> courses, List<CatalogSection> sections) {
 		Map<String, CatalogSection> eligible = new TreeMap<>();
 		for (var section : sections) {
-			if (!request.term().equals(section.term()) || !courses.containsKey(section.courseId())) {
+			if (!term.equals(section.term()) || !courses.containsKey(section.courseId())) {
 				continue;
 			}
 			if (section.crn() == null || section.crn().isBlank()
@@ -44,22 +61,18 @@ public class EngineMapper {
 				throw new IllegalStateException("Conflicting catalog records for a section");
 			}
 		}
-		if (!request.includeClosedSections()) {
+		if (!includeClosedSections) {
 			eligible.keySet().retainAll(usableWithoutClosed(eligible.values()));
 		}
 		var inputs = courses.keySet().stream().sorted()
 			.map(id -> new SchedulingEngine.Course(id, required.contains(id), eligible.values().stream()
 				.filter(section -> id.equals(section.courseId())).map(this::toSection).toList()))
 			.toList();
-		if (inputs.stream().filter(course -> !course.required()).count() > ScheduleRequestValidator.MAX_OPTIONAL_COURSES) {
-			throw new IllegalArgumentException("Too many optional courses for the engine");
-		}
-		var hard = request.preferences().hardConstraints();
+		var hard = preferences.hardConstraints();
 		var constraints = new SchedulingEngine.Constraints(hard.minCredits(), hard.maxCredits(),
 			hard.blockedTimes().stream().map(block -> new SchedulingEngine.Meeting(
 				block.days().stream().distinct().sorted().toList(), block.start(), block.end())).toList());
-		var soft = request.preferences().softPreferences() == null
-			? SoftPreferences.none() : request.preferences().softPreferences();
+		var soft = preferences.softPreferences() == null ? SoftPreferences.none() : preferences.softPreferences();
 		var weights = new SchedulingEngine.SoftWeights(
 			soft.optionalCourseIds() == null ? 0 : soft.optionalCourseIds().weight(),
 			soft.earliestStart() == null ? null : soft.earliestStart().value(),
@@ -69,29 +82,59 @@ public class EngineMapper {
 			soft.daysOff() == null ? List.of() : soft.daysOff().value().stream().distinct().sorted().toList(),
 			soft.daysOff() == null ? 0 : soft.daysOff().weight(),
 			soft.minimizeGaps() == null ? 0 : soft.minimizeGaps().weight());
-		return new PreparedInput(new SchedulingEngine.Problem(inputs, constraints, weights, request.maxResults()),
-			courses, eligible);
+		return new PreparedInput(new SchedulingEngine.Problem(inputs, constraints, weights, maxResults), courses, eligible);
 	}
 
 	public GenerateScheduleResponse response(String term, PreparedInput input, SchedulingEngine.Result result) {
 		List<ScheduleResponse> schedules = new ArrayList<>();
 		for (var schedule : result.schedules()) {
-			var sections = schedule.sectionCrns().stream().map(crn -> {
-				var section = input.sections().get(crn);
-				if (section == null) {
-					throw new IllegalStateException("Engine returned a section outside the prepared input");
-				}
-				return new SectionResponse(section.crn(), section.courseId(), section.sectionCode(),
-					input.courses().get(section.courseId()).title(), section.credits(),
-					section.meetings().stream().map(meeting -> new MeetingResponse(
-						meeting.days().stream().distinct().sorted().toList(), meeting.start(), meeting.end(), meeting.location()))
-						.toList());
-			}).toList();
+			var sections = schedule.sectionCrns().stream().map(crn -> sectionResponse(input, crn)).toList();
 			schedules.add(new ScheduleResponse(schedules.size() + 1, Objects.requireNonNull(schedule.score()),
 				schedule.totalCredits(), CreditLimits.isOverload(schedule.totalCredits()), sections,
 				Objects.requireNonNull(schedule.scoreBreakdown())));
 		}
-		return new GenerateScheduleResponse(term, schedules, result.diagnostics(), result.searchLimitReached());
+		var advice = result.electiveAdvice().stream()
+			.map(a -> new GenerateScheduleResponse.ElectiveAdviceResponse(a.courseId(), a.status(), a.summary(), a.fixes(),
+				a.alternativeCrns()))
+			.toList();
+		return new GenerateScheduleResponse(term, schedules, result.diagnostics(), result.searchLimitReached(), advice);
+	}
+
+	public CheckScheduleResponse checkResponse(String term, PreparedInput input, SchedulingEngine.Check check) {
+		return new CheckScheduleResponse(term,
+			check.sectionCrns().stream().map(crn -> sectionResponse(input, crn)).toList(),
+			check.totalCredits(), CreditLimits.isOverload(check.totalCredits()),
+			Objects.requireNonNull(check.score()), Objects.requireNonNull(check.scoreBreakdown()), check.complete(),
+			check.issues().stream()
+				.map(i -> new CheckScheduleResponse.IssueResponse(i.type(), i.severity(), i.crns(), i.message()))
+				.toList(),
+			check.candidates().stream()
+				.map(c -> new CheckScheduleResponse.CandidateResponse(c.crn(), c.courseId(), c.fits(), c.completesLecture(),
+					c.reasons()))
+				.toList());
+	}
+
+	public SuggestElectivesResponse suggestionsResponse(String term, PreparedInput pool,
+			List<SchedulingEngine.ElectiveFit> fits) {
+		return new SuggestElectivesResponse(term, fits.stream()
+			.map(f -> new SuggestElectivesResponse.Suggestion(f.courseId(), pool.courses().get(f.courseId()).title(),
+				f.crns().stream().map(crn -> sectionResponse(pool, crn)).toList(), f.totalCredits(),
+				CreditLimits.isOverload(f.totalCredits()), Objects.requireNonNull(f.score()),
+				Objects.requireNonNull(f.scoreBreakdown())))
+			.toList());
+	}
+
+	/** Display data for one section of the prepared input; a CRN outside it is an integration failure. */
+	SectionResponse sectionResponse(PreparedInput input, String crn) {
+		var section = input.sections().get(crn);
+		if (section == null) {
+			throw new IllegalStateException("Engine returned a section outside the prepared input");
+		}
+		return new SectionResponse(section.crn(), section.courseId(), section.sectionCode(),
+			input.courses().get(section.courseId()).title(), section.credits(),
+			section.meetings().stream().map(meeting -> new MeetingResponse(
+				meeting.days().stream().distinct().sorted().toList(), meeting.start(), meeting.end(), meeting.location()))
+				.toList());
 	}
 
 	/**

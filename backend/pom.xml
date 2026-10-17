@@ -21,6 +21,21 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
+		<!-- Database-backed course catalog (only used when CATALOG_SOURCE=database). Not spring-boot-starter-jdbc:
+		     its DataSource auto-configuration would stop the default no-database app from starting. -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
@@ -30,16 +45,6 @@
 			<groupId>com.anthropic</groupId>
 			<artifactId>anthropic-java</artifactId>
 			<version>2.71.0</version>
-		</dependency>
-		<!-- Read-only catalog repositories use the existing PostgreSQL schema without ORM-generated DDL. -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-jdbc</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
@@ -52,13 +57,21 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<spring.profiles.active>test</spring.profiles.active>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
 	</build>
 	<profiles>
-		<!-- Real PostgreSQL/HTTP tests are explicit so ordinary tests remain database-free. -->
 		<profile>
 			<id>database-it</id>
 			<build>
@@ -67,7 +80,12 @@
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-failsafe-plugin</artifactId>
 						<executions>
-							<execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
 						</executions>
 					</plugin>
 				</plugins>
