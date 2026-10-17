@@ -8,8 +8,8 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Backend foundation merged to `main` (which stays untouched). Integration on **`pre-main`**: Marpu's `common` error handling, CORS and Schedule API (validation, preparation, response mapping) are there. Michael's AI preference extraction is being integrated through PR #2 (`integrate/ai-into-pre-main`, pending review). Sunny's scheduling engine is on `integrate/engine-into-pre-main`, not yet in `pre-main`. Production catalog adapters are not built. |
-| **What works today** | Health endpoint, standardized Problem Details errors, validation infrastructure, configurable CORS, and Schedule API validation and mapping (Marpu; schedule success paths are tested with doubles, and the running app returns 503 for schedules until a production catalog and engine are registered). AI preference extraction with Claude, live-verified (eval 19/20 = 95%) (Michael). Test counts: see [HANDOFF.md](HANDOFF.md#latest-test-results). |
+| **Current phase** | Backend integration. This uncommitted Course/Schedule completion branch starts from integrated **`pre-main`** (`b715f86`) with the existing native solver and AI module. `main` stays untouched. |
+| **What works today** | Course search/detail/terms over read-only PostgreSQL, native-solver Schedule generation, validation, standard errors and CORS. Schedule explanation reloads catalog data and uses engine selection validation before Claude; the full provider pipeline is verified offline. See the [executed verification record](docs/course-schedule-verification.md) for evidence and deployment limits. |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -41,12 +41,12 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
-| Course search by code/title for a term | ✔ | ⬜ Planned |
+| Course search by code/title for a term | ✔ | ✅ Read-only PostgreSQL repositories; real HTTP and source-schema tests pass |
 | AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
 | Editable preference form (works without AI too) | ✔ | ⬜ Planned |
-| Conflict-free schedule generation, ranked by preferences | ✔ | 🟡 API layer implemented; catalog and solver adapters pending |
+| Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Database-backed, real native solver and HTTP verified |
 | Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
-| AI explanation of a schedule | Stretch | ⬜ Planned |
+| AI explanation of a schedule | Stretch | ✅ Implemented; offline full-pipeline provider tests pass; paid-provider quality not evaluated |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
 ## Technology stack
@@ -55,7 +55,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend | **Java 21 + Spring Boot 4.1.1**, Maven Wrapper | Static types for the constraint engine, mature REST, validation and testing; see [ADR-0001](docs/decisions/0001-java-spring-boot-over-python-fastapi.md) |
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
-| Database | PostgreSQL *(planned)* | Relational catalog data (term → course → section → meeting), with built-in text search |
+| Database | PostgreSQL, opt-in with `CATALOG_SOURCE=database` | Read-only Spring JDBC adapters for the Data module's catalog schema; startup never creates or seeds tables |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
 | Frontend | Next.js + TypeScript + Tailwind CSS *(planned)* | Typed UI, fast iteration, common team skill set |
 
@@ -111,7 +111,7 @@ These steps are for macOS. Linux works the same way; on Windows use `mvnw.cmd`.
 | Git | any recent | Cloning |
 | Maven | **not needed** | `./mvnw` downloads the pinned Maven 3.10.0 on first run |
 | Node.js | _TBD_ | Frontend (later) |
-| PostgreSQL | _TBD_ | Persistence phase (later) |
+| PostgreSQL | 17.6 tested | Database catalog mode and explicit database integration tests; optional for normal unit tests/startup |
 
 Install JDK 21 with [Homebrew](https://brew.sh):
 
@@ -146,9 +146,10 @@ cp .env.example .env    # optional right now; nothing is required yet
 |---|---|---|---|
 | `PORT` | Backend | No | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
-| `SCHEDULING_NODE_CAP` | Schedule API | No | `1000000` |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
-| `CATALOG_SOURCE` | Backend | No | `dummy`: made-up courses, no database. `database` is reserved for the PostgreSQL catalog (not built yet). |
+| `SCHEDULING_NODE_CAP` | Schedule API | No | `200000` |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL catalog | In database mode | —; `DB_URL` must be a PostgreSQL JDBC URL |
+| `CATALOG_SCHEMA` | PostgreSQL catalog | No | `cse007_snapshot`; lowercase SQL identifier |
+| `CATALOG_SOURCE` | Backend | No | `dummy`: AI development only. `database`: real catalog reads for Course, AI and Schedule. Course endpoints return 503 without the database catalog. |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
@@ -158,9 +159,9 @@ cp .env.example .env    # optional right now; nothing is required yet
 
 `CORS_ALLOWED_ORIGINS` accepts comma-separated exact frontend origins, for example `http://localhost:3000,https://planner.example`. Do not include trailing slashes, paths, or wildcards. The allowlist replaces the localhost default. An empty value disables cross-origin access when using a same-origin frontend proxy. CORS covers `/api/**`, allows GET/HEAD/POST/OPTIONS with Accept/Content-Type headers, and disables credentials. Error responses use Problem Details with a `requestId` and matching `X-Request-Id` header; see the [API contract](docs/api-contract.md#error-responses).
 
-`SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 1,000,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
+`SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 200,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
 
-**Schedule API status:** `POST /api/schedules/generate` now validates requests, prepares catalog input, and maps solver results. Success paths are tested with explicit doubles. The fetched repository has no production scheduling engine or section catalog; valid requests return a safe **503** until `CourseCatalog`, `SectionCatalog`, and a `SchedulingEngine` adapter are registered. Invalid requests still return **400** before those dependencies are accessed. This includes more than 8 optional selections, measured before deduplication. See [architecture §7](docs/architecture.md#7-scheduling-engine) for the pending native-engine mapping; no solver algorithm or successful production results are fabricated.
+**Schedule API status:** `POST /api/schedules/generate` is connected to the database catalog and the real native solver. Configure `CATALOG_SOURCE=database` and the database variables below. The API retains ten optional entries and a 200,000-node default per this completion task, copies native scores/order unchanged, and returns 200 with diagnostics when infeasible. `POST /api/schedules/explain` reloads catalog data, validates the selection with the engine, then calls the configured Claude provider; it returns 503 when AI is off. See the [verification evidence](docs/course-schedule-verification.md).
 
 ### 4. Run the automated tests
 
@@ -177,6 +178,34 @@ The first run downloads Maven and dependencies (a minute or two). Expected outpu
 ```
 
 ### 5. Run the backend
+
+For the Course API, provision the Data module's existing PostgreSQL schema separately, then set
+`CATALOG_SOURCE=database`, `DB_URL`, `DB_USERNAME`, optional `DB_PASSWORD`, and `CATALOG_SCHEMA`.
+The app makes read-only queries; it never executes a migration or imports fixture data during startup.
+`spring-jdbc` and the PostgreSQL driver support these repositories; there is no ORM-generated DDL.
+Default dummy mode still starts without a database, but its invented AI-development courses are never
+returned by the Course endpoints.
+
+The implemented Course routes are `GET /api/terms`, `GET /api/courses?term=...`, and
+`GET /api/courses/{courseId}?term=...`. See the [API contract](docs/api-contract.md) for fields,
+filters, pagination and status codes.
+
+Real database/HTTP tests are opt-in and use newly created schemas in an isolated loopback database:
+
+```bash
+export TEST_DATABASE_URL='jdbc:postgresql://127.0.0.1:5432/course_schedule_test'
+export TEST_DATABASE_USER='postgres'
+# Set TEST_DATABASE_PASSWORD in your environment if your local test server requires it.
+cd backend
+./mvnw -B -Pdatabase-it verify
+```
+
+The test role needs permission to create the isolated test database/schema. The fixture helper accepts
+only loopback URLs whose database name starts with `course_schedule_test`; it never touches a
+production database. It creates and cleans only its own `course_api_*` schemas. Ordinary `./mvnw test`
+does not require PostgreSQL. The integration fixture is synthetic and test-only; compatibility with
+David's full V1–V4 snapshot import was additionally verified from an unmodified external SQL bundle in a disposable schema.
+Current evidence and remaining blockers: [Course/Schedule verification](docs/course-schedule-verification.md).
 
 ```bash
 cd backend
@@ -242,9 +271,9 @@ Full workflow, including conflicts, AI agents and onboarding: **[docs/developmen
 |---|---|
 | Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented; merged to `main` in `76a8310` |
 | Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
-| Course catalog, PostgreSQL | ⬜ Planned |
-| Scheduling engine | ⬜ Planned |
-| AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
+| Course catalog, PostgreSQL | ✅ Read-only repositories and Course endpoints verified through PostgreSQL, real HTTP and Data's source schema |
+| Scheduling engine | ✅ Native engine supplied by integrated pre-main; database-backed Schedule API verified |
+| AI integration | ✅ Preference extraction retained from the integrated base; schedule explanation implemented and tested through the official SDK against a local provider fake. No paid-provider explanation evaluation in this task. |
 | Frontend | ⬜ Planned |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
@@ -264,18 +293,18 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 ## Known limitations and future work
 
 **Current limitations**
-- Health and Schedule API validation/mapping are implemented; shared errors and CORS are available. Schedule generation needs production catalog and engine adapters; the API currently returns 503 for valid generation requests. No catalog data, database, AI or frontend is integrated on this branch.
-- **The source for Lehigh course data hasn't been chosen.** This blocks course search and scheduling against real data.
+- Database mode requires Data's separately provisioned catalog schema and content. The backend performs no startup migrations or seed writes. Default dummy mode is for development and does not supply Course API records or schedulable sections.
+- Data's CSE 007 source SQL is verified in an isolated database; full-university coverage, a production database and current seat availability remain Data/deployment work. Historical seat snippets stay UNKNOWN.
+- Prerequisite expressions are preserved internally, but the established public response has no prerequisite fields and student eligibility is outside the MVP. The native scheduling boundary requires known integral credits and a single confirmed lecture parent per linked component.
+- Schedule explanation needs a configured Claude key; live model quality was not evaluated. Generation works without AI in database mode.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.
 - `.env` files aren't loaded automatically by Spring.
 
 **Planned beyond the MVP**
 - Prerequisite awareness (needs reliable data)
-- Linked lecture/lab sections, if the data supports them
 - Travel time between campuses
 - Saved schedules (would require accounts and authentication)
-- AI explanations
 - An OpenAPI spec generated from code, to keep frontend types in sync
 
 ---

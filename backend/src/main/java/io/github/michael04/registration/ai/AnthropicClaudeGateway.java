@@ -147,7 +147,7 @@ final class AnthropicClaudeGateway implements ClaudeGateway {
 		}
 	}
 
-	private static RuntimeException translate(AnthropicServiceException ex) {
+	static RuntimeException translate(AnthropicServiceException ex) {
 		int status = ex.statusCode();
 		log.warn("Claude request failed with HTTP {}", status);
 		if (status == 429) {

@@ -3,6 +3,7 @@ package io.github.michael04.registration.schedule.integration;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.EnumSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -14,6 +15,8 @@ import io.github.michael04.registration.engine.CourseOption;
 import io.github.michael04.registration.engine.ScheduleProblem;
 import io.github.michael04.registration.engine.ScheduleResult;
 import io.github.michael04.registration.engine.SectionOption;
+import io.github.michael04.registration.engine.SelectionChecker;
+import io.github.michael04.registration.engine.SelectionReport;
 
 /**
  * Adapter from the API's {@link SchedulingEngine} boundary to the native engine
@@ -32,6 +35,14 @@ import io.github.michael04.registration.engine.SectionOption;
  */
 @Component
 public class NativeSchedulingEngine implements SchedulingEngine {
+
+	/** Engine-owned validation/scoring for an existing selection, used before an AI explanation. */
+	public SelectionReport checkSelection(Problem problem, Collection<String> crns) {
+		try { return new SelectionChecker().check(toNative(problem), crns); }
+		catch (IllegalArgumentException ex) {
+			throw new IllegalStateException("Catalog data rejected by the scheduling engine", ex);
+		}
+	}
 
 	@Override
 	public Result solve(Problem problem, int nodeCap) {

@@ -6,10 +6,10 @@ import jakarta.validation.ConstraintValidatorContext;
 /** Cross-field rules and constraints on generic preference values. Numeric ranges use Bean Validation. */
 public class ScheduleRequestValidator implements ConstraintValidator<ValidScheduleRequest, GenerateScheduleRequest> {
 	/**
-	 * Most optional courses a request may list. Each optional course multiplies the engine's search,
-	 * so this keeps results exhaustive in practice (team decision 2026-10-16; see architecture.md § 7).
+	 * Original-list limit explicitly required by the Course/Schedule completion task.
+	 * Search remains deterministically bounded by the configured node cap.
 	 */
-	static final int MAX_OPTIONAL_COURSES = 8;
+	static final int MAX_OPTIONAL_COURSES = 10;
 
 	@Override
 	public boolean isValid(GenerateScheduleRequest request, ConstraintValidatorContext context) {
