@@ -1,0 +1,219 @@
+{
+ "term": "202710",
+ "updated": "2026-10-17",
+ "grid_csv": "banner/sections_grid.csv",
+ "courses": {
+  "CHM 030": {
+   "status": "PARTIAL",
+   "sections": 14,
+   "detail": "lecture 12305 panels read; labs not inspected"
+  },
+  "ENGR 010": {
+   "status": "GRID_ONLY",
+   "sections": 12,
+   "detail": "1 lecture 010 + 11 labs; no detail panels yet"
+  },
+  "ENGR 005": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 021": {
+   "status": "GRID_ONLY",
+   "sections": 10,
+   "detail": "2 lectures (110,210) + 8 recitations, all Linked"
+  },
+  "MATH 022": {
+   "status": "GRID_ONLY",
+   "sections": 20,
+   "detail": "4 lectures (110,210,310,410) + 16 recitations; each lecture has 2 Common Hour Exam meetings (2027-02-25, 2027-04-08) in meetings_extra.csv"
+  },
+  "MATH 205": {
+   "status": "GRID_ONLY",
+   "sections": 7,
+   "detail": "7 standalone-looking lectures (no Linked Sections button; NOT proof of standalone), waitlists exist; exams 03-04, 04-15 in meetings_extra.csv"
+  },
+  "MATH 231": {
+   "status": "GRID_ONLY",
+   "sections": 3,
+   "detail": "3 lectures; exams in meetings_extra.csv"
+  },
+  "MATH 241": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 242": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "PHY 011": {
+   "status": "GRID_ONLY",
+   "sections": 8,
+   "detail": "1 lecture (010) + 7 recitations, all Linked; recitations meet TR twice weekly"
+  },
+  "PHY 012": {
+   "status": "GRID_ONLY",
+   "sections": 8,
+   "detail": "8 lab sections, 1 credit each, no Linked Sections shown => separately registered (UNVERIFIED), waitlists exist"
+  },
+  "WRT 001": {
+   "status": "GRID_ONLY",
+   "sections": 8,
+   "detail": "8 lectures, no attributes besides On-Campus Required"
+  },
+  "WRT 002": {
+   "status": "GRID_ONLY",
+   "sections": 39,
+   "detail": "39 lectures; no linked/restriction detail inspected"
+  },
+  "ECO 001": {
+   "status": "GRID_ONLY",
+   "sections": 26,
+   "detail": "2 lectures (110,210) 4cr + 24 Friday recitations (0cr), all Linked; exams 02-22, 04-05"
+  },
+  "ECO 325": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "2 lectures"
+  },
+  "ECO 357": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "ECO 360": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "ECO 367": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 043": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "1 lecture; waitlist exists"
+  },
+  "MATH 309": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 312": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "grid only; sections 010 (4cr) and 011 (3cr) same meeting pattern"
+  },
+  "MATH 334": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "grid only; 010 (4cr) and 011 (3cr) same meeting pattern"
+  },
+  "MATH 031": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 032": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "MATH 051": {
+   "status": "GRID_ONLY",
+   "sections": 3,
+   "detail": "grid only; lecture 110 (4cr) + Friday recitations 111/112 (0cr grid); linked lists not inspected"
+  },
+  "MATH 052": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "grid only; 2 lectures each with 2 Common Hour Exams (Thu 16:25-17:40 on 2027-03-04, 2027-04-15); waitlist exists, not stored"
+  },
+  "MATH 062": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only; 2-credit half-course"
+  },
+  "MATH 076": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "grid only; 2-credit half-course (MATH 021 credit-exclusion partner with MATH 075)"
+  },
+  "MATH 081": {
+   "status": "GRID_ONLY",
+   "sections": 7,
+   "detail": "grid only; lectures 110 and 210 (4cr) each with recitations (0cr grid); linked lists not inspected, so which recitation pairs with which lecture is unknown"
+  },
+  "MATH 082": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "STAT 342": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "ISE 111": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only; building/room listed in grid"
+  },
+  "ISE 121": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only; waitlist exists, not stored"
+  },
+  "ISE 224": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "ISE 309": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "ISE 364": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "ISE 365": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "BUAN 348": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "BUAN 352": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "MKT 325": {
+   "status": "GRID_ONLY",
+   "sections": 2,
+   "detail": "grid only; same title and meeting pattern as ECO 325 (CRNs differ); cross-list NOT verified (Cross Listed panel not opened)"
+  },
+  "MKT 326": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "BIS 324": {
+   "status": "GRID_ONLY",
+   "sections": 1,
+   "detail": "grid only"
+  },
+  "WRT 003": {
+   "status": "NOT_OFFERED_IN_SPRING_2027",
+   "sections": 0
+  },
+  "WRT 005": {
+   "status": "GRID_ONLY",
+   "sections": 4,
+   "detail": "grid only"
+  }
+ },
+ "next": [],
+ "limitations": [
+  "Instructors stored from the grid on the user's explicit instruction 2026-10-17 (banner/instructors.csv); seat counts/waitlists not stored",
+  "Seat counts never stored",
+  "Banner batch/JS actions sometimes denied; single clicks work"
+ ]
+}

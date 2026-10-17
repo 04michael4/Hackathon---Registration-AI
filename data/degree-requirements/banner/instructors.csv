@@ -1,0 +1,226 @@
+term,crn,course,instructor,role,collected,origin
+202710,12109,MATH 312,"Ye, Zi",Primary,2026-10-17,authenticated_banner_grid
+202710,12110,MATH 312,"Ye, Zi",Primary,2026-10-17,authenticated_banner_grid
+202710,10280,MATH 334,"Ye, Zi",Primary,2026-10-17,authenticated_banner_grid
+202710,10412,MATH 334,"Ye, Zi",Primary,2026-10-17,authenticated_banner_grid
+202710,12112,MATH 051,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12822,MATH 051,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12823,MATH 051,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,10166,MATH 052,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,11409,MATH 052,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,14380,MATH 062,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,10167,MATH 076,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,11408,MATH 076,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,10874,MATH 081,"Sabini, Evan",Primary,2026-10-17,authenticated_banner_grid
+202710,12827,MATH 081,"Sabini, Evan",Primary,2026-10-17,authenticated_banner_grid
+202710,12830,MATH 081,"Sabini, Evan",Primary,2026-10-17,authenticated_banner_grid
+202710,12831,MATH 081,"Sabini, Evan",Primary,2026-10-17,authenticated_banner_grid
+202710,12832,MATH 081,"Russoniello, Nick",Primary,2026-10-17,authenticated_banner_grid
+202710,12833,MATH 081,"Russoniello, Nick",Primary,2026-10-17,authenticated_banner_grid
+202710,12834,MATH 081,"Russoniello, Nick",Primary,2026-10-17,authenticated_banner_grid
+202710,10379,ISE 111,"Perevalov, Eugene",Primary,2026-10-17,authenticated_banner_grid
+202710,10050,ISE 121,"Perevalov, Eugene",Primary,2026-10-17,authenticated_banner_grid
+202710,10053,ISE 224,"Marangos, Charalambos",Primary,2026-10-17,authenticated_banner_grid
+202710,13700,ISE 365,"Pamukcu, Derya",Primary,2026-10-17,authenticated_banner_grid
+202710,12796,BUAN 348,"Kim, Sun",Primary,2026-10-17,authenticated_banner_grid
+202710,12794,BUAN 352,"Ye, Han",Primary,2026-10-17,authenticated_banner_grid
+202710,12316,MKT 325,"Fang, Eric",Primary,2026-10-17,authenticated_banner_grid
+202710,12507,MKT 325,"Fang, Eric",Primary,2026-10-17,authenticated_banner_grid
+202710,13018,MKT 326,"Wang, Rebecca",Primary,2026-10-17,authenticated_banner_grid
+202710,10890,BIS 324,"Ndubizu, Andrea",Primary,2026-10-17,authenticated_banner_grid
+202710,13711,WRT 005,"Cusumano, Teresa",Primary,2026-10-17,authenticated_banner_grid
+202710,13717,WRT 005,"Harbaum, Jessica",Primary,2026-10-17,authenticated_banner_grid
+202710,13728,WRT 005,"O'Neill, Mike",Primary,2026-10-17,authenticated_banner_grid
+202710,13729,WRT 005,"Montufar, Cristina",Primary,2026-10-17,authenticated_banner_grid
+202710,13432,WRT 001,"Buesking, Renee",Primary,2026-10-17,authenticated_banner_grid
+202710,13520,WRT 001,"Buesking, Renee",Primary,2026-10-17,authenticated_banner_grid
+202710,13433,WRT 001,"Karleskint, Isabelle",Primary,2026-10-17,authenticated_banner_grid
+202710,13434,WRT 001,"Buesking, Renee",Primary,2026-10-17,authenticated_banner_grid
+202710,13437,WRT 001,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13521,WRT 001,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13440,WRT 001,"Buesking, Renee",Primary,2026-10-17,authenticated_banner_grid
+202710,14097,WRT 001,"Karleskint, Isabelle",Primary,2026-10-17,authenticated_banner_grid
+202710,13445,WRT 002,"Ouellette, Mark",Primary,2026-10-17,authenticated_banner_grid
+202710,13522,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13446,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13448,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13449,WRT 002,"Batchelor, Nicole",Primary,2026-10-17,authenticated_banner_grid
+202710,13450,WRT 002,"Karleskint, Isabelle",Primary,2026-10-17,authenticated_banner_grid
+202710,13451,WRT 002,"O'Brien, Colleen",Primary,2026-10-17,authenticated_banner_grid
+202710,13452,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13455,WRT 002,"Karleskint, Isabelle",Primary,2026-10-17,authenticated_banner_grid
+202710,13456,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13461,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13464,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13465,WRT 002,"Batchelor, Nicole",Primary,2026-10-17,authenticated_banner_grid
+202710,13466,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13467,WRT 002,"Munoz, Zakery",Primary,2026-10-17,authenticated_banner_grid
+202710,13523,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13468,WRT 002,"Batchelor, Nicole",Primary,2026-10-17,authenticated_banner_grid
+202710,13535,WRT 002,"Bailey, Renée",Primary,2026-10-17,authenticated_banner_grid
+202710,13469,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13524,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13470,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13471,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13472,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13473,WRT 002,"Bailey, Renée",Primary,2026-10-17,authenticated_banner_grid
+202710,13474,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13525,WRT 002,"O'Brien, Colleen",Primary,2026-10-17,authenticated_banner_grid
+202710,13475,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13476,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13477,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13478,WRT 002,"Bailey, Renée",Primary,2026-10-17,authenticated_banner_grid
+202710,13479,WRT 002,"O'Brien, Colleen",Primary,2026-10-17,authenticated_banner_grid
+202710,13480,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13481,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13482,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13483,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13536,WRT 002,"Bailey, Renée",Primary,2026-10-17,authenticated_banner_grid
+202710,13484,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13537,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13538,WRT 002,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12050,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12097,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12098,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12098,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12099,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12099,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12100,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12100,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12101,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12101,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12102,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12102,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12103,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12103,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12104,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12104,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12105,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12105,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12106,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12106,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12107,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12107,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10434,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10434,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10436,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10436,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10437,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10437,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,11394,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,11394,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10858,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10858,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10859,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10859,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10860,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10860,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10861,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10861,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10686,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10686,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,10687,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,10687,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,11395,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,11395,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,11396,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,11396,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12459,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12459,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12460,ECO 001,"Baltrusaitiene, Marija (Maria)",Primary,2026-10-17,authenticated_banner_grid
+202710,12460,ECO 001,"Staff, Teaching",Additional,2026-10-17,authenticated_banner_grid
+202710,12330,ECO 325,"Fang, Eric",Primary,2026-10-17,authenticated_banner_grid
+202710,12811,ECO 325,"Fang, Eric",Primary,2026-10-17,authenticated_banner_grid
+202710,12757,MATH 021,"Conus, Daniel",Primary,2026-10-17,authenticated_banner_grid
+202710,12758,MATH 021,"Conus, Daniel",Primary,2026-10-17,authenticated_banner_grid
+202710,12759,MATH 021,"Conus, Daniel",Primary,2026-10-17,authenticated_banner_grid
+202710,12761,MATH 021,"Conus, Daniel",Primary,2026-10-17,authenticated_banner_grid
+202710,12762,MATH 021,"Conus, Daniel",Primary,2026-10-17,authenticated_banner_grid
+202710,11181,MATH 021,"Chen, Daren",Primary,2026-10-17,authenticated_banner_grid
+202710,11182,MATH 021,"Chen, Daren",Primary,2026-10-17,authenticated_banner_grid
+202710,12763,MATH 021,"Chen, Daren",Primary,2026-10-17,authenticated_banner_grid
+202710,12764,MATH 021,"Chen, Daren",Primary,2026-10-17,authenticated_banner_grid
+202710,12765,MATH 021,"Chen, Daren",Primary,2026-10-17,authenticated_banner_grid
+202710,12766,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12767,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12768,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12769,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12770,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12771,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12772,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12773,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12774,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12777,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12778,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12779,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12780,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12781,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12783,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12786,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12788,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12790,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12792,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12793,MATH 022,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12837,MATH 205,"Coll, Vincent",Primary,2026-10-17,authenticated_banner_grid
+202710,10169,MATH 205,"Hambric, Logan",Primary,2026-10-17,authenticated_banner_grid
+202710,10170,MATH 205,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12838,MATH 205,"Hambric, Logan",Primary,2026-10-17,authenticated_banner_grid
+202710,10171,MATH 205,"Coll, Vincent",Primary,2026-10-17,authenticated_banner_grid
+202710,10734,MATH 205,"Hambric, Logan",Primary,2026-10-17,authenticated_banner_grid
+202710,13888,MATH 205,"Wang, Jiayuan",Primary,2026-10-17,authenticated_banner_grid
+202710,10383,MATH 231,"Russoniello, Nick",Primary,2026-10-17,authenticated_banner_grid
+202710,10173,MATH 231,"Liu, Jiaqi",Primary,2026-10-17,authenticated_banner_grid
+202710,10174,MATH 231,"Russoniello, Nick",Primary,2026-10-17,authenticated_banner_grid
+202710,15416,MATH 043,"Zhang, Linghai",Primary,2026-10-17,authenticated_banner_grid
+202710,12585,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10441,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10014,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10015,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10016,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10017,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10018,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,11339,PHY 011,"Honerkamp Smith, Aurelia",Primary,2026-10-17,authenticated_banner_grid
+202710,10006,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10007,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,12148,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10008,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10266,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10009,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10011,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,10012,PHY 012,"Dierolf, Volkmar",Primary,2026-10-17,authenticated_banner_grid
+202710,12303,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12304,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12305,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,15059,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12411,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12411,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12412,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12412,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12413,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12413,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12414,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12414,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,13233,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13233,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12415,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12415,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,13724,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,13724,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,15395,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,15395,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12416,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12416,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,12417,CHM 030,"Staff, Teaching",Primary,2026-10-17,authenticated_banner_grid
+202710,12417,CHM 030,"Prendergast, Daniel",Additional,2026-10-17,authenticated_banner_grid
+202710,14511,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14628,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14627,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14629,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14630,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14631,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14632,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14633,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14634,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14635,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14636,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
+202710,14637,ENGR 010,"Witmer, George",Primary,2026-10-17,authenticated_banner_grid
