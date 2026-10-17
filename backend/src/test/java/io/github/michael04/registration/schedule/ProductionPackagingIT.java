@@ -12,6 +12,9 @@ class ProductionPackagingIT {
 			String prefix = "BOOT-INF/classes/io/github/michael04/registration/";
 			assertThat(jar.getEntry(prefix + "course/DummyCourseCatalog.class")).isNull();
 			assertThat(jar.getEntry(prefix + "course/DummySectionCatalog.class")).isNull();
+			assertThat(jar.getEntry(prefix + "course/persistence/CatalogPersistenceConfiguration.class")).isNull();
+			assertThat(jar.getEntry(prefix + "course/persistence/DatabaseCourseCatalog.class")).isNull();
+			assertThat(jar.getEntry(prefix + "course/persistence/CatalogRepository.class")).isNull();
 			assertThat(jar.getEntry("BOOT-INF/classes/application-test.properties")).isNull();
 			assertThat(jar.getEntry(prefix + "course/persistence/JdbcCourseCatalog.class")).isNotNull();
 			assertThat(jar.getEntry(prefix + "course/persistence/JdbcSectionCatalog.class")).isNotNull();

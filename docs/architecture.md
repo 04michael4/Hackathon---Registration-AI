@@ -115,7 +115,7 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | Implemented | Existing Course API/read interfaces and authoritative PostgreSQL catalogs (`catalog_api`, or with `DB_CATALOG_SCHEMA=catalog_live` also approved promoted courses, [ADR-0003](decisions/0003-promote-evidence-through-approvals-into-catalog-live.md)); demo catalogs now test-only; the complete researched term catalog is stored in `catalog_research` ([ADR-0005](decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)), which the backend does not read | Backend API (+ Data) |
+| `course` | Implemented | Existing Course API/read interfaces and authoritative PostgreSQL catalogs (`catalog_api`, or with `DB_CATALOG_SCHEMA=catalog_live` also approved promoted courses, [ADR-0003](decisions/0003-promote-evidence-through-approvals-into-catalog-live.md)); demo catalogs now test-only ([ADR-0002](decisions/0002-read-only-database-catalog-through-catalog-api-views.md), [database guide](database.md)); the complete researched term catalog is stored in `catalog_research` ([ADR-0005](decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)), which the backend does not read | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
 | `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine. Endpoints: `generate` (with `electiveAdvice`), `check` (manual mode), `suggest-electives`. | Backend API |
@@ -128,6 +128,7 @@ flowchart TD
     schedule --> engine
     schedule --> course
     ai --> course
+    ai --> schedule
     ingest --> course
     course --> common
     schedule --> common
@@ -148,9 +149,11 @@ Rules:
 `JdbcCatalogDao` (`JdbcClient`), `JdbcCourseCatalog`, `JdbcSectionCatalog`, `CatalogProperties` and `TermMapping`.
 No JPA/Spring Data implementation exists; this integration does not introduce one or add a second datasource.
 
+The local draft is reconciled with this implementation. `JdbcCourseMetadataCatalog` uses that same Hikari datasource to read term names/capture dates, descriptions and instructor names from the existing qualified Data tables. `CourseService` adds only those display fields to certified courses/sections; eligibility, status, credits and lecture links still come from the authoritative catalogs/views. `SectionLookupCatalog` resolves explanation CRNs through those same catalogs. The older independent datasource, repository and catalog are retained under src/test only and excluded from the production JAR. No schema/view or engine algorithm is changed.
+
 Data owns `data/cse007-snapshot/` (V1-V4 tables/seed) and `data/catalog-api/V1__catalog_api_views.sql`.
 The authoritative tables include `source_asset`, `term`, `course`, `section`, `meeting`, `section_link`,
-`section_component_group`, `course_requirement` and evidence/issue records. Java reads only
+`section_component_group`, `course_requirement` and evidence/issue records. Scheduling and discovery read
 `catalog_api.course_offering`, `section_offering` and `section_meeting`; helper views enforce certified whole
 credits, confirmed lecture links/component rules and fail-closed readiness. Migrations and seeds are unchanged.
 
@@ -165,6 +168,8 @@ Ordinary tests remain DB-free; `-Pdatabase-it` adds real PostgreSQL/native-solve
 Their fixture loader imports the unchanged Data SQL in fresh, validated loopback test databases, never drops
 schemas/databases and retains fixtures for inspection. Only synthetic availability tests overlay the view in
 their dedicated test database; original-source verification uses all views unchanged and reports UNKNOWN status.
+
+What is implemented (2026-10-16): the schema actually in use is `cse007_snapshot` (CSE 007 only), read through the five `catalog_api` views; the entity diagram above is the original proposal, not the running schema. An append-only `banner_evidence` schema records Banner and user-report evidence apart from the catalog; nothing in it makes a course schedulable. See [database.md](database.md).
 
 ## 6. REST API design
 
@@ -358,7 +363,7 @@ To stay fast, the fix checks re-solve only the required courses plus that one el
 | Every required course is scheduled exactly once | **Hard** | A lecture with linked sections is taken with exactly one linked section per component type (lab, recitation). See §7. | 🟡 engine |
 | Total credits within `[minCredits, maxCredits]` | **Hard** | **Hard cap 21 credits** (team rule); default range 12–18. Above 18 (above 17 for first-semester students) is an overload that needs approval under Lehigh policy, so those schedules are flagged `overload: true`. See [api-contract.md § Credit limits](api-contract.md#credit-limits). The engine enforces the range; the 21 cap and the overload flag are the API layer's job. | 🟡 engine range |
 | No class during `blockedTimes` | **Hard** | Work, practice, etc. | 🟡 engine |
-| Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | Depends on enrollment data being available. The caller filters, using `CourseOption.excluding` (§7 rule 4). | ⬜ caller |
+| Sections belong to the requested term; closed sections excluded unless `includeClosedSections` | **Hard** | The caller filters explicit CLOSED status using `CourseOption.excluding` (§7 rule 4); historical unknown availability remains UNKNOWN. | ✅ caller |
 | Prerequisites satisfied | Out of MVP scope | Needs reliable prerequisite data and the student's history. The UI should say we don't check this. | — |
 | Include optional courses | Soft | Weighted; only if credits allow. Formulas for all soft preferences: [§7, Scoring](#7-scheduling-engine) | 🟡 engine |
 | Earliest start / latest end | Soft | Penalty grows with minutes outside the window | 🟡 engine |
@@ -370,11 +375,11 @@ To stay fast, the fix checks re-solve only the required courses plus that one el
 
 ## 9. AI integration and validation
 
-**Status: ✅ preference extraction implemented and live-verified** (2026-10-15: one request passed 16/16 checks; 20-case eval 19/20 = 95%, failure `vague-time` documented in api-contract.md). Automated tests run offline against a fake Anthropic API. Schedule explanation (stretch goal) ⬜ not started. Module: AI Integration. Package: `ai`.
+**Status: ✅ preference extraction implemented and live-verified** (2026-10-15: one request passed 16/16 checks; 20-case eval 19/20 = 95%, failure `vague-time` documented in api-contract.md). Automated tests run offline against a fake Anthropic API. Schedule explanation is implemented and offline-integrated against a local provider fake; paid-provider quality has not been evaluated. Module: AI Integration. Package: `ai`.
 
 **Uses:**
 1. Preference extraction (`POST /api/preferences/extract`): high priority.
-2. Schedule explanation (`POST /api/schedules/explain`): stretch goal.
+2. Schedule explanation (`POST /api/schedules/explain`): implemented via `ScheduleExplanationService`, authoritative `SectionLookupCatalog`, the existing `SchedulingEngine.check` selection validator and `AnthropicScheduleExplainer`. Only Claude mode with a key enables model calls; no dummy production explanation is returned.
 
 **How it's built:**
 

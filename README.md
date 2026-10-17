@@ -8,8 +8,8 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Final Schedule integration on `feature/backend-schedule-final-integration`, based on approved `pre-main` `4fb4ff2`. Authoritative PostgreSQL catalogs and native solver are integrated. Prior local uncommitted drafts remain untouched in the original checkout. |
-| **What works today** | Production Schedule generation uses the read-only PostgreSQL `catalog_api` views and real solver. Demo Course/Section catalogs live only in test sources. Clean verification: 702 tests passed; 16 standalone HTTP checks passed. [Evidence and cleanup inventory](docs/schedule-final-integration.md). |
+| **Current phase** | Local merge resolution on `feature/backend-course-schedule-completion-integrated`: pulls `pre-main` `5aa3e82` into the saved draft `4969f25`. One authoritative PostgreSQL catalog and native solver are used; local terms, metadata and explanation features are retained. |
+| **What works today** | Course search/detail, terms, generation, manual checks and elective suggestions use the authoritative persistence layer and native solver. Description/instructor metadata and grounded AI explanation from the local draft are retained. Demo catalogs and the superseded draft datasource are test-only. See [merge verification](docs/merge-resolution.md) and the [earlier integration evidence](docs/schedule-final-integration.md). |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -47,7 +47,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Authoritative PostgreSQL catalog, real native engine and actual HTTP verified |
 | Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); UI not built |
 | Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
-| AI explanation of a schedule | Stretch | ⬜ Planned |
+| AI explanation of a schedule | Stretch | ✅ Implemented; offline full-pipeline provider tests pass; paid-provider quality not evaluated |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
 ## Technology stack
@@ -56,7 +56,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend | **Java 21 + Spring Boot 4.1.1**, Maven Wrapper | Static types for the constraint engine, mature REST, validation and testing; see [ADR-0001](docs/decisions/0001-java-spring-boot-over-python-fastapi.md) |
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
-| Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views; no competing persistence architecture |
+| Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views (see [docs/database.md](docs/database.md)); no competing persistence architecture |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
 | Frontend | Next.js + TypeScript + Tailwind CSS *(planned)* | Typed UI, fast iteration, common team skill set |
 
@@ -163,6 +163,8 @@ cp .env.example .env    # optional right now; nothing is required yet
 
 `SCHEDULING_NODE_CAP` configures `scheduling.node-cap` (default 200,000). It must be a positive 32-bit integer; zero, negative, fractional, nonnumeric and overflowing values fail startup. Spring property overrides such as `--scheduling.node-cap=50000` also work.
 
+**Schedule explanation:** `/api/schedules/explain` reloads certified sections through the authoritative catalogs, checks them through the existing `SchedulingEngine.check`, then calls the configured Claude provider. AI-off mode returns 503; tests use a local provider fake and never make paid calls.
+
 **Schedule API status:** `POST /api/schedules/generate` uses the integrated JDBC catalogs and `NativeSchedulingEngine` / `BacktrackingScheduleSolver`. It accepts at most ten original optional entries, returns 400 before catalog/solver access for invalid requests, and returns 200 with diagnostics when infeasible. Database query/connectivity failures return sanitized 503; there is no synthetic fallback. Scores, breakdowns, ranking and component links are preserved. See [verification evidence](docs/schedule-final-integration.md).
 
 ### 4. Run the automated tests
@@ -228,7 +230,7 @@ export DB_USERNAME='registration'  # use the provisioned read-only catalog role
 ```
 
 `CATALOG_SOURCE` defaults to `database`. API term `2027-SPRING` maps explicitly to Banner `202710`
-through `app.catalog.terms`; raw Banner codes are not API term identifiers. The existing Hikari pool is
+through `app.catalog.terms`; raw Banner codes are not API term identifiers. Terms and Course display metadata use the same read-only pool and the existing `cse007_snapshot.term`, `source_asset`, `course` and `section` tables; the catalog reader needs SELECT permission on those tables as well as the catalog_api views. No schema migration is introduced. The existing Hikari pool is
 read-only, bounded and lazy. Missing URL/username fails startup clearly; a configured but unreachable database
 starts the app and returns 503 on catalog use. There is no dummy catalog in the production artifact.
 
@@ -307,13 +309,15 @@ Owners agreed 2026-10-15. Detailed responsibilities and how to build each part a
 
 Full workflow, including conflicts, AI agents and onboarding: **[docs/development-guide.md](docs/development-guide.md)**.
 
+Database setup, running the backend in database mode, and what data is (and is not) schedule-ready: **[docs/database.md](docs/database.md)**.
+
 ## Development status
 
 | Component | Status |
 |---|---|
 | Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented; merged to `main` in `76a8310` |
 | Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
-| Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures |
+| Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures See [docs/database.md](docs/database.md) |
 | Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
 | Frontend | ⬜ Planned |
@@ -343,10 +347,8 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 
 **Planned beyond the MVP**
 - Prerequisite awareness (needs reliable data)
-- Linked lecture/lab sections, if the data supports them
 - Travel time between campuses
 - Saved schedules (would require accounts and authentication)
-- AI explanations
 - An OpenAPI spec generated from code, to keep frontend types in sync
 
 ---

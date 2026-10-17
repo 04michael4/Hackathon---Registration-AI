@@ -1,0 +1,456 @@
+{
+ "catalog_year": "2026-27",
+ "evidence": {
+  "origin": "public_catalog",
+  "captured": "2026-10-17",
+  "status": "VERIFIED_CATALOG_TEXT",
+  "sources": [
+   "https://catalog.lehigh.edu/coursesprogramsandcurricula/engineeringandappliedscience/computerscienceandengineering/",
+   "https://catalog.lehigh.edu/coursesprogramsandcurricula/engineeringandappliedscience/",
+   "https://catalog.lehigh.edu/coursesprogramsandcurricula/artsandsciences/"
+  ]
+ },
+ "college_rules": {
+  "ROSSIN": {
+   "basic_hss": "ECO 001, WRT 001 (or WRT 003), WRT 002 (or WRT 005); minimum 10 credits",
+   "advanced_hss": "minimum 3 courses and 12 credits from HE, SW, AL or College of Health CGH/POPH; at least one 3+ credit course in each of two categories; at least one HE or AL; none Pass/Fail; each at least 2 credits",
+   "free_electives": "up to 6 credits advanced ROTC; internships ENGR 200/160 up to 6 free-elective credits P/F"
+  },
+  "CAS": {
+   "liberal_arts": "120 credits to graduate; Big Questions 1 course; First-Year Writing 2 courses/6 cr; Mathematics 1 course; HE, AL, NW, SW each at least 2 courses and 7 cr (NW includes 1 lab); Writing x3, Quantitative x3, Contemporary Challenges x3 encounters; minimum 2.0 GPA in major and overall; at most 1 course double-counted between major and minor"
+  }
+ },
+ "programs": [
+  {
+   "id": "ROSSIN_BS_CS",
+   "name": "Bachelor of Science in Computer Science",
+   "college": "P.C. Rossin College of Engineering and Applied Science",
+   "department": "Computer Science and Engineering",
+   "degree_type": "BS",
+   "total_credits": "130 (table total 130-131)",
+   "college_key": "ROSSIN",
+   "groups": [
+    {
+     "key": "cse_core",
+     "category": "CSE",
+     "logic": "ALL",
+     "items": [
+      {
+       "any": [
+        {
+         "all": [
+          "CSE 003",
+          "CSE 004"
+         ]
+        },
+        "CSE 007"
+       ]
+      },
+      "CSE 017",
+      "CSE 109",
+      "CSE 202",
+      "CSE 216",
+      "CSE 262",
+      "CSE 140",
+      "CSE 280",
+      "CSE 281",
+      "CSE 303",
+      "CSE 340"
+     ]
+    },
+    {
+     "key": "math_science",
+     "category": "MATH_SCIENCE",
+     "logic": "ALL",
+     "items": [
+      "CHM 030",
+      "ENGR 010",
+      "ENGR 005",
+      "MATH 021",
+      "MATH 022",
+      {
+       "any": [
+        "MATH 205",
+        "MATH 241",
+        "MATH 242"
+       ]
+      },
+      "MATH 231",
+      {
+       "all": [
+        "PHY 011",
+        "PHY 012"
+       ]
+      },
+      {
+       "credits": 3,
+       "rule": "additional natural science: a course that has another natural science course as a prerequisite",
+       "status": "UNRESOLVED_LIST"
+      }
+     ]
+    },
+    {
+     "key": "tech_electives",
+     "category": "TECH_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 15,
+     "rule": "any CSE course 200-level or above unless explicitly excluded by the department"
+    },
+    {
+     "key": "science_tech",
+     "category": "SCIENCE_TECH_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 12,
+     "rule": "chosen with advisor approval",
+     "status": "ADVISOR_DEPENDENT"
+    },
+    {
+     "key": "hss",
+     "category": "HSS",
+     "logic": "ALL",
+     "items": [
+      "ECO 001",
+      "WRT 001",
+      "WRT 002",
+      "CSE 252",
+      {
+       "credits": 12,
+       "min_courses": 3,
+       "rule": "Engineering College Advanced HSS. Lehigh's college page says minimum 3 courses and 12 credits; the CS requirements table says 16 credits. The two sources still disagree. 12 credits / 3 courses is a team working value chosen on 2026-10-17, not confirmed by Lehigh or an advisor.",
+       "status": "USER_CHOSEN_CONFLICT_UNRESOLVED_WITH_SOURCE",
+       "alternate_value": "CS requirements table says 16 credits (not adopted as the working value)"
+      }
+     ]
+    },
+    {
+     "key": "free",
+     "category": "FREE_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 8
+    }
+   ],
+   "unknown": [
+    "Minimum grade/GPA not stated on the catalog pages read",
+    "Which courses count as natural science with a natural-science prerequisite"
+   ],
+   "conflicts": [
+    "Advanced HSS: college page says min 3 courses / 12 credits; CS table says 16 credits. Both are Lehigh catalog text. Working value 12 credits chosen by the team, not verified with Lehigh."
+   ]
+  },
+  {
+   "id": "CAS_BS_CS",
+   "name": "Bachelor of Science in Computer Science",
+   "college": "College of Arts and Sciences",
+   "department": "Computer Science and Engineering",
+   "degree_type": "BS",
+   "total_credits": "127-128",
+   "college_key": "CAS",
+   "groups": [
+    {
+     "key": "cse_core",
+     "category": "CSE",
+     "logic": "ALL",
+     "items": [
+      {
+       "any": [
+        {
+         "all": [
+          "CSE 003",
+          "CSE 004"
+         ]
+        },
+        "CSE 007"
+       ]
+      },
+      "CSE 017",
+      "CSE 109",
+      "CSE 202",
+      "CSE 216",
+      "CSE 262",
+      "CSE 140",
+      "CSE 280",
+      "CSE 281",
+      "CSE 303",
+      "CSE 340"
+     ]
+    },
+    {
+     "key": "math",
+     "category": "MATH",
+     "logic": "ALL",
+     "items": [
+      "MATH 021",
+      "MATH 022",
+      {
+       "any": [
+        "MATH 205",
+        "MATH 241",
+        "MATH 242"
+       ]
+      },
+      "MATH 231"
+     ]
+    },
+    {
+     "key": "natural_world",
+     "category": "NATURAL_SCIENCE",
+     "logic": "CREDITS",
+     "credits": 12,
+     "rule": "12 credits of natural science: one course with an attached lab, and two courses in a lab science with the first a prerequisite to the second",
+     "status": "UNRESOLVED_LIST"
+    },
+    {
+     "key": "tech_electives",
+     "category": "TECH_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 15,
+     "rule": "any CSE course 200-level or above unless explicitly excluded"
+    },
+    {
+     "key": "science_tech",
+     "category": "SCIENCE_TECH_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 10,
+     "rule": "advisor approval",
+     "status": "ADVISOR_DEPENDENT"
+    },
+    {
+     "key": "other",
+     "category": "OTHER",
+     "logic": "ALL",
+     "items": [
+      "CSE 252",
+      "WRT 001",
+      "WRT 002",
+      {
+       "credits": 21,
+       "rule": "additional HE, SW and AL courses satisfying A&S distribution requirements",
+       "status": "UNRESOLVED_LIST"
+      }
+     ]
+    },
+    {
+     "key": "free",
+     "category": "FREE_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 11
+    }
+   ]
+  },
+  {
+   "id": "CAS_BA_CS",
+   "name": "Bachelor of Arts in Computer Science",
+   "college": "College of Arts and Sciences",
+   "department": "Computer Science and Engineering",
+   "degree_type": "BA",
+   "total_credits": "120 (major 46)",
+   "college_key": "CAS",
+   "groups": [
+    {
+     "key": "cse_core",
+     "category": "CSE",
+     "logic": "ALL",
+     "items": [
+      {
+       "any": [
+        {
+         "all": [
+          "CSE 003",
+          "CSE 004"
+         ]
+        },
+        "CSE 007"
+       ]
+      },
+      "CSE 017",
+      "CSE 109",
+      "CSE 216",
+      "CSE 262",
+      "CSE 140",
+      "CSE 340"
+     ]
+    },
+    {
+     "key": "calc1",
+     "category": "MATH",
+     "logic": "ANY",
+     "items": [
+      "MATH 021",
+      "MATH 031",
+      "MATH 051",
+      "MATH 081",
+      "MATH 076",
+      "MATH 062"
+     ]
+    },
+    {
+     "key": "calc2",
+     "category": "MATH",
+     "logic": "ANY",
+     "items": [
+      "MATH 022",
+      "MATH 032",
+      "MATH 052",
+      "MATH 082"
+     ]
+    },
+    {
+     "key": "linear_algebra",
+     "category": "MATH",
+     "logic": "ANY",
+     "items": [
+      "MATH 043",
+      "MATH 205",
+      "MATH 242"
+     ]
+    },
+    {
+     "key": "tech_electives",
+     "category": "TECH_ELECTIVE",
+     "logic": "CREDITS",
+     "credits": 12,
+     "rule": "any CSE course 200-level or above except CSE 252 and department exclusions"
+    }
+   ],
+   "unknown": [
+    "General education beyond the A&S Liberal Arts program is not on the CS page"
+   ]
+  },
+  {
+   "id": "MINOR_CS",
+   "name": "Minor in Computer Science",
+   "college": null,
+   "department": "Computer Science and Engineering",
+   "degree_type": "MINOR",
+   "total_credits": "16",
+   "college_key": null,
+   "restriction": "not available to Computer Engineering, Computer Science or Computer Science and Business majors",
+   "groups": [
+    {
+     "key": "core",
+     "category": "CSE",
+     "logic": "ALL",
+     "items": [
+      {
+       "any": [
+        {
+         "all": [
+          "CSE 003",
+          "CSE 004"
+         ]
+        },
+        "CSE 007"
+       ]
+      },
+      "CSE 017",
+      {
+       "credits": 3,
+       "rule": "CSE courses at the 100 level or higher excluding CSE 252"
+      },
+      {
+       "credits": 6,
+       "rule": "CSE courses at the 200 level or higher excluding CSE 252"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "MINOR_DS",
+   "name": "Minor in Data Science",
+   "college": null,
+   "department": "Computer Science and Engineering",
+   "degree_type": "MINOR",
+   "total_credits": "minimum 16 (required block shown as 10-11, table total 10)",
+   "college_key": null,
+   "restriction": "open to undergraduates in all majors; prerequisites do not count toward the minor",
+   "groups": [
+    {
+     "key": "required",
+     "category": "REQUIRED",
+     "logic": "ALL",
+     "items": [
+      "CSE 160",
+      "CSE 017",
+      "CSE 109",
+      "MATH 312"
+     ]
+    },
+    {
+     "key": "applied",
+     "category": "APPLIED_ANALYTICS",
+     "logic": "CHOOSE_N",
+     "n": 1,
+     "credits": 3,
+     "items": [
+      "CSE 323",
+      "CSE 326",
+      "CSE 347",
+      "BUAN 348",
+      "BUAN 352",
+      "ECO 325",
+      "ECO 360",
+      "ISE 309",
+      "ISE 364",
+      "ISE 365",
+      "MKT 325",
+      "MKT 326"
+     ],
+     "note": "director may approve others (UNRESOLVED)"
+    },
+    {
+     "key": "electives",
+     "category": "DS_ELECTIVE",
+     "logic": "CHOOSE_N",
+     "n": 1,
+     "credits": "3-4",
+     "items": [
+      "CSE 241",
+      "CSE 320",
+      "CSE 325",
+      "CSE 327",
+      "CSE 330",
+      "CSE 337",
+      "CSE 341",
+      "CSE 345",
+      "CSE 349",
+      "CSE 360",
+      "CSE 371",
+      "CSE 375",
+      "ISE 111",
+      "ISE 121",
+      "ISE 224",
+      "MATH 043",
+      "MATH 205",
+      "MATH 242",
+      "STAT 342",
+      "MATH 309",
+      "MATH 334",
+      "BIS 324",
+      "ECO 357",
+      "ECO 367"
+     ],
+     "note": "'including but not limited to'; one or more; applied-list courses also qualify"
+    }
+   ],
+   "conflicts": [
+    "CSE 109 credit value is blank in the catalog table; table total shows 10 rather than 10-11",
+    "catalog lists STAT 342 as 'Applied Linear Algebra'; unverified against the STAT 342 course page",
+    "ECO 325/MKT 325 and ECO 360/ISE 309 share titles; shared titles are NOT proof of cross-listing"
+   ]
+  }
+ ],
+ "course_credit_exclusions": [
+  {
+   "course": "MATH 021",
+   "excludes": [
+    "MATH 031",
+    "MATH 051",
+    "MATH 081"
+   ],
+   "also": "(MATH 075 and MATH 076)",
+   "source": "catalog.lehigh.edu course description MATH 021, read 2026-10-17",
+   "status": "VERIFIED_CATALOG_TEXT"
+  }
+ ]
+}

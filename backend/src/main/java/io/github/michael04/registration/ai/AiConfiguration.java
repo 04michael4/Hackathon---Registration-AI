@@ -50,4 +50,12 @@ public class AiConfiguration {
 		return new ClaudePreferenceExtractor(AnthropicClaudeGateway.create(claude), ClaudePreferenceExtractor.loadSystemPrompt());
 	}
 
+	@Bean
+	ScheduleExplainer scheduleExplainer(@Value("${app.ai.provider:none}") String provider, ClaudeProperties claude) {
+		if ("claude".equals(provider.trim().toLowerCase(Locale.ROOT)) && claude.hasApiKey()) {
+			return new AnthropicScheduleExplainer(claude);
+		}
+		return facts -> { throw new io.github.michael04.registration.common.AiUnavailableException(); };
+	}
+
 }

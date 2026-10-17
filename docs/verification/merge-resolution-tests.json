@@ -1,0 +1,466 @@
+{
+  "date": "2026-10-16",
+  "branch": "feature/backend-course-schedule-completion-integrated",
+  "local_commit": "4969f25",
+  "merge_target": "5aa3e82",
+  "commands": [
+    "./mvnw -B -Pdatabase-it clean verify",
+    "./mvnw -B -Dtest=SourceCatalogVerification test"
+  ],
+  "totals": {
+    "tests": 763,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "io.github.michael04.registration.ai.AiConfigurationTest",
+      "runner": "surefire",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.AiEvalDatasetTest",
+      "runner": "surefire",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.AnthropicClaudeGatewayTest",
+      "runner": "surefire",
+      "tests": 57,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.ClaudeEndpointFakeServerIntegrationTest",
+      "runner": "surefire",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.ClaudeExtractionValidatorTest",
+      "runner": "surefire",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.ClaudePreferenceExtractorTest",
+      "runner": "surefire",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.CourseMentionResolverTest",
+      "runner": "surefire",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.PreferenceAssemblerTest",
+      "runner": "surefire",
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.PreferenceControllerTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.PreferenceEndpointFailureIntegrationTest",
+      "runner": "surefire",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.PreferenceEndpointIntegrationTest",
+      "runner": "surefire",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.PreferenceExtractionServiceTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.ScheduleExplanationControllerTest",
+      "runner": "surefire",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.common.ConfiguredCorsTest",
+      "runner": "surefire",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.common.DisabledCorsTest",
+      "runner": "surefire",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.common.GlobalExceptionHandlerTest",
+      "runner": "surefire",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.common.json.JsonConfigurationTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.common.WebConfigTest",
+      "runner": "surefire",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseCatalogSelectionTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseControllerTest",
+      "runner": "surefire",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseMergeControllerTest",
+      "runner": "surefire",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseServiceTest",
+      "runner": "surefire",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseUnavailableTest",
+      "runner": "surefire",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.DummySectionCatalogTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.CatalogDatabaseConfigurationTest",
+      "runner": "surefire",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.CatalogPersistenceConfigurationTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.DatabaseCatalogIntegrationTest",
+      "runner": "surefire",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.DatabaseModeFailureEndpointTest",
+      "runner": "surefire",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.DefaultModeStartsWithoutDatabaseTest",
+      "runner": "surefire",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.JdbcCatalogDaoSqlTest",
+      "runner": "surefire",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.JdbcCourseCatalogTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.JdbcSectionCatalogTest",
+      "runner": "surefire",
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.persistence.TermMappingTest",
+      "runner": "surefire",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.SourceCatalogVerification",
+      "runner": "surefire",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.BacktrackingScheduleSolverTest",
+      "runner": "surefire",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.CourseOptionTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.ElectiveAdvisorTest",
+      "runner": "surefire",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.MeetingTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.ScheduleProblemTest",
+      "runner": "surefire",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.engine.SelectionCheckerTest",
+      "runner": "surefire",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.health.HealthControllerTest",
+      "runner": "surefire",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.RegistrationBackendApplicationTests",
+      "runner": "surefire",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.DemoCatalogScheduleTest",
+      "runner": "surefire",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.EngineMapperTest",
+      "runner": "surefire",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.integration.NativeSchedulingEngineTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ManualModeEndpointsTest",
+      "runner": "surefire",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ScheduleControllerTest",
+      "runner": "surefire",
+      "tests": 86,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ScheduleEngineIntegrationTest",
+      "runner": "surefire",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ScheduleUnavailableTest",
+      "runner": "surefire",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.SchedulingConfigurationTest",
+      "runner": "surefire",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.ai.ScheduleExplanationDatabaseIT",
+      "runner": "failsafe",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.course.CourseDatabaseIT",
+      "runner": "failsafe",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ProductionPackagingIT",
+      "runner": "failsafe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.ScheduleDatabaseIT",
+      "runner": "failsafe",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.SchedulingNodeCapDatabaseIT",
+      "runner": "failsafe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "io.github.michael04.registration.schedule.SourceCatalogDatabaseIT",
+      "runner": "failsafe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ]
+}

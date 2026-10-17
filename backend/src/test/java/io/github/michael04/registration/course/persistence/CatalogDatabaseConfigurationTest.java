@@ -11,8 +11,10 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import com.zaxxer.hikari.HikariDataSource;
 
 import io.github.michael04.registration.course.CourseCatalog;
+import io.github.michael04.registration.course.CourseMetadataCatalog;
 import io.github.michael04.registration.course.DummyCourseCatalog;
 import io.github.michael04.registration.course.SectionCatalog;
+import io.github.michael04.registration.course.SectionLookupCatalog;
 
 /**
  * Which catalog is active, and what the database mode needs. No database is contacted: the pool is lazy and the
@@ -54,6 +56,8 @@ class CatalogDatabaseConfigurationTest {
 			assertThat(ctx).hasNotFailed();
 			assertThat(ctx).hasSingleBean(CourseCatalog.class).hasSingleBean(JdbcCourseCatalog.class);
 			assertThat(ctx).hasSingleBean(SectionCatalog.class).hasSingleBean(JdbcSectionCatalog.class);
+			assertThat(ctx).hasSingleBean(DataSource.class).hasSingleBean(CourseMetadataCatalog.class)
+				.hasSingleBean(SectionLookupCatalog.class);
 			assertThat(ctx).doesNotHaveBean(DummyCourseCatalog.class);
 		});
 	}
