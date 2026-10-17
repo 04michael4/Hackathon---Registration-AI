@@ -30,7 +30,7 @@ the verification. It is safe to rerun: it reuses the cluster and does not reload
 Port defaults to 55433 (`--port`). Stop it with the `pg_ctl ... stop` line the script prints.
 
 Roles: `registration_admin` (cluster admin), `registration_app` (owns the database, used for loading and tests),
-`registration_reader` (`SELECT` on `catalog_api` only; the backend uses this).
+`registration_reader` (`SELECT` on `catalog_api`, plus column-level `SELECT` on the few `cse007_snapshot` columns the course-metadata catalog reads for `/api/terms` and the course detail: term name and capture date, description, CRN and instructor; the backend uses this).
 
 ## 2. Run the backend in database mode
 

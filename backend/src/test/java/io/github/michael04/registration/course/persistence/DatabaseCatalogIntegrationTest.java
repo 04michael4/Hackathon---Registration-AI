@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -191,6 +192,14 @@ class DatabaseCatalogIntegrationTest {
 				{"term":"2027-SPRING","preferences":{"hardConstraints":{"requiredCourseIds":["CSE-007","CSE-017"],"minCredits":4,"maxCredits":18}}}
 				"""))
 			.andExpect(status().isUnprocessableContent());
+	}
+
+	@Test
+	void theTermListAndCourseDetailAlsoWorkForTheLeastPrivilegeRole() throws Exception {
+		// JdbcCourseMetadataCatalog reads a few cse007_snapshot columns directly; the read-only role needs exactly those grants
+		// (data/setup-local-database.sh). Without them both calls are a safe 503.
+		mvc.perform(get("/api/terms")).andExpect(status().isOk()).andExpect(jsonPath("$.items[0].term").value("2027-SPRING"));
+		mvc.perform(get("/api/courses/CSE-007").param("term", TERM)).andExpect(status().isOk()).andExpect(jsonPath("$.courseId").value("CSE-007"));
 	}
 
 }

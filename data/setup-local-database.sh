@@ -8,7 +8,8 @@
 #   2. Creates a private cluster in DIR (default ~/.registration-local-pg, OUTSIDE the repository), listening on
 #      127.0.0.1 only (TCP; no Unix socket), scram-sha-256, with random passwords kept ONLY in DIR/pgpass (mode 600). Passwords are never printed.
 #   3. Creates database registration_local, an owner role (registration_app) and a read-only role for the backend
-#      (registration_reader: SELECT on the catalog_api views and nothing else).
+#      (registration_reader: SELECT on the catalog_api views, plus column-level SELECT on the few cse007_snapshot columns that the
+#      course-metadata catalog reads for /api/terms and the course detail: term names/capture dates, descriptions, CRN and instructor).
 #   4. Loads, in order: data/cse007-snapshot/database.sql (David's verified CSE 007 schema and seed, unchanged),
 #      data/catalog-api (read-only views), data/banner-evidence (schema + the seven user-reported links).
 #   5. Runs the verification: David's verify.sql, the catalog_api readiness tests, the banner_evidence probes and the
@@ -130,8 +131,15 @@ psql -X -v ON_ERROR_STOP=1 -q <<SQL
 GRANT CONNECT ON DATABASE $DB TO $READER;
 GRANT USAGE ON SCHEMA catalog_api TO $READER;
 GRANT SELECT ON ALL TABLES IN SCHEMA catalog_api TO $READER;
+-- JdbcCourseMetadataCatalog reads these columns directly (term list, course description, instructors); without them /api/terms and
+-- GET /api/courses/{id} return 503 for this least-privilege role. Column-level grants keep everything else in cse007_snapshot closed.
+GRANT USAGE ON SCHEMA cse007_snapshot TO $READER;
+GRANT SELECT (term_id, term_code, name, source_id) ON cse007_snapshot.term TO $READER;
+GRANT SELECT (source_id, captured_at) ON cse007_snapshot.source_asset TO $READER;
+GRANT SELECT (course_id, code, description) ON cse007_snapshot.course TO $READER;
+GRANT SELECT (section_id, course_id, term_id, crn, instructor) ON cse007_snapshot.section TO $READER;
 SQL
-echo "$READER can read catalog_api only"
+echo "$READER can read catalog_api and the metadata columns above, nothing else"
 
 # ---- 5. verification ------------------------------------------------------------------------------------------------
 say "verification"
