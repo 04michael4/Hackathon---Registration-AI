@@ -131,8 +131,15 @@ def main():
     check(sum(sum(v.values()) for v in status.values()) == 126, "3 requirement statuses for each of the 42 offerings (prerequisite, corequisite, enrollment restriction)")
     for kind, counts in status.items():
         print(f"        {kind:24} " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
-    check("TEXT_ONLY" in status.get("PREREQUISITE", {}) and "BANNER_NO_INFORMATION" in status.get("PREREQUISITE", {}) and "BANNER_NO_INFORMATION" in status.get("COREQUISITE", {}),
-          "what could not be turned into a rule is stored as TEXT_ONLY, and Banner's silence as BANNER_NO_INFORMATION (never as 'none', never dropped)")
+    check("TEXT_ONLY" in status.get("PREREQUISITE", {}) and "NONE_LISTED" in status.get("PREREQUISITE", {}) and "NONE_LISTED" in status.get("COREQUISITE", {})
+          and sql("SELECT count(*) FROM catalog_research.requirement_status WHERE status = 'NONE_LISTED' AND evidence_level <> 'USER_CLARIFICATION'") == "0",
+          "what could not be turned into a rule stays TEXT_ONLY; what Banner lists nothing for is NONE_LISTED (the reviewer's decision, labelled user-supplied, not Registrar-certified)")
+    check(sql("SELECT count(*) FROM catalog_research.prerequisite_banner_check") == "0",
+          "every structured prerequisite names exactly the courses Banner's own prerequisite text names")
+    hand = json.loads((Path(__file__).resolve().parent / "prerequisite_expressions.json").read_text(encoding="utf-8"))["expressions"]
+    stored = {r["offering_id"]: r for r in rows("SELECT offering_id, parse_status, expression FROM catalog_research.eligibility_rule WHERE rule_kind = 'PREREQUISITE'")}
+    check(all(stored[h["offeringId"]]["parse_status"] == "STRUCTURED" and stored[h["offeringId"]]["expression"] == h["expression"] for h in hand),
+          f"the {len(hand)} hand-structured prerequisites are stored exactly as decided")
     want_ex = sorted((o["offeringId"], x["with"], x["kind"]) for o in offs for x in o["creditExclusions"])
     got_ex = sorted((r["offering_id"], r["excluded_course_id"] or r["excluded_text"], r["exclusion_kind"]) for r in rows(f"SELECT offering_id, excluded_course_id, excluded_text, exclusion_kind FROM catalog_research.credit_exclusion WHERE term_code = '{TERM}'"))
     check(want_ex == got_ex, f"{len(got_ex)} credit-exclusion statements match the export")

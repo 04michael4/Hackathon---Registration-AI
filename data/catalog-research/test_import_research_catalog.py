@@ -126,6 +126,40 @@ class Normalize(unittest.TestCase):
         self.assertEqual(fx, before)
 
 
+class HandStructured(unittest.TestCase):
+    def payload(self, note="CSE 109 plus more words"):
+        return imp.normalize(fixture(offering(prerequisiteNote=note)), "202710")
+
+    def test_a_hand_structured_expression_fills_a_prerequisite_the_parser_left_as_text(self):
+        p = self.payload()
+        self.assertIsNone(p["offerings"][0]["prerequisiteExpression"])
+        imp.apply_prerequisite_expressions(p, {"CSE-098": {"course": "CSE-017", "concurrent": True}})
+        self.assertEqual(p["offerings"][0]["prerequisiteExpression"], {"course": "CSE-017", "concurrent": True})
+
+    def test_it_never_overrides_a_parsed_expression_with_a_different_one(self):
+        p = self.payload("CSE 017")
+        with self.assertRaises(imp.InputError):
+            imp.apply_prerequisite_expressions(p, {"CSE-098": {"course": "CSE-018"}})
+        imp.apply_prerequisite_expressions(p, {"CSE-098": {"course": "CSE-017"}})   # the same expression is harmless
+
+    def test_it_refuses_an_unknown_offering_or_one_with_no_prerequisite_statement(self):
+        with self.assertRaises(imp.InputError):
+            imp.apply_prerequisite_expressions(self.payload(), {"CSE-999": {"course": "CSE-017"}})
+        with self.assertRaises(imp.InputError):
+            imp.apply_prerequisite_expressions(self.payload(None), {"CSE-098": {"course": "CSE-017"}})
+
+    def test_malformed_expressions_are_refused(self):
+        for bad in ({"course": "CSE17"}, {"op": "XOR", "args": [{"course": "CSE-017"}, {"course": "CSE-018"}]}, {"op": "OR", "args": [{"course": "CSE-017"}]},
+                    {"course": "CSE-017", "concurrent": "yes"}, {"course": "CSE-017", "extra": 1}, [], {"op": "AND", "args": [{"course": "CSE-017"}, {}]}):
+            with self.assertRaises(imp.InputError, msg=str(bad)):
+                imp.check_expression(bad, "x")
+
+    def test_the_checked_in_file_is_valid_and_has_unique_offerings(self):
+        exprs = imp.load_prerequisite_expressions(Path(__file__).resolve().parent / "prerequisite_expressions.json")
+        self.assertEqual(sorted(exprs), ["CSE-109", "CSE-140", "CSE-398-042", "CSE-398-052"])
+        self.assertEqual(exprs["CSE-109"], {"course": "CSE-017", "concurrent": True})
+
+
 class Safety(unittest.TestCase):
     def test_dollar_quote_tag_never_occurs_in_the_text(self):
         literal = imp.sql_literal("a $q0$ b $q1$ c")

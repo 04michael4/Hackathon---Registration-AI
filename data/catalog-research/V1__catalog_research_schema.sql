@@ -10,8 +10,9 @@
 --   3. Can a student REGISTER?  -> only the university decides. Nothing here says so; every row is "proposed scheduling data".
 --
 -- RULES BUILT IN
---   * Nothing is invented. Unknown stays unknown: a requirement is UNKNOWN, BANNER_NO_INFORMATION (Banner is silent, which is not
---     proof that nothing applies), USER_CONFIRMED_NONE, TEXT_ONLY (stated, but not turned into a rule) or RULE_DEFINED.
+--   * Nothing is invented. A requirement is UNKNOWN (no source), NONE_LISTED (Banner lists nothing, and the designated reviewer decided to
+--     treat that as none; user-supplied, NOT Registrar certification), USER_CONFIRMED_NONE, TEXT_ONLY (stated, but not turned into a rule)
+--     or RULE_DEFINED.
 --   * Every Banner-sourced row is cross-checked against banner_evidence at import time and on demand (evidence_mismatch). A
 --     mismatch aborts the import; it is never "corrected" here.
 --   * User-supplied facts (exactly one lab, lab credits 0, standalone) are labelled USER_CLARIFICATION. A person's policy decision
@@ -129,7 +130,7 @@ CREATE TABLE IF NOT EXISTS catalog_research.requirement_status (
 	term_code        text NOT NULL,
 	offering_id      text NOT NULL,
 	requirement_type text NOT NULL CHECK (requirement_type IN ('PREREQUISITE', 'COREQUISITE', 'ENROLLMENT_RESTRICTION')),
-	status           text NOT NULL CHECK (status IN ('UNKNOWN', 'USER_CONFIRMED_NONE', 'BANNER_NO_INFORMATION', 'TEXT_ONLY', 'RULE_DEFINED')),
+	status           text NOT NULL CHECK (status IN ('UNKNOWN', 'USER_CONFIRMED_NONE', 'NONE_LISTED', 'TEXT_ONLY', 'RULE_DEFINED')),
 	evidence_level   text NOT NULL CHECK (evidence_level IN ('BANNER', 'RESEARCH_WORKBOOK', 'USER_CLARIFICATION', 'NONE')),
 	source_text      text,
 	PRIMARY KEY (term_code, offering_id, requirement_type),
@@ -137,11 +138,11 @@ CREATE TABLE IF NOT EXISTS catalog_research.requirement_status (
 	-- a rule or text always has its words; silence or "unknown" never pretends to
 	CHECK ((status IN ('TEXT_ONLY', 'RULE_DEFINED')) = (source_text IS NOT NULL AND length(btrim(source_text)) > 0)),
 	CHECK ((status = 'UNKNOWN' AND evidence_level = 'NONE')
-		OR (status = 'BANNER_NO_INFORMATION' AND evidence_level = 'BANNER')
+		OR (status = 'NONE_LISTED' AND evidence_level = 'USER_CLARIFICATION')
 		OR (status = 'USER_CONFIRMED_NONE' AND evidence_level = 'USER_CLARIFICATION')
 		OR (status IN ('TEXT_ONLY', 'RULE_DEFINED') AND evidence_level IN ('BANNER', 'RESEARCH_WORKBOOK', 'USER_CLARIFICATION')))
 );
-COMMENT ON TABLE catalog_research.requirement_status IS 'For each offering and requirement type, what is known. BANNER_NO_INFORMATION means Banner is silent, which is not proof nothing applies. Verbatim Banner text is kept when it exists.';
+COMMENT ON TABLE catalog_research.requirement_status IS 'For each offering and requirement type, what is known. NONE_LISTED means Banner lists nothing and the designated reviewer treats that as none (user-supplied, not Registrar certification). Verbatim Banner text is kept when it exists.';
 
 CREATE TABLE IF NOT EXISTS catalog_research.eligibility_rule (
 	rule_id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
