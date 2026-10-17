@@ -4,14 +4,16 @@
       python3 -I data/catalog-research/build_local_database.py --database registration_spring2027 --owner catalog_owner --reader catalog_reader \
         --input ~/.registration-demo/spring-2027.json \
         [--evidence-from host:port/database/user]   # copy the collected Banner evidence, read-only, from another database
+        [--noncse-export F --noncse-staging-db F --noncse-banner-dir D]   # also import the non-CSE staging data (programs + grid-staged sections)
         [--reuse]                                   # install into an existing local database instead of creating it
 
 Run as a role that can create roles and databases on a LOCAL cluster. In order, it:
   1. creates the owner and reader roles (no password; local trust authentication) and the database (owned by the non-superuser owner);
   2. installs, as that owner, data/cse007-snapshot, data/catalog-api, data/banner-evidence, data/catalog-promotion, data/catalog-research;
   3. optionally copies banner_evidence's rows from --evidence-from through pg_dump in a FORCED READ-ONLY session (the source is never written);
-  4. imports --input (data/catalog-research/import_research_catalog.py) and grants the reader role;
-  5. checks that the stored data is consistent with the evidence.
+  4. imports --input (data/catalog-research/import_research_catalog.py), then, when given, the non-CSE staging data
+     (data/catalog-research/import_noncse_catalog.py), and grants the reader role;
+  5. checks that the stored data is consistent with the evidence and with the verbatim grid rows.
 It refuses the shared database name and port, and refuses a non-loopback host. Nothing here approves, promotes or serves a course.
 """
 import argparse
@@ -53,6 +55,9 @@ def main(argv=None):
     ap.add_argument("--reader", default="catalog_reader")
     ap.add_argument("--input", required=True, help="research export JSON (outside the repository)")
     ap.add_argument("--evidence-from", help="host:port/database/user of a database to copy banner_evidence rows from (read-only)")
+    ap.add_argument("--noncse-export", help="export JSON of the non-CSE staging pipeline (local-only)")
+    ap.add_argument("--noncse-staging-db", help="the non-CSE SQLite staging database (opened read-only)")
+    ap.add_argument("--noncse-banner-dir", help="directory with the verbatim grid CSVs (local-only)")
     ap.add_argument("--reuse", action="store_true")
     args = ap.parse_args(argv)
 
@@ -109,6 +114,15 @@ def main(argv=None):
     if result.returncode != 0:
         fail((result.stdout + result.stderr).strip()[:1200])
     print(result.stdout.strip())
+    noncse = (args.noncse_export, args.noncse_staging_db, args.noncse_banner_dir)
+    if any(noncse) and not all(noncse):
+        fail("--noncse-export, --noncse-staging-db and --noncse-banner-dir go together")
+    if all(noncse):
+        result = subprocess.run([sys.executable, "-I", str(HERE / "import_noncse_catalog.py"), "--export", args.noncse_export, "--staging-db", args.noncse_staging_db,
+                                 "--banner-dir", args.noncse_banner_dir], env=env, capture_output=True, text=True)
+        if result.returncode != 0:
+            fail((result.stdout + result.stderr).strip()[:1200])
+        print(result.stdout.strip())
     psql(["-f", str(DATA / "catalog-promotion" / "grant_reader.sql"), "-v", f"reader={args.reader}"], owner)
     psql(["-f", str(HERE / "grant_reader.sql"), "-v", f"reader={args.reader}"], owner)
 
@@ -117,6 +131,11 @@ def main(argv=None):
     if mismatches != "0":
         fail(f"{mismatches} stored rows disagree with the evidence")
     print("evidence_mismatch: 0 rows")
+    if all(noncse):
+        grid = scalar("SELECT count(*) FROM catalog_research.grid_mismatch", owner, args.database)
+        if grid != "0":
+            fail(f"{grid} grid-staged rows disagree with the verbatim grid rows")
+        print("grid_mismatch: 0 rows")
 
 
 if __name__ == "__main__":

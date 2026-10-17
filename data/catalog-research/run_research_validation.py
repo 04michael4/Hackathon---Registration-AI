@@ -26,6 +26,7 @@ import run_promotion_validation as rpv  # noqa: E402  (synthetic Banner captures
 
 V1 = (HERE / "V1__catalog_research_schema.sql").read_text(encoding="utf-8")
 V2 = (HERE / "V2__catalog_research_views_and_import.sql").read_text(encoding="utf-8")
+V3 = (HERE / "V3__noncse_grid_staging_and_programs.sql").read_text(encoding="utf-8")
 TERM = "202710"
 
 PREAMBLE = r"""
@@ -91,6 +92,33 @@ TOPIC_CAPTURES = rpv.capture_set("094", [                                       
 for _capture in TOPIC_CAPTURES:
     if _capture.get("crn") == "94002":
         _capture["restrictions_text"] = "Not all restrictions are applicable. Must be enrolled in one of the following Classes: Graduate (GR) Junior (JR) Senior (SR)"
+
+# ---- synthetic grid-staged (non-CSE) data: the committed synthetic fixtures run through the real staging pipeline and the real normalizer ----
+import importlib.util  # noqa: E402
+import sqlite3  # noqa: E402
+
+
+def _load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+DEGREE = DATA / "degree-requirements"
+NONCSE = _load("import_noncse_catalog", HERE / "import_noncse_catalog.py")
+_STAGE = _load("build_staging_db", DEGREE / "build_staging_db.py")
+_EXPORT = _load("export_import_ready", DEGREE / "export_import_ready.py")
+_FIXTURES = DEGREE / "fixtures" / "banner_synthetic"
+_WORK = Path(tempfile.mkdtemp(prefix="noncse-synthetic-"))
+_STAGE.build(_WORK / "staging.db", banner_dir=_FIXTURES, banner_origin="synthetic_fixture").close()
+_export = _EXPORT.export(str(_WORK / "staging.db"), str(_WORK / "export.json"))
+_con = sqlite3.connect(f"file:{_WORK / 'staging.db'}?mode=ro", uri=True)
+_equivalences = [(a, b) for a, b in _con.execute("SELECT course_code, equivalent_code FROM course_equivalence ORDER BY 1, 2")]
+_con.close()
+GRID_PAYLOAD, PROGRAM_PAYLOAD = NONCSE.normalize(
+    _export, TERM, NONCSE.read_csv(_FIXTURES / "sections_grid.csv", NONCSE.GRID_COLUMNS), NONCSE.read_csv(_FIXTURES / "meetings_extra.csv", NONCSE.EXTRA_COLUMNS),
+    NONCSE.read_csv(_FIXTURES / "no_sections.csv", NONCSE.NOSEC_COLUMNS), _equivalences)
 EVIDENCE = rpv.import_sql(LECTURE_ONLY, LAB_COURSE, INDEPENDENT, TWO_LECTURES, TOPIC_CAPTURES)
 
 
@@ -184,6 +212,71 @@ def find(p, crn):
 GOOD = payload(lecture_only(), lab_course(), independent(), snapshot_007())
 DECISION = ("'{t}', '96001', 'ALLOW_SECTION_TYPE_AS_CONDITIONAL', '{d}', 'a reviewer allowed this section type in proposed schedules', "
             "'team policy only; not Registrar certification and not a guarantee', DATE '2026-10-16', 'workbook decision log'")
+
+
+
+def do_import_noncse(p, label="grid"):
+    text = json.dumps(p, sort_keys=True)
+    assert "$imp$" not in text
+    return f"SELECT catalog_research.import_noncse_term($imp${text}$imp$::jsonb, '{label}', repeat('c', 64));"
+
+
+def reject_noncse(label, p):
+    text = json.dumps(p, sort_keys=True)
+    return reject(label, f"SELECT catalog_research.import_noncse_term($imp${text}$imp$::jsonb, 'bad', repeat('d', 64))")
+
+
+def do_import_programs(p, label="programs"):
+    text = json.dumps(p, sort_keys=True)
+    assert "$imp$" not in text
+    return f"SELECT catalog_research.import_degree_programs($imp${text}$imp$::jsonb, '{label}', repeat('e', 64));"
+
+
+def reject_programs(label, p):
+    text = json.dumps(p, sort_keys=True)
+    return reject(label, f"SELECT catalog_research.import_degree_programs($imp${text}$imp$::jsonb, 'bad', repeat('f', 64))")
+
+
+def gm(change):
+    q = copy.deepcopy(GRID_PAYLOAD)
+    change(q)
+    return q
+
+
+def pm(change):
+    q = copy.deepcopy(PROGRAM_PAYLOAD)
+    change(q)
+    return q
+
+
+def gsec(p, crn):
+    return next(s for o in p["offerings"] for s in o["sections"] if s["crn"] == crn)
+
+
+def graw(p, crn):
+    return next(r for r in p["gridRows"] if r["crn"] == crn)
+
+
+def goff(p, offering_id):
+    return next(o for o in p["offerings"] if o["offeringId"] == offering_id)
+
+
+def _walk(groups):
+    for g in groups:
+        yield g
+        yield from _walk(g.get("children") or [])
+
+
+def count_groups(p):
+    return sum(1 for prog in p["programs"] for _ in _walk(prog["requirements"]))
+
+
+def count_options(p):
+    return sum(len(g.get("options") or []) for prog in p["programs"] for g in _walk(prog["requirements"]))
+
+
+def first_group(p):
+    return p["programs"][0]["requirements"][0]
 
 
 def scenarios():
@@ -321,6 +414,127 @@ def scenarios():
         probe("the import wrote no approval, promotion or evidence row", "NOT EXISTS (SELECT 1 FROM catalog_promoted.approval) AND NOT EXISTS (SELECT 1 FROM catalog_promoted.promotion)"),
         probe("catalog_live serves exactly what it served before (the snapshot course only)", "(SELECT string_agg(course_id, ',') FROM catalog_live.course_offering) = 'CSE-007'"),
     ])))
+    # 7. Grid-staged (non-CSE) data: its own validated import path, kept apart from the research-sourced data.
+    both = do_import(GOOD) + "\n" + do_import_noncse(GRID_PAYLOAD) + "\n" + do_import_programs(PROGRAM_PAYLOAD)
+    n_off, n_sec = len(GRID_PAYLOAD["offerings"]), sum(len(o["sections"]) for o in GRID_PAYLOAD["offerings"])
+    out.append(("grid-staged data is imported through its own cross-checked path, stays BLOCKED, and never reaches a scheduler", both + "\n" + "\n".join([
+        probe("the grid-staged offerings and sections are stored next to the research-sourced ones", f"(SELECT count(*) FROM catalog_research.offering) = {n_off} + 4 AND (SELECT count(*) FROM catalog_research.section) = {n_sec} + 9"),
+        probe("every CRN is unique across both datasets", "(SELECT count(DISTINCT (term_code, crn)) FROM catalog_research.section) = (SELECT count(*) FROM catalog_research.section)"),
+        probe("the stored rows agree with the verbatim grid rows and, separately, with the Banner evidence", "NOT EXISTS (SELECT 1 FROM catalog_research.grid_mismatch) AND NOT EXISTS (SELECT 1 FROM catalog_research.evidence_mismatch)"),
+        probe("every grid-staged offering is BLOCKED because its details were never inspected", "(SELECT string_agg(DISTINCT tier || ':' || tier_reason, ',') FROM catalog_research.offering_tier t JOIN catalog_research.offering o USING (term_code, offering_id) WHERE o.data_source = 'BANNER_GRID_STAGING') = 'BLOCKED:GRID_ONLY_DETAILS_NOT_INSPECTED'"),
+        probe("the research-sourced tiers are unchanged by the grid import", "(SELECT string_agg(offering_id || ':' || tier, ',' ORDER BY offering_id) FROM catalog_research.offering_tier t JOIN catalog_research.offering o USING (term_code, offering_id) WHERE o.data_source <> 'BANNER_GRID_STAGING') = 'CSE-007:READY,CSE-096:BLOCKED,CSE-097:CONDITIONAL,CSE-098:CONDITIONAL'"),
+        probe("none of it is in the candidate views, so none of it can be promoted by accident", "NOT EXISTS (SELECT 1 FROM catalog_research.candidate_section_offering WHERE crn LIKE '99%') AND NOT EXISTS (SELECT 1 FROM catalog_research.candidate_course_offering WHERE course_id IN ('MATH-021', 'CHM-030', 'PHY-012')) AND NOT EXISTS (SELECT 1 FROM catalog_research.candidate_section_meeting WHERE crn LIKE '99%')"),
+        probe("none of it is served or schedulable, and eligibility is never guaranteed", "EXISTS (SELECT 1 FROM catalog_research.offering_status WHERE promotion_state = 'GRID_STAGING_ONLY') AND NOT EXISTS (SELECT 1 FROM catalog_research.offering_status WHERE promotion_state = 'GRID_STAGING_ONLY' AND (serving_status <> 'STORED_NOT_SERVED' OR registration_eligibility_guaranteed))"),
+        probe("catalog_live still serves only the verified snapshot course", "(SELECT string_agg(course_id, ',') FROM catalog_live.course_offering) = 'CSE-007'"),
+        probe("weekly meetings are expanded per day from the grid's day letters (MWF = 3 rows, TR = 2)", "(SELECT count(*) FROM catalog_research.section_meeting WHERE crn = '99020' AND meeting_kind = 'WEEKLY') = 3 AND (SELECT string_agg(day_of_week::text, ',' ORDER BY day_of_week) FROM catalog_research.section_meeting WHERE crn = '99001') = '2,4'"),
+        probe("the dated exams stay dated: two one-time rows on their own Thursdays, in exam_meeting, never weekly", "(SELECT string_agg(meeting_date::text, ',' ORDER BY meeting_date) FROM catalog_research.exam_meeting) = '2027-02-25,2027-04-08' AND (SELECT count(*) FROM catalog_research.section_meeting WHERE crn = '99010' AND meeting_kind = 'WEEKLY') = 2 AND (SELECT count(*) FROM catalog_research.section_meeting WHERE meeting_kind = 'DATED_ONE_TIME' AND day_of_week = 4) = 2"),
+        probe("recurrence dates and Banner meeting types are preserved", "(SELECT start_date || '/' || end_date || '/' || meeting_type FROM catalog_research.section_meeting WHERE crn = '99001' AND day_of_week = 2) = '2027-01-25/2027-05-07/Class'"),
+        probe("a location of 'None' becomes TBA and a named place is kept", "(SELECT location FROM catalog_research.section_meeting WHERE crn = '99001' LIMIT 1) = 'TBA' AND (SELECT location FROM catalog_research.section_meeting WHERE crn = '99021') = 'Synthetic Lab 180' AND (SELECT location FROM catalog_research.exam_meeting LIMIT 1) = 'To Be Determined'"),
+        probe("a lab listed by its lecture is LISTED_BY_LECTURE_ONLY; a recitation or lab nobody paired is NOT_COLLECTED with no lecture", "(SELECT string_agg(crn || ':' || link_status || ':' || COALESCE(lecture_crn, '-'), ',' ORDER BY crn) FROM catalog_research.section WHERE crn IN ('99002', '99021', '99022', '99030')) = '99002:NOT_COLLECTED:-,99021:LISTED_BY_LECTURE_ONLY:99020,99022:LISTED_BY_LECTURE_ONLY:99020,99030:NOT_COLLECTED:-'"),
+        probe("Banner's 'NONE_SHOWN' link flag is kept as a flag, not read as standalone", "(SELECT banner_link_flag FROM catalog_research.section WHERE crn = '99030') = 'NONE_SHOWN' AND (SELECT components_status FROM catalog_research.offering WHERE offering_id = 'PHY-012') = 'COMPONENTS_UNVERIFIED'"),
+        probe("recitations are stored as RECITATION, not forced into lecture or lab", "(SELECT component_type FROM catalog_research.section WHERE crn = '99002') = 'RECITATION'"),
+        probe("grid credits are kept as shown (labs 0 or 1) with their source, nothing summed or inferred", "(SELECT string_agg(crn || ':' || credits || ':' || credit_source, ',' ORDER BY crn) FROM catalog_research.section WHERE crn IN ('99001', '99002', '99030')) = '99001:4:GRID_DISPLAY,99002:0:GRID_DISPLAY,99030:1:GRID_DISPLAY'"),
+        probe("an offering whose lecture sections differ in credits has no single credit value", "(SELECT credits IS NULL AND credits_status = 'VARIES_BY_SECTION' FROM catalog_research.offering WHERE offering_id = 'MATH-312') AND (SELECT string_agg(credits::text, ',' ORDER BY crn) FROM catalog_research.section WHERE offering_id = 'MATH-312') = '4,3'"),
+        probe("a lab-only course is an offering without a lecture", "(SELECT count(*) FROM catalog_research.section WHERE offering_id = 'PHY-012' AND component_type <> 'LAB') = 0 AND (SELECT credits FROM catalog_research.offering WHERE offering_id = 'PHY-012') = 1"),
+        probe("nothing about requirements was collected: every kind is UNKNOWN, never 'none'", "(SELECT string_agg(DISTINCT status || ':' || evidence_level, ',') FROM catalog_research.requirement_status WHERE offering_id IN (SELECT offering_id FROM catalog_research.offering WHERE data_source = 'BANNER_GRID_STAGING')) = 'UNKNOWN:NONE' AND (SELECT count(*) FROM catalog_research.unresolved_requirement WHERE offering_id = 'MATH-021') = 3"),
+        probe("a team-asserted cross-list is an unverified alias on both courses", "(SELECT string_agg(offering_id || '>' || alias_subject || alias_number || ':' || alias_status, ',' ORDER BY offering_id) FROM catalog_research.course_alias WHERE offering_id IN ('ECO-325', 'MKT-325')) = 'ECO-325>MKT325:CROSS_LIST_USER_ASSERTED_UNVERIFIED,MKT-325>ECO325:CROSS_LIST_USER_ASSERTED_UNVERIFIED' AND (SELECT cross_listing_status FROM catalog_research.offering WHERE offering_id = 'ECO-325') = 'CROSS_LISTED_USER_ASSERTED_UNVERIFIED'"),
+        probe("the verbatim grid rows and their provenance are kept", f"(SELECT count(*) FROM catalog_research.grid_observation) = {n_sec} AND (SELECT days FROM catalog_research.grid_observation WHERE crn = '99001') = 'TR' AND (SELECT count(*) FROM catalog_research.grid_extra_meeting_observation) = 2 AND (SELECT origin || '/' || redistribution_status || '/' || verification FROM catalog_research.grid_source) = 'synthetic_fixture/SYNTHETIC/GRID_ONLY_DETAILS_NOT_INSPECTED'"),
+        probe("no instructor column or name exists anywhere in the staged data", "NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'catalog_research' AND (column_name ILIKE '%instructor%'))"),
+        reject_noncse("a grid CRN that is already a research-sourced section", gm(lambda p: (gsec(p, "99001").update(crn="98001"), graw(p, "99001").update(crn="98001")))),
+        do_import(GOOD, "again"),
+        probe("after re-importing the research data the grid-staged sections and exams are all still there", f"(SELECT count(*) FROM catalog_research.section WHERE offering_id IN (SELECT offering_id FROM catalog_research.offering WHERE data_source = 'BANNER_GRID_STAGING')) = {n_sec} AND (SELECT count(*) FROM catalog_research.exam_meeting) = 2 AND NOT EXISTS (SELECT 1 FROM catalog_research.grid_mismatch)"),
+        do_import_noncse(GRID_PAYLOAD, "again"),
+        probe("re-importing the grid data replaces rather than duplicates, and the research data and decisions survive", f"(SELECT count(*) FROM catalog_research.offering) = {n_off} + 4 AND (SELECT count(*) FROM catalog_research.section) = {n_sec} + 9 AND (SELECT count(*) FROM catalog_research.grid_observation) = {n_sec} AND (SELECT count(*) FROM catalog_research.import_run WHERE kind = 'GRID_STAGING') = 2 AND NOT EXISTS (SELECT 1 FROM catalog_research.grid_mismatch)"),
+    ])))
+    # 8. Anything that disagrees with the verbatim grid rows aborts the grid import.
+    out.append(("a grid import that disagrees with the verbatim grid rows or breaks the rules is refused", "\n".join([
+        reject_noncse("a wrong credit value", gm(lambda p: gsec(p, "99001").update(credits=3))),
+        reject_noncse("a wrong day", gm(lambda p: gsec(p, "99001")["meetings"][0].update(day=3))),
+        reject_noncse("a wrong start time", gm(lambda p: gsec(p, "99001")["meetings"][0].update(start="09:25"))),
+        reject_noncse("a wrong location", gm(lambda p: gsec(p, "99021")["meetings"][0].update(location="Elsewhere 9"))),
+        reject_noncse("wrong recurrence dates", gm(lambda p: gsec(p, "99001")["meetings"][0].update(startDate="2027-01-26"))),
+        reject_noncse("a wrong Banner meeting type", gm(lambda p: gsec(p, "99021")["meetings"][0].update(type="Class"))),
+        reject_noncse("a missing weekly meeting", gm(lambda p: gsec(p, "99020")["meetings"].pop())),
+        reject_noncse("a missing exam", gm(lambda p: gsec(p, "99010")["meetings"].pop())),
+        reject_noncse("an extra exam the grid does not have", gm(lambda p: gsec(p, "99001")["meetings"].append({"type": "Common Hour Exam", "kind": "DATED_ONE_TIME", "day": 4, "start": "16:25", "end": "17:40", "startDate": "2027-03-04", "endDate": "2027-03-04", "location": "TBA"}))),
+        reject_noncse("an exam on the wrong date", gm(lambda p: gsec(p, "99010")["meetings"][-1].update(startDate="2027-04-15", endDate="2027-04-15"))),
+        reject_noncse("an extra meeting the grid does not have", gm(lambda p: gsec(p, "99002")["meetings"].append({"type": "Recitation", "kind": "WEEKLY", "day": 5, "start": "12:10", "end": "13:00", "startDate": "2027-01-25", "endDate": "2027-05-07", "location": "TBA"}))),
+        reject_noncse("a grid row with no stored section", gm(lambda p: goff(p, "ECO-325")["sections"].pop())),
+        reject_noncse("a stored section with no grid row", gm(lambda p: goff(p, "ECO-325")["sections"].append(copy.deepcopy(gsec(p, "99051")) | {"crn": "99999", "sectionCode": "099"}))),
+        reject_noncse("a wrong component", gm(lambda p: gsec(p, "99002").update(component="LAB"))),
+        reject_noncse("a wrong link flag", gm(lambda p: gsec(p, "99030").update(bannerLinkFlag="LINKED"))),
+        reject_noncse("a wrong title", gm(lambda p: goff(p, "MATH-022").update(title="Something Else"))),
+        reject_noncse("an offering credit that hides a difference between sections", gm(lambda p: goff(p, "MATH-312").update(credits=4, creditsStatus="SINGLE_VALUE"))),
+        reject_noncse("an offering credit that does not match its lecture sections", gm(lambda p: goff(p, "MATH-021").update(credits=3))),
+        reject_noncse("a raw grid row that says something else", gm(lambda p: graw(p, "99001").update(hours_grid="5"))),
+        reject_noncse("a raw day string that says something else", gm(lambda p: graw(p, "99001").update(days="MW"))),
+        reject_noncse("a lab pointing at a lecture of another offering", gm(lambda p: gsec(p, "99021").update(lectureCrn="99001"))),
+        reject_noncse("a lab marked NOT_COLLECTED that still names a lecture", gm(lambda p: gsec(p, "99021").update(linkStatus="NOT_COLLECTED"))),
+        reject_noncse("a grid row from another term", gm(lambda p: graw(p, "99001").update(term="202720"))),
+        reject_noncse("an offering that is not grid-staged", gm(lambda p: goff(p, "MATH-022").update(dataSource="BANNER_EVIDENCE"))),
+        reject_noncse("a payload with no offerings", gm(lambda p: p.update(offerings=[]))),
+        reject_noncse("a malformed term code", gm(lambda p: p.update(termCode="2027-SPRING"))),
+        reject_noncse("an unknown source origin", gm(lambda p: p["source"].update(origin="somewhere"))),
+        reject_noncse("a real Banner source claiming it can be redistributed", gm(lambda p: p["source"].update(origin="authenticated_banner", redistribution="SYNTHETIC"))),
+        probe("every refused grid import left nothing behind", "NOT EXISTS (SELECT 1 FROM catalog_research.offering) AND NOT EXISTS (SELECT 1 FROM catalog_research.grid_observation) AND NOT EXISTS (SELECT 1 FROM catalog_research.grid_source)"),
+    ])))
+    # 9. Table rules for the new structures.
+    out.append(("table rules refuse impossible grid, link, credit and dated-meeting rows", both + "\n" + "\n".join([
+        reject("a recitation linked to a lab of another offering", "UPDATE catalog_research.section SET lecture_crn = '99021', link_status = 'CONFIRMED' WHERE crn = '99002'"),
+        reject("a lecture that claims a confirmed link", "UPDATE catalog_research.section SET link_status = 'CONFIRMED' WHERE crn = '99020'"),
+        reject("a research-sourced lab with credits (only grid-displayed credits may differ)", "UPDATE catalog_research.section SET credits = 1 WHERE crn = '97002'"),
+        reject("a lab claiming to be a research credit while carrying the grid's 1", "UPDATE catalog_research.section SET credit_source = 'RESEARCH' WHERE crn = '99030'"),
+        reject("a dated meeting spanning two dates", "INSERT INTO catalog_research.section_meeting (term_code, crn, day_of_week, start_time, end_time, location, meeting_type, meeting_kind, start_date, end_date) VALUES ('202710', '99001', 4, '18:00', '19:00', 'x', 'Common Hour Exam', 'DATED_ONE_TIME', '2027-03-04', '2027-03-05')"),
+        reject("a dated meeting whose weekday is not its date's weekday", "INSERT INTO catalog_research.section_meeting (term_code, crn, day_of_week, start_time, end_time, location, meeting_type, meeting_kind, start_date, end_date) VALUES ('202710', '99001', 1, '18:00', '19:00', 'x', 'Common Hour Exam', 'DATED_ONE_TIME', '2027-03-04', '2027-03-04')"),
+        reject("a dated meeting with no date", "INSERT INTO catalog_research.section_meeting (term_code, crn, day_of_week, start_time, end_time, location, meeting_type, meeting_kind) VALUES ('202710', '99001', 4, '18:00', '19:00', 'x', 'Common Hour Exam', 'DATED_ONE_TIME')"),
+        reject("a weekly meeting that ends its recurrence before it starts", "UPDATE catalog_research.section_meeting SET start_date = '2027-06-01' WHERE crn = '99001'"),
+        reject("a weekly meeting with only one recurrence date", "UPDATE catalog_research.section_meeting SET end_date = NULL WHERE crn = '99001'"),
+        reject("the same dated exam twice", "INSERT INTO catalog_research.section_meeting (term_code, crn, day_of_week, start_time, end_time, location, meeting_type, meeting_kind, start_date, end_date) SELECT term_code, crn, day_of_week, start_time, end_time, location, meeting_type, meeting_kind, start_date, end_date FROM catalog_research.section_meeting WHERE meeting_kind = 'DATED_ONE_TIME' LIMIT 1"),
+        reject("a single credit value hiding NULL", "UPDATE catalog_research.offering SET credits = NULL WHERE offering_id = 'MATH-021'"),
+        reject("a credit value on an offering that varies", "UPDATE catalog_research.offering SET credits = 3 WHERE offering_id = 'MATH-312'"),
+        reject("a data source nobody defined", "UPDATE catalog_research.offering SET data_source = 'SOMEWHERE' WHERE offering_id = 'MATH-021'"),
+        reject("a grid row with a malformed CRN", "UPDATE catalog_research.grid_observation SET crn = '12' WHERE crn = '99001'"),
+        reject("a real Banner source marked as redistributable", "UPDATE catalog_research.grid_source SET origin = 'authenticated_banner'"),
+        reject("a requirement group choosing N without N", "UPDATE catalog_research.requirement_group SET n = NULL WHERE logic = 'CHOOSE_N'"),
+        reject("a requirement group with N but not CHOOSE_N", "UPDATE catalog_research.requirement_group SET n = 2 WHERE logic = 'ALL'"),
+        reject("an option naming neither a course nor a rule", "UPDATE catalog_research.requirement_course_option SET course_id = NULL, rule_text = NULL WHERE option_id = (SELECT min(option_id) FROM catalog_research.requirement_course_option WHERE course_id IS NOT NULL)"),
+        reject("an option naming a course the catalog does not know", "UPDATE catalog_research.requirement_course_option SET course_id = 'ZZZ-999' WHERE option_id = (SELECT min(option_id) FROM catalog_research.requirement_course_option WHERE course_id IS NOT NULL)"),
+        reject("a catalog course claiming its prerequisites were collected", "UPDATE catalog_research.catalog_course SET prerequisite_status = 'COLLECTED'"),
+        reject("an unverified cross-list upgraded to verified", "UPDATE catalog_research.catalog_course_equivalence SET status = 'VERIFIED'"),
+        reject("a program from a non-catalog source", "UPDATE catalog_research.program SET source_level = 'RANDOM_WEBSITE'"),
+    ])))
+    # 10. Programs.
+    n_prog = len(PROGRAM_PAYLOAD["programs"])
+    out.append(("degree programs keep their AND/OR/choose-N structure, their course links and their unknowns", both + "\n" + "\n".join([
+        probe("every program, requirement group and option is stored", f"(SELECT count(*) FROM catalog_research.program) = {n_prog} AND (SELECT count(*) FROM catalog_research.requirement_group) = {count_groups(PROGRAM_PAYLOAD)} AND (SELECT count(*) FROM catalog_research.requirement_course_option) = {count_options(PROGRAM_PAYLOAD)}"),
+        probe("the groups form a consistent tree, with ALL, ANY, CHOOSE_N and CREDITS logic preserved", "NOT EXISTS (SELECT 1 FROM catalog_research.program_structure_problem) AND (SELECT count(DISTINCT logic) FROM catalog_research.requirement_group) = 4 AND EXISTS (SELECT 1 FROM catalog_research.requirement_group WHERE parent_group_id IS NOT NULL)"),
+        probe("every requirement option that names a course points at a catalog course (foreign key)", "NOT EXISTS (SELECT 1 FROM catalog_research.requirement_course_option o WHERE o.course_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM catalog_research.catalog_course c WHERE c.course_id = o.course_id))"),
+        probe("a program's top-level groups carry their category", "NOT EXISTS (SELECT 1 FROM catalog_research.requirement_group g WHERE g.parent_group_id IS NULL AND NOT EXISTS (SELECT 1 FROM catalog_research.program_requirement pr WHERE pr.group_id = g.group_id))"),
+        probe("conflicts and unknowns the sources left open are preserved, not resolved", "EXISTS (SELECT 1 FROM catalog_research.program WHERE jsonb_array_length(conflicts) > 0) AND EXISTS (SELECT 1 FROM catalog_research.program WHERE jsonb_array_length(unknowns) > 0)"),
+        probe("catalog courses say their prerequisites were NOT_COLLECTED, never 'none'", "(SELECT string_agg(DISTINCT prerequisite_status, ',') FROM catalog_research.catalog_course) = 'NOT_COLLECTED'"),
+        probe("credit exclusions and the cross-list assertion are kept with their status", "(SELECT count(*) FROM catalog_research.catalog_course_exclusion) = 4 AND (SELECT count(*) FROM catalog_research.catalog_course_equivalence) = 2 AND (SELECT string_agg(DISTINCT status, ',') FROM catalog_research.catalog_course_equivalence) = 'CROSS_LISTED_USER_ASSERTED_UNVERIFIED'"),
+        probe("a program course's term status comes from what was searched: offered, searched with no result, or not collected", "(SELECT term_status FROM catalog_research.course_term_status WHERE course_id = 'MATH-021') = 'OFFERED' AND (SELECT term_status FROM catalog_research.course_term_status WHERE course_id = 'ENGR-005') = 'SEARCHED_NOT_OFFERED' AND (SELECT term_status FROM catalog_research.course_term_status WHERE course_id = 'MATH-241') = 'NOT_COLLECTED'"),
+        probe("course-to-degree links show each course's tier without making it schedulable", "EXISTS (SELECT 1 FROM catalog_research.program_course_link WHERE course_id = 'MATH-021' AND offerings_and_tiers = 'MATH-021:BLOCKED')"),
+        probe("open items are carried forward, and the staged data names no instructor", "EXISTS (SELECT 1 FROM catalog_research.unresolved_item WHERE subject = 'INSTRUCTORS' AND detail LIKE 'NOT_IMPORTED%')"),
+        do_import_programs(PROGRAM_PAYLOAD, "programs again"),
+        probe("re-importing the programs replaces rather than duplicates", f"(SELECT count(*) FROM catalog_research.program) = {n_prog} AND (SELECT count(*) FROM catalog_research.requirement_group) = {count_groups(PROGRAM_PAYLOAD)} AND (SELECT count(*) FROM catalog_research.requirement_course_option) = {count_options(PROGRAM_PAYLOAD)} AND (SELECT count(*) FROM catalog_research.import_run WHERE kind = 'PROGRAMS') = 2"),
+        reject_programs("a CHOOSE_N that asks for more than it offers", pm(lambda p: first_group(p).update(logic="CHOOSE_N", n=99))),
+        reject_programs("a group with a repeated key in one program", pm(lambda p: p["programs"][0]["requirements"].append(copy.deepcopy(p["programs"][0]["requirements"][0])))),
+        reject_programs("a degree type nobody defined", pm(lambda p: p["programs"][0].update(degreeType="PHD"))),
+        reject_programs("an option naming a course the payload does not define", pm(lambda p: first_group(p)["options"].append({"option_set": 99, "course_code": "ZZZ 999", "rule_text": None, "credits": None, "status": "STATED"}))),
+        reject_programs("a program with no requirements", pm(lambda p: p["programs"][0].update(requirements=[]))),
+        reject_programs("a payload with no programs", pm(lambda p: p.update(programs=[]))),
+    ])))
+    # 11. Privileges for the new objects.
+    out.append(("the read-only role can read the grid and program data but cannot write or import", both + "\n" + "\n".join([
+        "SET LOCAL ROLE research_test_reader;",
+        probe("the reader can read grid observations, programs and exams", "(SELECT count(*) FROM catalog_research.grid_observation) > 0 AND (SELECT count(*) FROM catalog_research.program) > 0 AND (SELECT count(*) FROM catalog_research.exam_meeting) = 2"),
+        reject("the reader cannot change a grid row", "UPDATE catalog_research.grid_observation SET days = 'MWF'"),
+        reject("the reader cannot delete a program", "DELETE FROM catalog_research.program"),
+        reject("the reader cannot run the grid importer", "SELECT catalog_research.import_noncse_term('{}'::jsonb, 'x', repeat('a', 64))"),
+        reject("the reader cannot run the program importer", "SELECT catalog_research.import_degree_programs('{}'::jsonb, 'x', repeat('a', 64))"),
+        "RESET ROLE;",
+    ])))
     return out
 
 
@@ -354,7 +568,7 @@ def mutate(text, old, new, label):
 MUTATIONS = [
     ("import no longer checks the evidence", "V2", lambda t: mutate(t, "	IF v_bad IS NOT NULL THEN\n		RAISE EXCEPTION 'imported data disagrees", "	IF false THEN\n		RAISE EXCEPTION 'imported data disagrees", "importcheck")),
     ("grid credits are not compared", "V2", lambda t: mutate(t, "OR s.credits::numeric <> e.grid_hours::numeric)", "OR false)", "gridcredits")),
-    ("a lab may carry credits", "V1", lambda t: mutate(t, "CHECK (component_type = 'LECTURE' OR credits = 0)", "CHECK (true)", "labcredits")),
+    ("a lab may carry credits", "V1", lambda t: mutate(t, "CHECK (component_type = 'LECTURE' OR credits = 0 OR credit_source = 'GRID_DISPLAY')", "CHECK (true)", "labcredits")),
     ("a lab may point at anything", "V1", lambda t: mutate(t, "FOREIGN KEY (term_code, offering_id, lecture_crn, lecture_component)\n		REFERENCES catalog_research.section (term_code, offering_id, crn, component_type),", "", "labfk")),
     ("a decision may claim Registrar certification", "V1", lambda t: mutate(t, "CHECK (NOT registrar_certified)", "CHECK (true)", "certified")),
     ("a decision may guarantee registration", "V1", lambda t: mutate(t, "CHECK (NOT guarantees_registration)", "CHECK (true)", "guarantee")),
@@ -368,7 +582,21 @@ MUTATIONS = [
     ("an identical decision is recorded twice", "V2", lambda t: mutate(t, "		RETURN prev.decision_id;      -- the identical current decision: nothing to record", "		NULL;", "idempotent")),
     ("an unlisted requirement is stored as unknown", "V2", lambda t: mutate(t, "WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'NONE_LISTED'", "WHEN o.data_source = 'BANNER_EVIDENCE' AND be.n > 0 THEN 'UNKNOWN'", "silence")),
     ("a topic's Banner text is read for the whole course", "V2", lambda t: mutate(t, "		WHERE e.term_code = o.term_code AND e.crn IN (SELECT s.crn FROM catalog_research.section s WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id)\n			AND e.note_kind = k.note_kind AND NOT catalog_promoted.is_empty_requirement(e.note_kind, e.note_text)) bn", "		WHERE e.term_code = o.term_code AND e.course_id = o.course_id\n			AND e.note_kind = k.note_kind AND NOT catalog_promoted.is_empty_requirement(e.note_kind, e.note_text)) bn", "topictext")),
-    ("the import erases policy decisions", "V2", lambda t: mutate(t, "	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term;", "	DELETE FROM catalog_research.tier_policy_decision WHERE term_code = v_term;\n	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term;", "erasedecisions")),
+    ("the import erases policy decisions", "V2", lambda t: mutate(t, "	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term AND crn = ANY (v_crns);", "	DELETE FROM catalog_research.tier_policy_decision WHERE term_code = v_term;\n	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term AND crn = ANY (v_crns);", "erasedecisions")),
+    ("the research import erases grid-staged offerings", "V2", lambda t: mutate(t, "INTO v_off FROM catalog_research.offering WHERE term_code = v_term AND data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT');", "INTO v_off FROM catalog_research.offering WHERE term_code = v_term;", "wipecse")),
+    ("the grid import erases research-sourced offerings", "V3", lambda t: mutate(t, "INTO v_off FROM catalog_research.offering WHERE term_code = v_term AND data_source = 'BANNER_GRID_STAGING';", "INTO v_off FROM catalog_research.offering WHERE term_code = v_term;", "wipegrid")),
+    ("the grid import no longer cross-checks the verbatim rows", "V3", lambda t: mutate(t, "	IF v_bad IS NOT NULL THEN\n		RAISE EXCEPTION 'imported data disagrees with the verbatim grid rows", "	IF false THEN\n		RAISE EXCEPTION 'imported data disagrees with the verbatim grid rows", "gridcheck")),
+    ("grid-staged credits are not compared", "V3", lambda t: mutate(t, "OR s.credits IS DISTINCT FROM CASE WHEN g.hours_grid ~ '^[0-9]+$' THEN g.hours_grid::smallint END", "OR false", "gridcredits")),
+    ("a stored exam the grid lacks goes unnoticed", "V3", lambda t: mutate(t, "WHERE m.meeting_kind = 'DATED_ONE_TIME' AND NOT EXISTS (SELECT 1 FROM extra_days e", "WHERE false AND NOT EXISTS (SELECT 1 FROM extra_days e", "extraexam")),
+    ("a grid exam that is not stored goes unnoticed", "V3", lambda t: mutate(t, "FROM extra_days e WHERE NOT EXISTS (SELECT 1 FROM catalog_research.section_meeting m", "FROM extra_days e WHERE false AND NOT EXISTS (SELECT 1 FROM catalog_research.section_meeting m", "missingexam")),
+    ("a weekly meeting the grid lacks goes unnoticed", "V3", lambda t: mutate(t, "WHERE m.meeting_kind = 'WEEKLY' AND NOT EXISTS (SELECT 1 FROM grid_days d", "WHERE false AND NOT EXISTS (SELECT 1 FROM grid_days d", "extraweekly")),
+    ("grid-staged offerings are not blocked", "V2", lambda t: mutate(t, "		WHEN o.data_source = 'BANNER_GRID_STAGING' THEN 'BLOCKED'\n", "		WHEN false THEN 'BLOCKED'\n", "gridtier")),
+    ("grid-staged sections reach the candidate views", "V2", lambda t: mutate(t, "FROM catalog_research.section s JOIN catalog_research.offering o USING (term_code, offering_id)\nWHERE o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT');", "FROM catalog_research.section s JOIN catalog_research.offering o USING (term_code, offering_id);", "gridcandidate")),
+    ("unknown requirements are stored as a reviewer's 'none'", "V3", lambda t: mutate(t, "SELECT v_term, o.j ->> 'offeringId', k, 'UNKNOWN', 'NONE', NULL", "SELECT v_term, o.j ->> 'offeringId', k, 'NONE_LISTED', 'USER_CLARIFICATION', NULL", "unknownasnone")),
+    ("a real Banner source may claim to be redistributable", "V3", lambda t: mutate(t, "CHECK ((origin = 'authenticated_banner') = (redistribution_status = 'NOT_VERIFIED_LOCAL_ONLY'))", "CHECK (true)", "redistribution")),
+    ("program structure is not checked", "V3", lambda t: mutate(t, "	IF v_bad IS NOT NULL THEN\n		RAISE EXCEPTION 'the imported programs are structurally inconsistent", "	IF false THEN\n		RAISE EXCEPTION 'the imported programs are structurally inconsistent", "programcheck")),
+    ("link status may contradict the lecture link", "V1", lambda t: mutate(t, "	CHECK ((component_type = 'LECTURE' AND lecture_crn IS NULL AND link_status = 'NOT_APPLICABLE')", "	CHECK (true OR (component_type = 'LECTURE' AND lecture_crn IS NULL AND link_status = 'NOT_APPLICABLE')", "linkcheck")),
+    ("a dated meeting may sit on the wrong weekday", "V1", lambda t: mutate(t, "AND day_of_week = extract(isodow FROM start_date)))", "))", "weekday")),
 ]
 
 
@@ -420,12 +648,14 @@ def main():
                 for label, which, change in MUTATIONS:
                     v1 = change(V1) if which == "V1" else V1
                     v2 = change(V2) if which == "V2" else V2
-                    f1, f2 = Path(tmp) / "v1.sql", Path(tmp) / "v2.sql"
+                    v3 = change(V3) if which == "V3" else V3
+                    f1, f2, f3 = Path(tmp) / "v1.sql", Path(tmp) / "v2.sql", Path(tmp) / "v3.sql"
                     f1.write_text(v1, encoding="utf-8")
                     f2.write_text(v2, encoding="utf-8")
+                    f3.write_text(v3, encoding="utf-8")
                     caught = False
                     for title, body in scenarios():
-                        code, out, passed = execute(run_scenario(body, install_first=f"\\i {f1}\n\\i {f2}\n"))
+                        code, out, passed = execute(run_scenario(body, install_first=f"\\i {f1}\n\\i {f2}\n\\i {f3}\n"))
                         if code != 0 or passed != expected_probes(body):
                             caught = True
                             break

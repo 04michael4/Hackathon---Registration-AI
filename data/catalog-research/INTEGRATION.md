@@ -16,7 +16,7 @@ banner_evidence -> catalog_promoted -> catalog_live  unchanged (evidence -> appr
 function references it; `verify_structure.sql` asserts both. The backend's schema allow-list is still `catalog_api` / `catalog_live`
 (`DB_CATALOG_SCHEMA=catalog_research` fails at startup, checked 2026-10-17).
 
-## 2. Added (10 tables, 9 views, 3 functions; schema `catalog_research`)
+## 2. Added (22 tables, 14 views, 5 functions; schema `catalog_research`)
 Tables: `import_run`, `offering`, `section`, `section_meeting`, `section_arranged_meeting`, `requirement_status`, `eligibility_rule`,
 `credit_exclusion`, `course_alias`, `tier_policy_decision`. Views: `evidence_mismatch`, `active_tier_policy_decision`, `offering_tier`,
 `offering_status`, `unresolved_requirement`, `prerequisite_banner_check`, `candidate_course_offering`, `candidate_section_offering`, `candidate_section_meeting`.
@@ -68,3 +68,20 @@ meetings) are not exposed to the backend until the ADR-0004 decisions are made.
 - **Term mapping:** stored `term_code` is the Banner code `202710`; the API term `2027-SPRING` is mapped explicitly by the backend.
 - **Special topics:** the Banner evidence calls both CSE 398 topics `CSE-398`; stored offering ids are `CSE-398-<section>`. `promotion_readiness`
   therefore cannot tell them apart until the topic-id scheme is decided.
+
+## 8. Unified database (CSE + non-CSE) and what changed relative to PR #8 / PR #9
+- This branch (`integrate/unified-course-db`, based on `pre-main` `fa3f95e`) carries **cherry-picked copies** of the PR #8 commits (promotion layer, ADR-0004,
+  reconcile tool, fixture builder, `catalog_research`; **not** the feature-flagged demo backend) and of the PR #9 commit (`data/degree-requirements`). The hashes are
+  new, so merging PR #8 or #9 first will conflict textually with the cherry-picks (same content): rebase this branch onto whichever merges first.
+- Relative to PR #8, `V1`/`V2` of `catalog_research` were **edited in place** (they are unmerged): `section.component_type` also allows `RECITATION`; new section columns
+  `credit_source`, `link_status`, `banner_link_flag`; the lab-credit rule now exempts `credit_source = GRID_DISPLAY`; `offering.credits` may be NULL with
+  `credits_status`; `offering.data_source` also allows `BANNER_GRID_STAGING`; `section_meeting` gets `meeting_type`, `meeting_kind`, `start_date`, `end_date` and a surrogate
+  key (the old composite key became a unique index); `import_run` gets `kind`; `import_term` now replaces only research-sourced offerings. Everything PR #8 asserted
+  (97 probes, 17 mutations) still holds unchanged; the new V3 adds the rest. `V3` is entirely new.
+- A database already built from PR #8's `V1`/`V2` (for example the original local `registration_spring2027`) is **not** upgraded in place: rebuild it with
+  `build_local_database.py`. Nothing in the original was changed.
+- `catalog_live` and the backend are unchanged. The unified database serves exactly what the CSE-only one did (CSE 007); the 191 non-CSE sections are `BLOCKED`,
+  absent from the `candidate_*` views, and every requirement of theirs is `UNKNOWN`.
+- **Existing issue, surfaced by this integration (fixed 2026-10-17):** with the least-privilege reader role, `GET /api/courses/{id}` and `/api/terms` returned 503 on `pre-main`, because `JdbcCourseMetadataCatalog` reads `cse007_snapshot.term/course/section/source_asset` directly. `catalog-promotion/grant_reader.sql` now grants that role column-level `SELECT` on exactly the columns those queries read (PR #7's setup script got the same fix). Remaining: a promoted Banner course has no `cse007_snapshot` row, so it has no description or instructor lookup.
+- Not imported by design: instructor names (redistribution from an authenticated Banner session is not verified), seat counts and waitlists, `section_details.md` (free text).
+  The one section whose detail panels were read (CHM 030 lecture) therefore keeps UNKNOWN requirements here, not the "none listed" the CSE path derives from captures.

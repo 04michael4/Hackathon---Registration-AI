@@ -15,6 +15,11 @@
 6. **A section-type policy decision is an append-only `TEAM_POLICY` row** with CHECK constraints that forbid claiming Registrar certification or a registration guarantee. It makes CSE 217-010 `CONDITIONAL`; it does not change `promotion_readiness`, which still blocks the course until the serving requirements in ADR-0004 hold.
 7. **Catalog-shaped `candidate_*` views** (same columns and types as the three views the adapter reads) cover every stored offering, with `schedulable` true only for what `catalog_live` serves.
 
+## Addendum (unified database)
+8. **Grid-staged data has its own validated path.** Non-CSE sections whose only evidence is the Banner results grid are stored with `data_source = BANNER_GRID_STAGING`, their verbatim grid rows and provenance (`grid_*` tables), and a `grid_mismatch` cross-check, instead of being forced through the `banner_evidence` check. They are `BLOCKED`, outside the `candidate_*` views, and every requirement is `UNKNOWN`.
+9. **The section model grows only where the data demands it:** `RECITATION`, link statuses (`CONFIRMED`, `LISTED_BY_LECTURE_ONLY`, `NOT_COLLECTED`), grid-displayed credits (`credit_source`), offerings whose sections differ in credits, dated one-time meetings, and Banner meeting types and recurrence dates.
+10. **Degree programs are stored apart from term offerings** (requirement trees with AND/OR/choose-N/credits logic over catalog courses), with conflicts and unknowns preserved.
+
 ## Consequences
 - Re-importing a term replaces its stored rows in one transaction (history: `import_run`); decisions persist.
 - This implements the *storage* half of ADR-0004's "Additive schema" (`offering_tier`, rules, exclusions, aliases, offering identity, arranged meetings, policy decision) in `catalog_research` instead of `catalog_live`. Exposing conditions to the backend remains ADR-0004's open decision.
