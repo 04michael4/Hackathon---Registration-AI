@@ -48,7 +48,8 @@ Evidence levels: `BANNER` (Banner text), `RESEARCH_WORKBOOK` (stated in the rese
 for the demo). None of them is Registrar certification.
 
 Views: `evidence_mismatch` and `prerequisite_banner_check` (both must be empty), `offering_tier`, `offering_status`, `unresolved_requirement`, `active_tier_policy_decision`,
-and `candidate_course_offering` / `candidate_section_offering` / `candidate_section_meeting`.
+`candidate_course_offering` / `candidate_section_offering` / `candidate_section_meeting` (research-sourced offerings only), and, from V3, `grid_mismatch`,
+`exam_meeting`, `course_term_status`, `program_course_link` and `program_structure_problem`.
 
 ### Tier (derived, never stored)
 `READY` = served by `catalog_api` today (CSE 007). `BLOCKED` = stored data disagrees with the evidence, or the special-topic course-id
@@ -95,12 +96,48 @@ owner; `grant_reader.sql` gives a read-only role `SELECT` only (no `EXECUTE` on 
 
 ## Verification
 
-`run_research_validation.py`: install and reinstall (identical definitions); 6 scenarios, **97 probes** on synthetic courses (consistent
+`run_research_validation.py`: install and reinstall (identical definitions); 6 scenarios, **195 probes** on synthetic courses (consistent
 import, 18 probes on evidence disagreement and malformed payloads, 22 impossible rows refused, policy decisions, special topics, privileges and isolation),
-each rolled back; **17 mutation checks** (one rule weakened at a time, each caught); the three serving-layer view sets unchanged.
-`test_import_research_catalog.py`: 24 unit tests. `verify_local_database.py`: field-by-field comparison with the export plus the serving
-boundary, 32 checks as the owner and 30 as the read-only role (it skips the checks that role may not read). Actual results are in
+each rolled back; **31 mutation checks** (one rule weakened at a time, each caught); the three serving-layer view sets unchanged.
+`test_import_research_catalog.py` (24) and `test_import_noncse_catalog.py` (22) unit tests. `verify_local_database.py` (CSE only database): 32 / 30 checks as the owner / the read-only role. `verify_unified_database.py`
+(CSE + non-CSE database): 45 checks as the owner and 43 as the read-only role (it skips what that role may not read). Actual results are in
 [HANDOFF.md](../../HANDOFF.md).
+
+## Unified database: CSE + non-CSE (V3)
+
+The same schema also holds the non-CSE Spring 2027 sections and the five degree programs, through two further validated import paths
+(`V3__noncse_grid_staging_and_programs.sql`, `import_noncse_catalog.py`). Differences from the CSE path:
+
+| | CSE (research-sourced) | non-CSE (grid-staged) |
+|---|---|---|
+| Evidence | `banner_evidence` captures (details, linked sections, restrictions) | the Banner results **grid** only, kept verbatim in `grid_observation` / `grid_extra_meeting_observation` / `grid_search_result` with `grid_source` provenance (local-only, details never inspected) |
+| Cross-check | `evidence_mismatch` (against `banner_evidence`) | `grid_mismatch` (against the verbatim grid rows; days, locations and components are re-derived in SQL, independently of the importer) |
+| `data_source` | `BANNER_EVIDENCE` / `SNAPSHOT` | `BANNER_GRID_STAGING` |
+| Components | `LECTURE`, `LAB` with a confirmed link | also `RECITATION`; a pairing is `CONFIRMED`, `LISTED_BY_LECTURE_ONLY` (only a lecture's Linked Sections list shows it) or `NOT_COLLECTED`, never inferred |
+| Credits | researched; labs add 0 | the grid's number, `credit_source = GRID_DISPLAY`; a course whose lectures differ has `credits NULL / VARIES_BY_SECTION` |
+| Requirements | reviewed statuses | every kind `UNKNOWN` (nothing collected; "no restriction shown" is not proof) |
+| Tier | `READY` / `CONDITIONAL` / `BLOCKED` | always `BLOCKED` (`GRID_ONLY_DETAILS_NOT_INSPECTED`); absent from the `candidate_*` views |
+
+Meetings: a weekly meeting is stored one row per day (`meeting_kind = WEEKLY`, with Banner's meeting type and recurrence dates); a Common Hour
+Exam is a `DATED_ONE_TIME` row on its own date (its weekday must be that date's weekday), listed in `exam_meeting` and never in a weekly view.
+Instructor names are never imported. Each importer replaces only its own data, so importing CSE never touches grid-staged rows and the reverse.
+
+Programs: `program`, `requirement_group` (tree; `ALL` / `ANY` / `CHOOSE_N` / `CREDITS`), `program_requirement` (category), `requirement_course_option`
+(options sharing an `option_set` are taken together), `catalog_course` (prerequisites `NOT_COLLECTED`), `catalog_course_exclusion`,
+`catalog_course_equivalence` (team-asserted cross-lists, unverified) and `unresolved_item`. `course_term_status` says for each program course whether it
+is offered this term, was searched with no result, or was never searched; `program_course_link` joins programs to offerings and tiers (study only,
+nothing schedulable); `program_structure_problem` must be empty.
+
+```bash
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=<local superuser> python3 -I data/catalog-research/build_local_database.py \
+  --database registration_unified_spring2027 --input <CSE export JSON> --evidence-from <host:port/database/user> \
+  --noncse-export <non-CSE export JSON> --noncse-staging-db <staging.db> --noncse-banner-dir <grid CSV directory>
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registration_unified_spring2027 python3 -I data/catalog-research/verify_unified_database.py \
+  --cse-export <CSE export JSON> --noncse-export <non-CSE export JSON> --banner-dir <grid CSV directory> [--instructors-csv <file>]
+```
+The non-CSE inputs come from `data/degree-requirements` (SQLite staging, `export_import_ready.py`); the real files are local-only and never committed.
+`verify_unified_database.py` rebuilds its expectations from the raw CSVs and exports and prints only counts and verdicts (the optional instructor
+file is used only to prove no name appears in the stored data).
 
 ## What this does not do
 - It does not approve, promote or serve anything, and it does not change `catalog_api`, `catalog_promoted`, `catalog_live`,
