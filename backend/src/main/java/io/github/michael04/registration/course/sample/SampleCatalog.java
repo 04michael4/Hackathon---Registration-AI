@@ -1,4 +1,4 @@
-package io.github.michael04.registration.course.demo;
+package io.github.michael04.registration.course.sample;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -24,16 +24,17 @@ import io.github.michael04.registration.course.SectionCatalog;
 import io.github.michael04.registration.course.SectionLookupCatalog;
 
 /**
- * Opt-in demo catalog ({@code CATALOG_SOURCE=demo}) so the frontend can be demonstrated without PostgreSQL.
- * Every course, section, time, instructor and description here is <b>made up</b>; it is not Lehigh data.
+ * Opt-in sample catalog ({@code CATALOG_SOURCE=sample}) so the frontend can be demonstrated without PostgreSQL or the
+ * private researched fixture that {@code CATALOG_SOURCE=demo} needs. Every course, section, time, instructor and
+ * description here is <b>made up</b>; it is not Lehigh data.
  *
  * <p>The default stays {@code database} (the authoritative catalog). Nothing falls back to this class: it exists
  * only when explicitly selected. It covers what the demo needs: lectures with labs and recitations, a closed
  * section, a course offered only MWF 8:00am, early, late and Friday-only sections, and clashing sections.
  */
 @Component
-@ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "demo")
-public class DemoCatalog implements CourseCatalog, SectionCatalog, CourseMetadataCatalog, SectionLookupCatalog {
+@ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "sample")
+public class SampleCatalog implements CourseCatalog, SectionCatalog, CourseMetadataCatalog, SectionLookupCatalog {
 
 	public static final String TERM = "2027-SPRING";
 
@@ -48,7 +49,7 @@ public class DemoCatalog implements CourseCatalog, SectionCatalog, CourseMetadat
 	private final Map<String, CatalogSection> sections = new TreeMap<>();
 	private final Map<String, List<String>> instructors = new TreeMap<>();
 
-	public DemoCatalog() {
+	public SampleCatalog() {
 		course("CSE-017", "Programming and Data Structures", 3,
 				"Object-oriented programming in Java, recursion, and core data structures: lists, stacks, trees, hash tables.")
 			.lecture("41001", "010", "MWF", "09:00", "09:50", "Prof. Ana Moreno")
@@ -127,6 +128,15 @@ public class DemoCatalog implements CourseCatalog, SectionCatalog, CourseMetadat
 		course("ART-011", "Drawing I", 3,
 				"Observational drawing in studio, from line and value to composition.")
 			.lecture("56001", "010", "TR", "15:00", "17:50", "Prof. Mateo Silva");
+		course("CSE-326", "Machine Learning", 3,
+				"Supervised and unsupervised learning, neural networks, model evaluation and the ethics of prediction.")
+			.lecture("57001", "010", "MW", "13:30", "14:45", "Dr. Priya Raman");
+		course("CSE-343", "Computer Security", 3,
+				"Threats, cryptography basics, secure systems and network security, with hands-on attack and defense labs.")
+			.lecture("57101", "010", "TR", "15:00", "16:15", "Dr. Marco Bianchi");
+		course("FIN-125", "Introduction to Finance", 3,
+				"Time value of money, stocks and bonds, risk and return, and how companies make investment decisions.")
+			.lecture("57201", "010", "MWF", "11:00", "11:50", "Prof. Victor Nash");
 	}
 
 	@Override
@@ -161,7 +171,7 @@ public class DemoCatalog implements CourseCatalog, SectionCatalog, CourseMetadat
 
 	@Override
 	public List<CourseResponses.TermResponse> terms() {
-		return List.of(new CourseResponses.TermResponse(TERM, "Spring 2027 (demo data)", LocalDate.of(2026, 10, 16)));
+		return List.of(new CourseResponses.TermResponse(TERM, "Spring 2027 (sample data)", LocalDate.of(2026, 10, 16)));
 	}
 
 	@Override

@@ -3,7 +3,8 @@
 A PostgreSQL schema, `banner_evidence`, for recording **what a source showed** (Lehigh Banner pages, a user's
 screenshots, the department page), **what we claim from it**, and **what a person decided**. It is separate from the
 catalog: `catalog_api` and `cse007_snapshot` never read it, it never reads them, and nothing in it makes a course
-schedulable. Promotion into the catalog is a later, reviewed step.
+schedulable. Its one permitted reader is the promotion layer (`catalog_promoted`, see [../catalog-promotion/README.md](../catalog-promotion/README.md)),
+which only reads it; `verify_structure.sql` allows exactly that. Promotion into the catalog is a later, reviewed step.
 
 Status: **implemented and verified.** Schema v1 and v2, a read-only Banner collector (browser extractors plus a
 sanitizing importer), and the seven user-reported lecture/lab links. **No Banner records are published in this repository**

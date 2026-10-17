@@ -115,7 +115,7 @@ Base package: `io.github.michael04.registration`. We **package by feature**: eac
 | *(root)* | ✅ | `RegistrationBackendApplication` | Backend API |
 | `health` | ✅ | `HealthController`, `HealthResponse` | Backend API |
 | `common` | ✅ | `GlobalExceptionHandler`, Problem Details rendering, servlet fallback, application exceptions, validation error record, configurable CORS | Backend API |
-| `course` | Implemented | Existing Course API/read interfaces and authoritative PostgreSQL catalogs; demo catalogs now test-only | Backend API (+ Data) |
+| `course` | Implemented | Existing Course API/read interfaces and authoritative PostgreSQL catalogs (`catalog_api`, or with `DB_CATALOG_SCHEMA=catalog_live` also approved promoted courses, [ADR-0003](decisions/0003-promote-evidence-through-approvals-into-catalog-live.md)); demo catalogs now test-only ([ADR-0002](decisions/0002-read-only-database-catalog-through-catalog-api-views.md), [database guide](database.md)); the complete researched term catalog is stored in `catalog_research` ([ADR-0005](decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)), which the backend does not read | Backend API (+ Data) |
 | `ingest` | ⬜ | Loads `data/` catalog snapshots into the database | Data |
 | `engine` | 🟡 | **Pure Java** scheduler: input model, constraint checks, search, scoring. No Spring, no I/O. Implemented and unit-tested; called by `/api/schedules/generate` through `schedule.integration.NativeSchedulingEngine` ([§7](#7-scheduling-engine)). | Scheduling Engine |
 | `schedule` | 🟡 | Controller, validation, service, `EngineMapper`, node-cap configuration; `integration.NativeSchedulingEngine` adapts the `SchedulingEngine` boundary to the engine. Endpoints: `generate` (with `electiveAdvice`), `check` (manual mode), `suggest-electives`. | Backend API |
@@ -168,6 +168,8 @@ Ordinary tests remain DB-free; `-Pdatabase-it` adds real PostgreSQL/native-solve
 Their fixture loader imports the unchanged Data SQL in fresh, validated loopback test databases, never drops
 schemas/databases and retains fixtures for inspection. Only synthetic availability tests overlay the view in
 their dedicated test database; original-source verification uses all views unchanged and reports UNKNOWN status.
+
+What is implemented (2026-10-16): the schema actually in use is `cse007_snapshot` (CSE 007 only), read through the five `catalog_api` views; the entity diagram above is the original proposal, not the running schema. An append-only `banner_evidence` schema records Banner and user-report evidence apart from the catalog; nothing in it makes a course schedulable. See [database.md](database.md).
 
 ## 6. REST API design
 

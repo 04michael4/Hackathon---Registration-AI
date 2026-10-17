@@ -1,0 +1,27 @@
+{
+  "note": "Prerequisite expressions structured by hand where the automatic parser (strictly 'course codes joined by AND/OR') cannot read the research text. Each entry's course set equals the course set in Banner's own prerequisite text (checked by the catalog_research.prerequisite_banner_check view). Decided by the designated demo academic evidence reviewer on 2026-10-17; user-supplied, not Registrar certification. 'concurrent' means the catalog text says the course may be taken in the same semester.",
+  "expressions": [
+    {
+      "offeringId": "CSE-109",
+      "expression": {"course": "CSE-017", "concurrent": true},
+      "basis": "Banner lists CSE 017; the official catalog statement in the research text says CSE 017 may be taken concurrently in the same semester."
+    },
+    {
+      "offeringId": "CSE-140",
+      "expression": {"op": "AND", "args": [
+        {"op": "OR", "args": [{"course": "MATH-021"}, {"course": "MATH-031"}, {"course": "MATH-051"}, {"course": "MATH-076"}, {"course": "MATH-081"}, {"course": "MATH-062"}]},
+        {"course": "CSE-017"}]},
+      "basis": "The research text omits the subject of the bare numbers; Banner's prerequisite text names Mathematics for each (021, 031, 051, 076, 081, 062)."
+    },
+    {
+      "offeringId": "CSE-398-042",
+      "expression": {"course": "CSE-303"},
+      "basis": "Banner lists CSE 303 alone for this topic. The standing restriction is stored separately as a restriction."
+    },
+    {
+      "offeringId": "CSE-398-052",
+      "expression": {"op": "OR", "args": [{"course": "CSE-017"}, {"course": "CSE-027"}]},
+      "basis": "Banner lists CSE 017 or CSE 027 for this topic."
+    }
+  ]
+}

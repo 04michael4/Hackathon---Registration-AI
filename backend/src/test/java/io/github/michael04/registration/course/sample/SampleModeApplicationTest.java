@@ -1,4 +1,4 @@
-package io.github.michael04.registration.course.demo;
+package io.github.michael04.registration.course.sample;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -17,16 +17,16 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** The whole app in opt-in demo mode: no database, real engine, made-up catalog. */
-@SpringBootTest(properties = "app.catalog.source=demo")
+/** The whole app in opt-in sample mode: no database, real engine, made-up catalog. */
+@SpringBootTest(properties = "app.catalog.source=sample")
 @AutoConfigureMockMvc
-class DemoModeApplicationTest {
+class SampleModeApplicationTest {
 
 	@Autowired MockMvc mvc;
 	@Autowired ApplicationContext context;
 
 	@Test
-	void demoModeNeedsNoDatabase() {
+	void sampleModeNeedsNoDatabase() {
 		assertThat(context.getBeansOfType(DataSource.class)).isEmpty();
 	}
 

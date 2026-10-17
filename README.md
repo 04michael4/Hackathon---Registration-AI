@@ -56,7 +56,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend | **Java 21 + Spring Boot 4.1.1**, Maven Wrapper | Static types for the constraint engine, mature REST, validation and testing; see [ADR-0001](docs/decisions/0001-java-spring-boot-over-python-fastapi.md) |
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
-| Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views; no competing persistence architecture |
+| Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views (see [docs/database.md](docs/database.md)); no competing persistence architecture |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
 | Frontend | Next.js 16 + TypeScript + Tailwind CSS 4 + shadcn/ui | Typed UI, fast iteration, common team skill set; accessible Radix-based components |
 
@@ -149,7 +149,9 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `200000`; positive 32-bit integer |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
-| `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. `demo` (opt-in only) serves a made-up catalog of ~18 courses with sections so the frontend can be demonstrated without PostgreSQL; it is never selected automatically. |
+| `DB_CATALOG_SCHEMA` | Backend, only when `CATALOG_SOURCE=database` | No | `catalog_api` (the verified snapshot). `catalog_live` also serves approved, still-valid promoted courses (see [data/catalog-promotion](data/catalog-promotion/README.md)); no other value is accepted |
+| `DEMO_FIXTURE_PATH` | Backend, only when `CATALOG_SOURCE=demo` | Only in demo mode | Path of the local Spring 2027 demo fixture (kept outside the repository; see section 4b) |
+| `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. Opt-in alternatives, never selected automatically: `demo` (Michael's researched Spring 2027 fixture, needs `DEMO_FIXTURE_PATH`; section 4b) and `sample` (a made-up catalog of ~20 courses with sections, committed, so the frontend can be demonstrated without PostgreSQL or the private fixture). |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
@@ -179,6 +181,42 @@ The first run downloads Maven and dependencies (a minute or two). Expected outpu
 [INFO] BUILD SUCCESS
 ```
 
+### 4a. Spring 2027 course database (`catalog_research`, local database only)
+
+The 42 researched Spring 2027 CSE offerings (52 sections) are stored, with their evidence levels and unresolved requirements, in the
+additive schema `catalog_research` ([data/catalog-research](data/catalog-research/README.md), [ADR-0005](docs/decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)).
+It is **storage only**: the backend does not read it, nothing is approved or promoted, `catalog_live` still serves only CSE 007, and
+nothing in it says a student may register. Build and verify it in an isolated local PostgreSQL (the shared database is refused):
+
+```bash
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=<local superuser> python3 -I data/catalog-research/build_local_database.py \
+  --database registration_spring2027 --input ~/.registration-demo/spring-2027.json --evidence-from <host:port/database/user>
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registration_spring2027 \
+  python3 -I data/catalog-research/verify_local_database.py --input ~/.registration-demo/spring-2027.json
+```
+
+### 4b. Spring 2027 demo (local, feature-flagged)
+
+`CATALOG_SOURCE=demo` runs the existing schedule service and engine on a local fixture of the 42 researched Spring 2027 CSE offerings,
+with eligibility warnings and a one-page UI. It is **not** the production path: it never touches PostgreSQL, the promotion gates or
+`catalog_live`, and everything it shows is a *proposed* option, not a registration and not Registrar-certified. The fixture holds real
+CRNs and times, so it is built locally and kept **outside the repository** (never committed):
+
+```bash
+# 1. Build the fixture from the exported research workbook and a read-only SCRATCH copy of the collected Banner evidence
+#    (PG* variables point at the scratch copy; the shared database is refused). Or reuse a fixture someone already built.
+python3 -I data/catalog-promotion/tools/build_demo_fixture.py --workbook ~/Downloads/TRACKER.xlsx --db --out ~/.registration-demo/spring-2027.json
+# 2. Run the demo
+cd backend && CATALOG_SOURCE=demo DEMO_FIXTURE_PATH=~/.registration-demo/spring-2027.json AI_PROVIDER=none ./mvnw spring-boot:run
+# 3. Open http://localhost:8080/demo   (API: GET /api/demo/offerings, POST /api/demo/schedules/generate)
+```
+
+`POST /api/demo/schedules/generate` takes `courseIds` (wanted), optional `optionalCourseIds`, `minCredits`/`maxCredits` and an optional
+`profile` (`classStanding` FR/SO/JR/SR/GR, `level` UG/GR, `college`, `majors`). The response is the engine's timetables plus per-course
+warnings (`UNVERIFIED`, `UNRESOLVED`, `OVERRIDE_REQUIRED`); a missing profile field is never read as eligible. The shared
+`/api/schedules/*` and `/api/courses` endpoints also run on the demo catalog, unchanged. Tests: `./mvnw test -Dtest='Demo*Test'` (synthetic
+fixture) and, with the fixture present, `DEMO_FIXTURE_PATH=... ./mvnw test -Dtest=DemoRealFixtureTest`.
+
 ### 5. Run the backend
 
 Provision Data's existing schema and views separately; application startup never creates tables or imports data:
@@ -194,9 +232,9 @@ export DB_USERNAME='registration'  # use the provisioned read-only catalog role
 `CATALOG_SOURCE` defaults to `database`. API term `2027-SPRING` maps explicitly to Banner `202710`
 through `app.catalog.terms`; raw Banner codes are not API term identifiers. Terms and Course display metadata use the same read-only pool and the existing `cse007_snapshot.term`, `source_asset`, `course` and `section` tables; the catalog reader needs SELECT permission on those tables as well as the catalog_api views. No schema migration is introduced. The existing Hikari pool is
 read-only, bounded and lazy. Missing URL/username fails startup clearly; a configured but unreachable database
-starts the app and returns 503 on catalog use. The only non-database catalog in the artifact is the opt-in `CATALOG_SOURCE=demo` (made-up data, see `course.demo.DemoCatalog`); nothing falls back to it.
+starts the app and returns 503 on catalog use. Besides Michael's opt-in `CATALOG_SOURCE=demo` (section 4b), the artifact has the opt-in `CATALOG_SOURCE=sample` (made-up data, see `course.sample.SampleCatalog`); nothing falls back to either.
 
-To run the frontend demo without PostgreSQL: `CATALOG_SOURCE=demo AI_PROVIDER=dummy ./mvnw spring-boot:run`.
+To run the frontend without PostgreSQL or the private fixture: `CATALOG_SOURCE=sample AI_PROVIDER=dummy ./mvnw spring-boot:run`.
 
 The Maven test profile retains synthetic fixtures in `src/test`; ordinary `./mvnw test` needs no database.
 For real HTTP/JDBC/native-solver tests, use an isolated loopback PostgreSQL test server:
@@ -233,11 +271,11 @@ Stop the server with `Ctrl+C`. PostgreSQL configuration is required for the prod
 
 ### 6. Run the frontend
 
-Needs Node 20+. Start the backend first; for a demo without PostgreSQL use the opt-in demo catalog:
+Needs Node 20+. Start the backend first; without PostgreSQL use the opt-in sample catalog (or Michael's `demo` mode if you have its fixture):
 
 ```bash
 # Terminal 1
-cd backend && CATALOG_SOURCE=demo AI_PROVIDER=dummy ./mvnw spring-boot:run
+cd backend && CATALOG_SOURCE=sample AI_PROVIDER=dummy ./mvnw spring-boot:run
 
 # Terminal 2
 cd frontend
@@ -279,13 +317,15 @@ Owners agreed 2026-10-15. Detailed responsibilities and how to build each part a
 
 Full workflow, including conflicts, AI agents and onboarding: **[docs/development-guide.md](docs/development-guide.md)**.
 
+Database setup, running the backend in database mode, and what data is (and is not) schedule-ready: **[docs/database.md](docs/database.md)**.
+
 ## Development status
 
 | Component | Status |
 |---|---|
 | Backend foundation (Spring Boot, Maven Wrapper, health endpoint, tests) | ✅ Implemented; merged to `main` in `76a8310` |
 | Shared errors, validation infrastructure, CORS | ✅ Implemented and verified on `feature/backend-common`; user-designated testing target is `pre-main` |
-| Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures |
+| Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures See [docs/database.md](docs/database.md) |
 | Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
 | Frontend | 🟡 Four tabs per the UI/UX spec, on `feature/frontend-polish` (PR pending); demo data for prerequisites and requirements |

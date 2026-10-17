@@ -12,8 +12,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Runs the catalog queries on PostgreSQL through the read-only {@code catalog_api} views and nothing else. The views
- * (data/catalog-api) expose a course only when every section is certified for scheduling, so an uncertified
+ * Runs the catalog queries on PostgreSQL through the read-only {@code catalog_api} views (or, when configured, the
+ * same-shaped {@code catalog_live} views) and nothing else. The views (data/catalog-api, data/catalog-promotion) expose a course only when every section is certified for scheduling, so an uncertified
  * section can never be returned here.
  *
  * <p>A database failure becomes {@link CatalogUnavailableException}. Only the exception class is logged: driver
@@ -39,38 +39,72 @@ final class JdbcCatalogDao implements CatalogDao {
 			+ "start_time, end_time, location FROM catalog_api.section_meeting WHERE term_code = ? AND crn = ANY(?) "
 			+ "GROUP BY crn, start_time, end_time, location ORDER BY crn, start_time, end_time, location";
 
+	/** The only schemas the adapter may read. Both expose the same views; catalog_live adds promoted courses. */
+	static final List<String> ALLOWED_SCHEMAS = List.of("catalog_api", "catalog_live");
+
 	private final JdbcClient jdbc;
 
+	private final String termExistsSql;
+
+	private final String coursesSql;
+
+	private final String courseSql;
+
+	private final String sectionsSql;
+
+	private final String meetingsSql;
+
 	JdbcCatalogDao(JdbcClient jdbc) {
+		this(jdbc, "catalog_api");
+	}
+
+	/**
+	 * @param schema {@code catalog_api} (the verified snapshot, the default) or {@code catalog_live} (the same plus
+	 * approved, currently-servable promoted courses). Anything else is refused, so a setting can never point the
+	 * adapter at another schema.
+	 */
+	JdbcCatalogDao(JdbcClient jdbc, String schema) {
+		if (!ALLOWED_SCHEMAS.contains(schema)) {
+			throw new IllegalArgumentException("app.catalog.database.schema must be one of " + ALLOWED_SCHEMAS);
+		}
 		this.jdbc = jdbc;
+		this.termExistsSql = inSchema(TERM_EXISTS, schema);
+		this.coursesSql = inSchema(COURSES, schema);
+		this.courseSql = inSchema(COURSE, schema);
+		this.sectionsSql = inSchema(SECTIONS, schema);
+		this.meetingsSql = inSchema(MEETINGS, schema);
+	}
+
+	static String inSchema(String sql, String schema) {
+		return sql.replace("catalog_api.", schema + ".");
 	}
 
 	@Override
 	public boolean termHasCourses(String bannerTerm) {
 		return guarded(() -> Boolean.TRUE.equals(
-				jdbc.sql(TERM_EXISTS).param(bannerTerm).query(Boolean.class).single()));
+				jdbc.sql(termExistsSql).param(bannerTerm).query(Boolean.class).single()));
 	}
 
 	@Override
 	public List<CourseRow> courses(String bannerTerm) {
-		return guarded(() -> jdbc.sql(COURSES).param(bannerTerm).query(JdbcCatalogDao::courseRow).list());
+		return guarded(() -> jdbc.sql(coursesSql).param(bannerTerm).query(JdbcCatalogDao::courseRow).list());
 	}
 
 	@Override
 	public Optional<CourseRow> course(String bannerTerm, String courseId) {
-		return guarded(() -> jdbc.sql(COURSE).param(bannerTerm).param(courseId).query(JdbcCatalogDao::courseRow)
+		return guarded(() -> jdbc.sql(courseSql).param(bannerTerm).param(courseId).query(JdbcCatalogDao::courseRow)
 			.optional());
 	}
 
 	@Override
 	public List<SectionRow> sections(String bannerTerm, List<String> courseIds) {
-		return guarded(() -> jdbc.sql(SECTIONS).param(bannerTerm).param(courseIds.toArray(String[]::new))
+		return guarded(() -> jdbc.sql(sectionsSql).param(bannerTerm).param(courseIds.toArray(String[]::new))
 			.query(JdbcCatalogDao::sectionRow).list());
 	}
 
 	@Override
 	public List<MeetingRow> meetings(String bannerTerm, List<String> crns) {
-		return guarded(() -> jdbc.sql(MEETINGS).param(bannerTerm).param(crns.toArray(String[]::new))
+		return guarded(() -> jdbc.sql(meetingsSql).param(bannerTerm).param(crns.toArray(String[]::new))
 			.query(JdbcCatalogDao::meetingRow).list());
 	}
 

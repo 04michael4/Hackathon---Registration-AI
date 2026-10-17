@@ -3,7 +3,7 @@
 The Syllo course planner: Next.js 16 (App Router) + TypeScript (strict) + Tailwind CSS 4 + shadcn/ui (Radix).
 It follows the UI/UX spec "Course Planner — UI UX Spec" (four tabs, mock login, demo data).
 
-> Student hackathon prototype. Course data is made up (backend `CATALOG_SOURCE=demo`), prerequisites,
+> Student hackathon prototype. Course data is made up (backend `CATALOG_SOURCE=sample`), prerequisites,
 > requirements and transcripts are demo data in `src/lib/demo/program.ts`, and nothing registers anyone for classes.
 
 ## Run it
@@ -11,9 +11,9 @@ It follows the UI/UX spec "Course Planner — UI UX Spec" (four tabs, mock login
 You need Node 20+ and the backend running.
 
 ```bash
-# Terminal 1: backend with the opt-in demo catalog (no PostgreSQL needed)
+# Terminal 1: backend with the opt-in sample catalog (no PostgreSQL needed)
 cd backend
-CATALOG_SOURCE=demo AI_PROVIDER=dummy ./mvnw spring-boot:run
+CATALOG_SOURCE=sample AI_PROVIDER=dummy ./mvnw spring-boot:run
 
 # Terminal 2: frontend
 cd frontend

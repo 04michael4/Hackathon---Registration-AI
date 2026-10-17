@@ -1,0 +1,5 @@
+term,crn,course,instructor,role,collected,origin
+202710,99001,MATH 021,"Fixture, Primary",Primary,synthetic,synthetic_test_fixture
+202710,99020,CHM 030,"Staff, Teaching",Primary,synthetic,synthetic_test_fixture
+202710,99021,CHM 030,"Staff, Teaching",Primary,synthetic,synthetic_test_fixture
+202710,99021,CHM 030,"Fixture, Extra",Additional,synthetic,synthetic_test_fixture

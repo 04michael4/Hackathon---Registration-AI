@@ -1,4 +1,4 @@
-package io.github.michael04.registration.course.demo;
+package io.github.michael04.registration.course.sample;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -9,11 +9,11 @@ import org.junit.jupiter.api.Test;
 import io.github.michael04.registration.course.CatalogSection;
 import io.github.michael04.registration.course.CourseSummary;
 
-class DemoCatalogTest {
+class SampleCatalogTest {
 
-	private final DemoCatalog catalog = new DemoCatalog();
-	private final List<String> ids = catalog.listCourses(DemoCatalog.TERM).stream().map(CourseSummary::courseId).toList();
-	private final List<CatalogSection> all = catalog.sectionsFor(DemoCatalog.TERM, ids);
+	private final SampleCatalog catalog = new SampleCatalog();
+	private final List<String> ids = catalog.listCourses(SampleCatalog.TERM).stream().map(CourseSummary::courseId).toList();
+	private final List<CatalogSection> all = catalog.sectionsFor(SampleCatalog.TERM, ids);
 
 	@Test
 	void everyCourseHasALectureAndEveryLinkPointsAtALectureOfTheSameCourse() {
@@ -30,11 +30,11 @@ class DemoCatalogTest {
 
 	@Test
 	void metadataAndCrnLookupCoverEverySection() {
-		assertThat(catalog.terms()).singleElement().satisfies(t -> assertThat(t.term()).isEqualTo(DemoCatalog.TERM));
-		var detail = catalog.detail(DemoCatalog.TERM, "PHY-011");
+		assertThat(catalog.terms()).singleElement().satisfies(t -> assertThat(t.term()).isEqualTo(SampleCatalog.TERM));
+		var detail = catalog.detail(SampleCatalog.TERM, "PHY-011");
 		assertThat(detail.description()).isNotBlank();
 		assertThat(detail.instructorsByCrn()).hasSize(8).allSatisfy((crn, names) -> assertThat(names).isNotEmpty());
-		assertThat(catalog.sectionsByCrn(DemoCatalog.TERM, List.of("42001", "50011")))
+		assertThat(catalog.sectionsByCrn(SampleCatalog.TERM, List.of("42001", "50011")))
 			.extracting(CatalogSection::courseId).containsExactly("CSE-109", "PHY-011");
 	}
 
