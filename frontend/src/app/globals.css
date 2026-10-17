@@ -1,0 +1,149 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-grid: var(--grid);
+  --color-grid-faint: var(--grid-faint);
+  --color-marker: var(--marker);
+  --color-signal: var(--signal);
+  --color-req-core: var(--req-core);
+  --color-req-gened: var(--req-gened);
+  --color-req-elective: var(--req-elective);
+  --color-req-free: var(--req-free);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Graph-paper planner. Cool paper, blueprint ink, one highlighter. */
+  --paper: #F4F7F9;
+  --ink: #17324D;
+  --grid: #C9D6E0;
+  --grid-faint: #E3EAF0;
+  --marker: #F5C842;
+  --signal: #C23B30;
+  /* Requirement index tabs: major core, gen ed, elective, free */
+  --req-core: #2F6DB5;
+  --req-gened: #B26E14;
+  --req-elective: #2E8A63;
+  --req-free: #8457A8;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #FFFFFF;
+  --card-foreground: var(--ink);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8EEF3;
+  --secondary-foreground: var(--ink);
+  --muted: #E8EEF3;
+  --muted-foreground: #4E6478;
+  --accent: #FBEAB0;
+  --accent-foreground: var(--ink);
+  --destructive: var(--signal);
+  --border: var(--grid);
+  --input: #AFC0CE;
+  --ring: #2F6DB5;
+  --chart-1: var(--req-core);
+  --chart-2: var(--req-gened);
+  --chart-3: var(--req-elective);
+  --chart-4: var(--req-free);
+  --chart-5: var(--signal);
+  --radius: 0.25rem;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E8EEF3;
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--grid);
+  --sidebar-ring: #2F6DB5;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer base {
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Calendar ink: hour lines solid, quarter-hours dotted, like engineering paper. */
+.graph-paper {
+  background-color: #FFFFFF;
+  background-image:
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px),
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--hour) / 4 - 1px), var(--grid-faint) calc(var(--hour) / 4 - 1px) calc(var(--hour) / 4));
+  background-size: 100% var(--hour), 100% var(--hour);
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
