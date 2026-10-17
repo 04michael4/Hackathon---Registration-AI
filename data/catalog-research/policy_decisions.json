@@ -1,0 +1,15 @@
+{
+  "note": "Policy decisions recorded by the designated demo academic evidence reviewer (a role; the person is named in the research workbook, not here). TEAM_POLICY, not Registrar certification.",
+  "decisions": [
+    {
+      "termCode": "202710",
+      "crn": "14003",
+      "decisionType": "ALLOW_SECTION_TYPE_AS_CONDITIONAL",
+      "decision": "ALLOW",
+      "decidedOn": "2026-10-16",
+      "rationale": "Banner reports CSE 217-010 as an Independent Study section although it has ordinary scheduled class meetings (Monday and Wednesday 15:00-16:15). The reviewer allows it in proposed schedules as a conditional option; the reported type stays on the offering as metadata.",
+      "limitations": "Demo team policy only. Not Registrar certification. Does not waive the Banner first-year restriction or the CSE 216 prerequisite, and does not guarantee that a student may register.",
+      "sourceRef": "Research workbook, DECISION LOG: reviewer decision of 2026-10-16 on CSE 217-010"
+    }
+  ]
+}
