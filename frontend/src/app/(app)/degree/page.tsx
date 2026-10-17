@@ -8,6 +8,7 @@ import { CircleAlert, CircleCheck, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DegreeGrid } from "@/components/degree-grid";
+import { PrereqMap } from "@/components/prereq-map";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ export default function DegreePage() {
   const { doc, commit, undo, status, comments } = store;
   const plan = doc.degree;
   const [slot, setSlot] = useState<{ item: string; term: string } | null>(null);
+  const [view, setView] = useState<"plan" | "map">("plan");
 
   const statuses = useMemo(() => requirementStatus(student, plan), [plan]);
   const feasible = isFeasible(student, plan);
@@ -78,15 +80,29 @@ export default function DegreePage() {
   const latestComment = comments.at(-1);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-end gap-x-8 gap-y-2">
         <div>
-          <p className="text-sm text-muted-foreground">{student.name}, {student.year}</p>
-          <h1 className="text-3xl font-bold [font-stretch:85%]">{PROGRAM.name}</h1>
+          <p className="text-sm text-ink-muted">{student.name}, {student.year}</p>
+          <h1 className="font-heading text-2xl font-bold">{PROGRAM.name}</h1>
+        </div>
+        <div role="tablist" aria-label="Degree view" className="flex rounded-md border border-grid bg-white p-0.5 text-sm">
+          {(["plan", "map"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={view === v ? "rounded bg-brand px-3 py-1 font-bold text-white" : "rounded px-3 py-1 text-ink-muted hover:text-ink"}
+            >
+              {v === "plan" ? "Semester plan" : "Prerequisite map"}
+            </button>
+          ))}
         </div>
         <p className="flex items-center gap-2 text-sm">
           {feasible ? (
-            <><CircleCheck className="size-4 text-req-elective" aria-hidden /> Graduation on track for {termLabel("S2029")}</>
+            <><CircleCheck className="size-4 text-brand" aria-hidden /> Graduation on track for {termLabel("S2029")}</>
           ) : (
             <><CircleAlert className="size-4 text-signal" aria-hidden /> Not on track yet: {errors.length ? "fix the prerequisite order" : "some requirements aren't placed"}</>
           )}
@@ -122,7 +138,7 @@ export default function DegreePage() {
       </div>
 
       {(status === "Changes requested" || status === "Approved" || latestComment) && (
-        <div className="flex flex-wrap items-center gap-3 rounded-sm border border-ink bg-white px-4 py-2.5 text-sm">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-md border border-brand bg-white px-4 py-2 text-sm">
           <span className="mr-auto">
             {status === "Approved" ? "Your advisor approved this plan." : status === "Changes requested" ? "Your advisor asked for changes." : "Your advisor left a comment."}
             {latestComment && <span className="text-muted-foreground"> “{latestComment.text}”</span>}
@@ -131,10 +147,16 @@ export default function DegreePage() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_17rem]">
-        <DegreeGrid student={student} plan={plan} onMove={move} onRemove={remove} onFillSlot={(item, term) => setSlot({ item, term })} comments={comments} />
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="min-h-0 min-w-0 overflow-auto">
+          {view === "plan" ? (
+            <DegreeGrid student={student} plan={plan} onMove={move} onRemove={remove} onFillSlot={(item, term) => setSlot({ item, term })} comments={comments} />
+          ) : (
+            <PrereqMap student={student} plan={plan} />
+          )}
+        </div>
 
-        <aside className="h-fit rounded-sm border border-grid bg-white">
+        <aside className="max-h-full min-h-0 overflow-y-auto rounded-lg border border-grid bg-white">
           <div className="border-b border-grid p-3">
             <h2 className="text-lg font-bold">Requirements</h2>
             <p className="tabular text-sm">
@@ -158,7 +180,7 @@ export default function DegreePage() {
                     </span>
                   </span>
                   {covered >= s.requirement.count ? (
-                    <CircleCheck className="size-4 text-req-elective" aria-label="Covered" />
+                    <CircleCheck className="size-4 text-brand" aria-label="Covered" />
                   ) : (
                     <span className="tabular text-xs font-bold text-signal">{s.requirement.count - covered} left</span>
                   )}
@@ -185,7 +207,7 @@ export default function DegreePage() {
                 return (
                   <li key={id} className="flex items-center gap-3 px-3 py-2">
                     <span className="min-w-0 flex-1">
-                      <span className="font-heading font-semibold [font-stretch:85%]">{courseCode(id)}</span> {COURSES[id]?.title}
+                      <span className="font-heading font-semibold">{courseCode(id)}</span> {COURSES[id]?.title}
                       {result && !result.ok && <span className="block text-xs text-signal">{result.message}</span>}
                       {result && result.ok && result.warnings.map((w) => <span key={w} className="block text-xs text-muted-foreground">{w}</span>)}
                     </span>
