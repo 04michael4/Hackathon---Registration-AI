@@ -178,4 +178,15 @@ class CatalogDatabaseConfigurationTest {
 		return all.toString();
 	}
 
+	@Test
+	void theSchemaDefaultsToTheVerifiedCatalogAndOnlyAcceptsTheTwoKnownSchemas() {
+		databaseMode().run(ctx -> assertThat(ctx.getBean(CatalogProperties.class).database().schema()).isEqualTo("catalog_api"));
+		databaseMode().withPropertyValues("app.catalog.database.schema=catalog_live")
+			.run(ctx -> assertThat(ctx).hasNotFailed());
+		databaseMode().withPropertyValues("app.catalog.database.schema=public").run(ctx -> {
+			assertThat(ctx).hasFailed();
+			assertThat(ctx.getStartupFailure()).hasStackTraceContaining("app.catalog.database.schema must be one of");
+		});
+	}
+
 }

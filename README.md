@@ -149,6 +149,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `200000`; positive 32-bit integer |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
+| `DB_CATALOG_SCHEMA` | Backend, only when `CATALOG_SOURCE=database` | No | `catalog_api` (the verified snapshot). `catalog_live` also serves approved, still-valid promoted courses (see [data/catalog-promotion](data/catalog-promotion/README.md)); no other value is accepted |
 | `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. Synthetic catalogs are test-only and absent from the application JAR. |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
@@ -177,6 +178,20 @@ The first run downloads Maven and dependencies (a minute or two). Expected outpu
 ```
 [INFO] Tests run: <count>, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
+```
+
+### 4a. Spring 2027 course database (`catalog_research`, local database only)
+
+The 42 researched Spring 2027 CSE offerings (52 sections) are stored, with their evidence levels and unresolved requirements, in the
+additive schema `catalog_research` ([data/catalog-research](data/catalog-research/README.md), [ADR-0005](docs/decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)).
+It is **storage only**: the backend does not read it, nothing is approved or promoted, `catalog_live` still serves only CSE 007, and
+nothing in it says a student may register. Build and verify it in an isolated local PostgreSQL (the shared database is refused):
+
+```bash
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=<local superuser> python3 -I data/catalog-research/build_local_database.py \
+  --database registration_spring2027 --input ~/.registration-demo/spring-2027.json --evidence-from <host:port/database/user>
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registration_spring2027 \
+  python3 -I data/catalog-research/verify_local_database.py --input ~/.registration-demo/spring-2027.json
 ```
 
 ### 5. Run the backend

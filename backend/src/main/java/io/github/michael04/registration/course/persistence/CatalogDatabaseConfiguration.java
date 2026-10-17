@@ -49,6 +49,10 @@ public class CatalogDatabaseConfiguration {
 		if (db.username() == null || db.username().isBlank()) {
 			throw new IllegalStateException("CATALOG_SOURCE=database needs DB_USERNAME (app.catalog.database.username)");
 		}
+		if (!JdbcCatalogDao.ALLOWED_SCHEMAS.contains(db.schema())) {
+			throw new IllegalStateException(
+					"app.catalog.database.schema must be one of " + JdbcCatalogDao.ALLOWED_SCHEMAS + " (default catalog_api)");
+		}
 		if (db.maxPoolSize() < 1) {
 			throw new IllegalStateException("app.catalog.database.max-pool-size must be at least 1");
 		}
@@ -73,8 +77,8 @@ public class CatalogDatabaseConfiguration {
 	}
 
 	@Bean
-	CatalogDao catalogDao(DataSource catalogDataSource) {
-		return new JdbcCatalogDao(JdbcClient.create(catalogDataSource));
+	CatalogDao catalogDao(DataSource catalogDataSource, CatalogProperties properties) {
+		return new JdbcCatalogDao(JdbcClient.create(catalogDataSource), properties.database().schema());
 	}
 
 	@Bean
