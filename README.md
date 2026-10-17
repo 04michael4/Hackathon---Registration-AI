@@ -179,6 +179,20 @@ The first run downloads Maven and dependencies (a minute or two). Expected outpu
 [INFO] BUILD SUCCESS
 ```
 
+### 4a. Spring 2027 course database (`catalog_research`, local database only)
+
+The 42 researched Spring 2027 CSE offerings (52 sections) are stored, with their evidence levels and unresolved requirements, in the
+additive schema `catalog_research` ([data/catalog-research](data/catalog-research/README.md), [ADR-0005](docs/decisions/0005-store-the-researched-term-catalog-separately-from-serving.md)).
+It is **storage only**: the backend does not read it, nothing is approved or promoted, `catalog_live` still serves only CSE 007, and
+nothing in it says a student may register. Build and verify it in an isolated local PostgreSQL (the shared database is refused):
+
+```bash
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=<local superuser> python3 -I data/catalog-research/build_local_database.py \
+  --database registration_spring2027 --input ~/.registration-demo/spring-2027.json --evidence-from <host:port/database/user>
+PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registration_spring2027 \
+  python3 -I data/catalog-research/verify_local_database.py --input ~/.registration-demo/spring-2027.json
+```
+
 ### 4b. Spring 2027 demo (local, feature-flagged)
 
 `CATALOG_SOURCE=demo` runs the existing schedule service and engine on a local fixture of the 42 researched Spring 2027 CSE offerings,

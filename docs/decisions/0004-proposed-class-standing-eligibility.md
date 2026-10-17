@@ -44,9 +44,10 @@ All of these must hold before `catalog_live` serves a `CONDITIONAL` offering. No
 4. The offering's credits have a person's recorded approval (`approval` row, with the evidence fingerprint current). Lab credits keep their own approval and supporting source. Standalone, cross-listing and credit-exclusion claims that nobody has confirmed are shown as conditions and do not block; a claim a person does confirm is recorded with its supporting source.
 5. For a section type outside lecture and lab (CSE 217), the recorded policy decision of point 8 exists for that CRN.
 6. The evidence is still current: any new Banner capture for the course makes its approvals stale until re-reviewed, and a conflict blocks serving.
-7. The reviewer's identity is recorded in the research workbook alongside each decision (a repository file does not name the reviewer). (The 2026-10-16 export of the workbook named no reviewer.)
+7. The reviewer's identity is recorded in the research workbook alongside each decision (a repository file does not name the reviewer). The stored decision names only the role (`DEMO_ACADEMIC_EVIDENCE_REVIEWER`) and points to the workbook entry.
 
 ## Additive schema (in `catalog_live`; read by the adapter only when `DB_CATALOG_SCHEMA=catalog_live`)
+_Update 2026-10-17: the **storage** half exists as `catalog_research` ([ADR-0005](0005-store-the-researched-term-catalog-separately-from-serving.md), local database only): offering identity, eligibility rules, credit exclusions, aliases, arranged meetings and an append-only `TEAM_POLICY` decision table. The `catalog_live` views below, which would expose conditions to the backend, are still not implemented._
 - `offering_tier(term_code, course_id, tier, blocked_reason)`
 - `eligibility_rule(term_code, course_id, crn, rule_kind, operator, values text[], expression jsonb, evidence_level, source_note)`
 - `credit_exclusion(term_code, course_a, course_b, exclusion_kind, evidence_level, source_note)`: one row per unordered pair per source; two sources that disagree stay as two rows
