@@ -4,7 +4,7 @@ Live record of project progress. **Read it at the start of every session; update
 
 | | |
 |---|---|
-| **Last updated** | 2026-10-16 20:34 EDT, Codex, local pre-main merge conflict resolution; staged, not committed |
+| **Last updated** | 2026-10-17, a Claude Code session for Michael (@04michael4): `origin/pre-main` (`fa3f95e`) merged into `integrate/database-into-pre-main`; conflicts resolved, not pushed |
 | **Current milestone** | Phase 1 ✅ on `main`. Phase 2 on `pre-main`: Marpu's `common` error handling, CORS and Schedule API (validation and mapping; 503 until a production catalog and engine exist). **Michael's AI module (live-verified, eval 19/20 = 95%) is merged with the latest `pre-main` (`9cd9cdf`) on the local branch `reconcile/ai-pre-main`.** Marpu's two PR #2 review findings (`24:00` accepted as `00:00`; a model reply of `{}` accepted as complete) are fixed there with regression tests: **460/460 tests pass.** Not pushed. |
 | **Next milestone** | Michael reviews `reconcile/ai-pre-main`; then PR #2 (`integrate/ai-into-pre-main` → `pre-main`) is updated and Marpu reviews it. Sunny's engine branch and David's data branch follow through their own PRs. `main` stays untouched. |
 | **Latest backend acceptance** | Local draft 4969f25 and pre-main 5aa3e82 reconciled on feature/backend-course-schedule-completion-integrated. Real database/native-solver/HTTP verification: 763 tests passed, no failures/errors/skips. See [merge evidence](docs/merge-resolution.md). Earlier status summaries below are historical. |
@@ -561,6 +561,46 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ---
 
+## Database integration (`catalog_api`, JDBC adapter, `banner_evidence`)
+
+**Status:** 🟡 Implemented and tested on `integrate/database-into-pre-main` (merged with `origin/pre-main` `4fb4ff2`, which contains the scheduling engine, PR #5 and the catalog endpoints). One course, **CSE 007, is schedule-ready**; nothing else is. Full guide: [docs/database.md](docs/database.md); decision: [ADR-0002](docs/decisions/0002-read-only-database-catalog-through-catalog-api-views.md).
+
+**Implemented**
+- `data/cse007-snapshot/`: the verified CSE 007 PostgreSQL schema and seed (copied unchanged from `origin/feature/data-cse007-snapshot` at `ee07e18`; images and PDFs not included).
+- `data/catalog-api/`: five read-only views, six fail-closed readiness rules, tests that prove each rule matters.
+- `backend/.../course/persistence/`: `JdbcCourseCatalog` and `JdbcSectionCatalog` (read-only pool, lazy connect, safe 503 on outage, inconsistent rows rejected, explicit term map `2027-SPRING` to `202710`). Selected by `CATALOG_SOURCE` (`database` is now the default on `pre-main`); dummy mode is unchanged and needs no PostgreSQL.
+- `data/banner-evidence/`: append-only evidence schema (v1 + v2), the seven user-reported lecture/lab links, a read-only Banner collector (whitelist-only browser extractors and a sanitizing importer) and synthetic fixtures. No Banner records are published.
+- `data/setup-local-database.sh`: builds a private local cluster, loads and verifies every layer, creates a read-only role for the backend.
+
+**Test results (run on this branch, 2026-10-16)**
+- Re-run 2026-10-17 on this branch merged with `origin/pre-main` `fa3f95e` (no push): `cd backend && ./mvnw -B test` (no database variables): `Tests run: 716, Failures: 0, Errors: 0, Skipped: 11`, BUILD SUCCESS (the 11 skipped are the opt-in `DatabaseCatalogIntegrationTest`); that test with `RUN_DB_IT=true` against a database built by `data/setup-local-database.sh`: `Tests run: 11, Failures: 0, Errors: 0, Skipped: 0` as both the read-only and the owner role (the 11th, `theTermListAndCourseDetailAlsoWorkForTheLeastPrivilegeRole`, fails with a 503 when the reader's `cse007_snapshot` column grants are revoked); `./mvnw -B -Pdatabase-it verify` against a local PostgreSQL 17: `Tests run: 45, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS.
+- **Found in review (2026-10-17):** on `pre-main`, `JdbcCourseMetadataCatalog` reads `cse007_snapshot.term/source_asset/course/section` directly, but the setup script's read-only role had `SELECT` on `catalog_api` only, so `/api/terms` and `GET /api/courses/{id}` returned 503 for it. The script now grants that role `USAGE` on `cse007_snapshot` and column-level `SELECT` on exactly the columns those two queries read (term_id/term_code/name/source_id; source_id/captured_at; course_id/code/description; section_id/course_id/term_id/crn/instructor), nothing else (verified: other tables and columns still give `permission denied`). Note the script's default port (55433) is the shared database's port; pass `--port` and `--dir` when the shared one is running.
+- Before the merge (2026-10-16, base `4fb4ff2`): `./mvnw -B clean test` gave `Tests run: 683, Failures: 0, Errors: 0, Skipped: 10`.
+- Opt-in database tests as the read-only role, on a database built from scratch by the setup script: `DatabaseCatalogIntegrationTest`, `Tests run: 10, Failures: 0, Errors: 0, Skipped: 0`. One of them generates CSE 007 schedules with the real engine through the database.
+- Packaged app in database mode, `POST /api/schedules/generate` with `CSE-007`, `minCredits=4`, `maxCredits=4`: 2 schedules, each lecture 12275 plus exactly one lab (12638 in rank 1, 13132 in rank 2), both 4 credits, both scored 100, no diagnostics. `CSE-017` returns 422. Dummy mode starts with no database variables.
+- On the fresh database: `verify.sql` PASS; `catalog_api` readiness test PASS (9 probes, 8 fail-closed); `check_rules_matter.py` all six rules covered; `banner_evidence` probes 78/78; collector unit tests 31/31; `run_validation.py` ALL CHECKS PASSED (it also weakens 17 schema guards and 10 importer checks one at a time; each must make a test fail).
+
+**Run it**
+- Database: `data/setup-local-database.sh` (PostgreSQL 15+). Backend: set `PGPASSFILE`, `CATALOG_SOURCE=database`, `DB_URL`, `DB_USERNAME` (environment only; commands in [docs/database.md](docs/database.md)).
+
+**What data is confirmed**
+- CSE 007: lecture 12275 (4 credits) with labs 13132 and 12638 (0 credits), exactly one lab required, term `202710`. Confirmed by the team.
+- Seven lecture-to-lab links (CSE 017, 109, 202, 216, 241) were reported by a user from Banner screenshots and recorded as user reports; they are **not** schedule-ready (see below).
+
+**Not schedule-ready (all courses except CSE 007)**
+- CSE 017, 109, 202, 216, 241 (lecture + lab): lab credits, the required lab count and a reviewed link status are unresolved, and they are not in the snapshot. Lecture-only courses (for example CSE 003): the schema has no "verified standalone" status. All other CSE sections: never imported (only a provisional, untracked extraction exists).
+
+**Continuing the Banner collector safely** (details in `data/banner-evidence/README.md`)
+- Collect only with an authorized session, read-only, at least 5 seconds between loads, selecting "2027 Spring Semester (View Only)" explicitly. Run `banner_collect.py --dry-run --twice` first. Never commit anything under `captures/`. The terms of use were not reviewed.
+- Evidence is not approval: a person records a `claim_review`; only then can a claim be proposed for the catalog, and the six `catalog_api` rules still decide readiness.
+
+**Known limitations and next tasks**
+- Decide which credit display counts for labs (Banner's search grid shows "Hours" 0; Class Details shows the course credit). Banner states no required lab count.
+- Promote reviewed evidence into the catalog (target schema undecided) and add a verified-standalone link status.
+- Course discovery vs readiness: an uncertified offered course looks unknown. The two-step fix (`CourseCatalog.isSchedulable`, a shared-interface change) needs the Backend API owner's approval.
+- CSE 007 lab 062's room is `Room 11` in the seed; Banner shows Room 112. The seed is unchanged.
+- The collector assumes 10 grid rows per page and parseable meeting text; larger courses, TBA/online meetings and recitation chains need work.
+
 ## Next recommended tasks
 
 In priority order, across the team:
@@ -586,11 +626,13 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-16 (evening) | Claude Code for Michael | Database | Created `integrate/database-into-pre-main` from `origin/pre-main` `b715f86` (later merged with `4fb4ff2`) and integrated the CSE 007 snapshot, `catalog_api` views, `banner_evidence` schema and collector, JDBC catalog adapter and a local database setup script; reconciled `pom.xml`, `application.properties`, `.env.example` and `README.md` with the engine-bearing pre-main. Replaced the adapter's recording engine double with the real engine: CSE 007 at 4 credits yields two valid schedules. Default build 683 tests (merged tree), 0 failures, 10 skipped (opt-in); opt-in database tests 10/10. |
 | 2026-10-16 20:34 EDT | Codex | Backend API | Resolved 14 local pull conflicts against pre-main 5aa3e82, retaining authoritative persistence/native solver plus local terms/metadata/explanation. Moved obsolete draft datasource to test-only; 715 regular + 45 integration + 3 source tests passed, zero failures/errors/skips. All resolutions staged; merge commit pending, no push. |
 | 2026-10-16 20:02 EDT | Codex | Backend API | User authorized local commit of all remaining earlier Course/Schedule draft files on feature/backend-course-schedule-completion-integrated. Fresh Maven test: 588 passed, zero failures/errors/skips. Final integration already clean and pushed separately at pre-main 5aa3e82; no additional merge/push, backup stashes retained. |
 | 2026-10-16 19:42 EDT | Codex | Backend API | User authorized final Schedule integration push to pre-main. Fresh fetch shows unchanged base 4fb4ff2 and no merge needed. Pre-push regression: 683 tests, zero failures/errors, ten opt-in DB skips, BUILD SUCCESS; previous complete 702-case run and 16 HTTP checks passed. Normal fast-forward push prepared; original checkout preserved. |
 
 | 2026-10-16 19:20 EDT | Codex | Backend API | Final Schedule consolidation from approved pre-main 4fb4ff2 in new linked worktree; moved demo catalogs to test-only, reused authoritative Hikari/JDBC/views/native solver. Clean build: 702 tests and 16 standalone HTTP checks passed, including actual DB outage503 without fallback. No commit/push/merge/PR; original uncommitted work preserved. |
+| 2026-10-17 | Claude Code for Michael | Database | Merged `origin/pre-main` (`fa3f95e`) into a copy of PR #7's head (`717f5ca`) and resolved four conflicts (HANDOFF.md, README.md, docs/architecture.md, `DatabaseCatalogIntegrationTest`): kept pre-main's statements about the default database catalog and test-only demo catalogs, kept PR #7's database guide, setup script and real-engine end-to-end test, and dropped the obsolete `RecordingEngine` test double. Results are in the section above. Not pushed. |
 | 2026-10-16 18:41 EDT | Claude Code for Sunny | Integration | `integrate/catalog-endpoints-into-pre-main` from `pre-main` `b715f86`: merged PR #5 (database catalog, Michael) and `feature/backend-catalog-endpoints`. Resolved the README `CATALOG_SOURCE`/`DB_URL` conflict (both kept) and updated one assertion in `DefaultModeStartsWithoutDatabaseTest` (demo section catalog now expected). `cd backend && ./mvnw -B clean test` → `Tests run: 683, Failures: 0, Errors: 0, Skipped: 10` (opt-in live AI / DB tests), BUILD SUCCESS. Live: default mode generate 4 schedules (top 100), search/check 200; database mode with no DB → health 200, generate 503. For review via PR into `pre-main`. |
 | 2026-10-16 18:33 EDT | Codex | Backend API | Completed Course/Schedule integration on new feature branch from integrated pre-main b715f86; 631 automated cases and 17 standalone HTTP checks passed using real PostgreSQL/native solver and offline AI fixtures. Docs and exact evidence saved; all work uncommitted, no merge/push/PR. |
 | 2026-10-16 18:33 EDT | Claude Code for Sunny | Scheduling Engine (+ Backend API / Data, at the owner's request) | `feature/backend-catalog-endpoints` from `pre-main` `b715f86`: demo section catalog, course search/detail, `/check`, `/suggest-electives`, `electiveAdvice`, min-credit suggestion. Docs updated. `cd backend && ./mvnw -B test` → `Tests run: 588, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Live: all endpoints verified with `AI_PROVIDER=dummy`. |
