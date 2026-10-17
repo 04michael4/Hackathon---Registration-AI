@@ -8,8 +8,8 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Phase 1, backend foundation: ✅ implemented and verified locally; committed on `feature/backend-foundation`, not yet merged to `main` |
-| **What works today** | Spring Boot backend with `GET /api/health`, 3 passing automated tests |
+| **Current phase** | Phase 1 foundation: backend health API and an independent browser-local frontend prototype are implemented; production feature integration remains planned |
+| **What works today** | Spring Boot `GET /api/health`; Next.js mock course/degree planning UI with local persistence; backend and frontend test/build checks |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
 ## Contents
@@ -40,11 +40,11 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Feature | In MVP | Status |
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
-| Course search by code/title for a term | ✔ | ⬜ Planned |
+| Course search by code/title for a term | ✔ | 🟡 Browser-local mock; backend catalog planned |
 | AI preference extraction from free text | ✔ | ⬜ Planned |
-| Editable preference form (works without AI too) | ✔ | ⬜ Planned |
-| Conflict-free schedule generation, ranked by preferences | ✔ | ⬜ Planned |
-| Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
+| Editable preference form (works without AI too) | ✔ | 🟡 Browser-local mock implemented |
+| Conflict-free schedule generation, ranked by preferences | ✔ | 🟡 Deterministic browser demo; authoritative Java engine planned |
+| Weekly calendar view of generated schedules | ✔ | 🟡 Browser-local mock implemented |
 | AI explanation of a schedule | Stretch | ⬜ Planned |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
@@ -56,7 +56,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
 | Database | PostgreSQL *(planned)* | Relational catalog data (term → course → section → meeting), with built-in text search |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
-| Frontend | Next.js + TypeScript + Tailwind CSS *(planned)* | Typed UI, fast iteration, common team skill set |
+| Frontend | **Next.js 16 + React 19 + strict TypeScript + Tailwind CSS 4** | Typed UI and reusable components; browser-local mock implemented, backend integration planned |
 
 ## Architecture
 
@@ -84,7 +84,7 @@ Only the backend talks to Claude and holds secrets. The frontend is a thin clien
 │       │   └── health/      GET /api/health
 │       ├── main/resources/application.properties
 │       └── test/java/...    Automated tests
-├── frontend/                Next.js app (placeholder)
+├── frontend/                Next.js App Router mock frontend
 ├── data/                    Catalog snapshots / seed data (placeholder)
 ├── docs/
 │   ├── architecture.md      Technical architecture and design rationale
@@ -112,7 +112,7 @@ These steps are for macOS. Linux works the same way; on Windows use `mvnw.cmd`.
 | JDK | **21** | Backend (required) |
 | Git | any recent | Cloning |
 | Maven | **not needed** | `./mvnw` downloads the pinned Maven 3.10.0 on first run |
-| Node.js | _TBD_ | Frontend (later) |
+| Node.js | **24 LTS** | Frontend development and production builds |
 | PostgreSQL | _TBD_ | Persistence phase (later) |
 
 Install JDK 21 with [Homebrew](https://brew.sh):
@@ -149,7 +149,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `PORT` | Backend | No | `8080` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend *(planned)* | No | — |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Backend *(planned)* | No | — |
-| `NEXT_PUBLIC_API_BASE_URL` | Frontend *(planned)* | No | `http://localhost:8080` |
+| `NEXT_PUBLIC_API_BASE_URL` | Frontend backend integration *(planned; unused today)* | No | `http://localhost:8080` |
 
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
 
@@ -185,15 +185,15 @@ curl -i http://localhost:8080/api/health
 
 Stop the server with `Ctrl+C`. No database or API key is needed in this phase.
 
-### 6. Run the frontend *(not yet implemented)*
-
-Once `frontend/` is scaffolded, the expected flow is below. Confirm against [frontend/README.md](frontend/README.md) once it exists.
+### 6. Run the frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev        # http://localhost:3000, talks to the backend at NEXT_PUBLIC_API_BASE_URL
+npm ci
+npm run dev        # http://localhost:3000; browser-local mock, no backend required
 ```
+
+Run `npm run lint`, `npm test`, and `npm run build` before review. See [frontend/README.md](frontend/README.md) for the project structure and production commands.
 
 ### Troubleshooting
 
@@ -234,7 +234,7 @@ Full workflow, including conflicts, AI agents and onboarding: **[docs/developmen
 | Course catalog, PostgreSQL | ⬜ Planned |
 | Scheduling engine | ⬜ Planned |
 | AI integration | ⬜ Planned |
-| Frontend | ⬜ Planned |
+| Frontend mock prototype | ✅ Next.js/React/TypeScript/Tailwind migration implemented and verified locally on 2026-10-17; backend integration remains planned |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
 Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
@@ -253,7 +253,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 ## Known limitations and future work
 
 **Current limitations**
-- Only the health endpoint exists. No catalog data, database, AI or frontend yet.
+- Only the backend health endpoint exists. The frontend is a browser-local mock and is not connected to backend catalog, scheduling or AI endpoints.
 - **The source for Lehigh course data hasn't been chosen.** This blocks course search and scheduling against real data.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.

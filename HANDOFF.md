@@ -142,8 +142,30 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Data and Frontend
 
-**Owner:** David · **Status:** 🟡 Active CSE 007 database fixture implemented and
-verified; backend persistence and frontend are not started.
+**Owner:** David · **Status:** 🟡 Active CSE 007 database fixture and browser-local
+Next.js frontend prototype implemented; backend persistence/integration is not started.
+
+**2026-10-17 16:52 EDT — Codex, frontend framework migration: completed.**
+Migrated the standalone `dist/` HTML/CSS/JavaScript prototype to Next.js 16.4.2,
+React 19, strict TypeScript and Tailwind CSS 4. The App Router project now uses
+reusable screen components, a typed local state context, extracted deterministic
+planner/audit rules, browser-local persistence and a pinned npm lockfile. Preserved
+the login/role demo, feature navigation, semester search/calendar/conflict choices,
+local assistant previews, saved schedules/undo, degree drag/drop/electives, course
+details, advisor comments/status/approval and the existing responsive visual styles.
+No backend endpoint, API contract or AI provider is connected.
+
+Verification on Node.js 24.22.0, rerun at 2026-10-17 17:58 EDT before commit:
+`npm run lint` completed with no findings;
+`npm test` reported `Test Files 1 passed (1)` and `Tests 4 passed (4)`;
+`npm run build` reported `Compiled successfully`, completed TypeScript, and generated
+the static `/` route; `npm run dev` reached `Ready in 484ms`, and an HTTP smoke test
+returned status `200` with `text/html; charset=utf-8`. The development server was
+stopped afterward. A project-wide `backend/.\mvnw.cmd test` check was also attempted,
+but the wrapper failed before starting Maven with `Cannot index into a null array` /
+`Cannot start maven from wrapper`; no new backend test result is claimed. `npm ci`
+completed from the lockfile and reported 5 high-severity dependency advisories; no
+automatic breaking upgrade was applied.
 
 **2026-10-16 10:45 EDT — Codex for David, database branch verification: completed.**
 Created `feature/data-cse007-snapshot` from merged `main`. Regenerated the active
@@ -217,7 +239,7 @@ Next: connect the course API to this dataset when its DTO contract is agreed.
 
 **Next recommended**
 1. **Data:** identify a permitted source for Lehigh course/section data, and record its format, terms of use and refresh process in `data/README.md`. Meanwhile, create a small **synthetic** sample catalog so the Engine and Backend API work can proceed.
-2. **Frontend:** scaffold Next.js + TypeScript + Tailwind in `frontend/`; add a page that calls `GET /api/health`; document the run commands in `frontend/README.md` and the README.
+2. **Frontend:** review the migrated browser-local Next.js prototype. When the API owners are ready, replace `src/lib/mock-data.ts` and browser-only planner boundaries with documented backend calls; do not connect Claude from the browser.
 3. Decide CORS vs. a Next.js proxy with the Backend API owner.
 
 **Blockers:** real data depends on step 1.
@@ -230,7 +252,7 @@ In priority order, across the team:
 1. Review Phase 1 on `feature/backend-foundation`, then merge it to `main`.
 2. Assign module owners, and fill in the README team table and this file.
 3. Decide the course data source (or agree on a synthetic dataset for the hackathon).
-4. Start, in parallel: engine core (no dependencies), frontend scaffold, CI.
+4. Start, in parallel: engine core (no dependencies), frontend/backend integration planning, CI.
 
 ## Instructions for the next developer or AI agent
 
@@ -248,6 +270,7 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-17 17:59 EDT | Codex for David | Frontend | Prepared the Next.js migration for commit; `npm ci` completed, lint passed, Vitest passed 4/4 tests, and the production build compiled. Maven wrapper still fails before backend tests; npm reported 5 high-severity advisories. |
 | 2026-10-16 10:45 EDT | Codex for David | Data | Created `feature/data-cse007-snapshot`; regenerated the active seed with 8 verified source hashes and reran all three PostgreSQL verification suites successfully. Maven wrapper still fails before tests. |
 | 2026-10-15 22:07 EDT | Codex | Data | Rebuilt active CSE 007 data from all 7 supplied screenshots: 3 sections, 5 meetings, 1 confirmed link and explicit unresolved fields. Imported cse007_snapshot; hashes, reimport, full SQL bundle and 6 rejection checks passed. Backend Maven wrapper still fails before tests. |
 | 2026-10-15 21:46 EDT | Codex | Data | Read the 6-page database PDF; created JSON and PostgreSQL fixture in cse007_pdf_demo with UUIDs, section credits, TBA and synthetic preferences. Fresh load and stable-ID reimport verified; 9 rejection checks passed. Maven wrapper still fails before tests. |

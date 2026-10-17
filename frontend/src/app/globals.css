@@ -1,0 +1,180 @@
+@import "tailwindcss";
+@import "../styles/legacy-base.css";
+@import "../styles/legacy-product.css";
+@import "../styles/legacy-semester.css";
+@import "../styles/legacy-degree.css";
+@import "../styles/legacy-polish.css";
+
+:root {
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-display: "Manrope", system-ui, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-body);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.react-screen {
+  display: block;
+}
+
+.syllo-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: var(--theme-brown, #502f2f);
+}
+
+.syllo-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.syllo-dialog-backdrop {
+  align-items: center;
+  background: rgb(0 0 0 / 55%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 80;
+}
+
+.syllo-dialog-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 25%);
+  max-height: 85vh;
+  max-width: 38rem;
+  overflow: auto;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.syllo-dialog-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.syllo-dialog-card label {
+  display: grid;
+  gap: 0.4rem;
+  margin-block: 1rem;
+}
+
+.syllo-dialog-card input,
+.syllo-dialog-card textarea,
+.syllo-dialog-card select {
+  border: 1px solid #d8d0ca;
+  border-radius: 0.6rem;
+  padding: 0.75rem;
+}
+
+.syllo-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.syllo-empty {
+  color: #716761;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.syllo-field-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.syllo-field-grid label {
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+.syllo-field-grid input,
+.syllo-field-grid select {
+  background: white;
+  border: 1px solid #d8d0ca;
+  border-radius: 0.55rem;
+  padding: 0.55rem;
+}
+
+.syllo-warning {
+  background: #fff8e7;
+  border: 1px solid #efd88c;
+  border-radius: 0.65rem;
+  color: #5f4814;
+  margin-top: 0.75rem;
+  padding: 0.7rem;
+}
+
+.syllo-course-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.syllo-course-grid article {
+  align-items: center;
+  border: 1px solid #e4ded9;
+  border-radius: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.85rem;
+}
+
+.syllo-course-grid article > div:first-child {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.syllo-course-grid small {
+  color: #716761;
+}
+
+.syllo-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-block: 1rem;
+}
+
+.syllo-status-filters button[aria-pressed="true"] {
+  background: var(--theme-brown, #502f2f);
+  color: white;
+}
+
+.degree-course.is-course-selected {
+  outline: 3px solid #e5b63e;
+}
+
+.degree-course.is-course-prerequisite {
+  outline: 3px solid #6ca5d8;
+}
+
+.degree-course.is-course-unlocked {
+  outline: 3px solid #66a36d;
+}
+
+.degree-course.is-course-unrelated {
+  opacity: 0.35;
+}

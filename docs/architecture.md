@@ -28,7 +28,7 @@ Related: [API contract](api-contract.md) · [Decision records](decisions/README.
 
 ```mermaid
 flowchart LR
-    S([Student]) --> FE["Next.js frontend ⬜"]
+    S([Student]) --> FE["Next.js frontend 🟡<br/>browser-local mock"]
     FE -->|"HTTP/JSON /api/**"| API["Spring Boot backend ✅ foundation"]
     subgraph API_INT [Backend]
         API --> COURSE["course ⬜<br/>catalog search"]
@@ -54,7 +54,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 2. Frontend and backend responsibilities
 
-| Concern | Frontend (Next.js) ⬜ | Backend (Spring Boot) |
+| Concern | Frontend (Next.js) 🟡 mock implemented | Backend (Spring Boot) |
 |---|---|---|
 | UI, routing, calendar view | ✔ | |
 | Free-text input and editable preference form | ✔ | |
@@ -69,7 +69,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 3. Component interaction and data flow
 
-Main user flow (all ⬜ planned):
+The production API-backed user flow below remains planned. The current frontend implements the same screens and interactions against typed browser-local mock data; it does not call the backend or Claude.
 
 ```mermaid
 sequenceDiagram
@@ -349,7 +349,7 @@ flowchart LR
 | Engine unit tests | Plain JUnit 5, no Spring | Correctness, infeasibility diagnostics, **determinism** (run twice, compare), "no returned schedule has a conflict" checks | ⬜ |
 | AI layer | JUnit with a fake `PreferenceExtractor` / recorded responses | Validation pipeline, error mapping. **No real API calls in `./mvnw test`.** | ⬜ |
 | Persistence | Testcontainers Postgres or `@DataJpaTest` (_TBD_) | Queries and migrations | ⬜ |
-| Frontend | _TBD_ (e.g. Vitest / Playwright) | UI behavior | ⬜ |
+| Frontend | Vitest for pure planner rules; Next production build + ESLint | Deterministic mock rules, strict types and build integrity | 🟡; browser workflow automation remains planned |
 | CI | _None yet_. Recommended: GitHub Actions running `./mvnw test` on every PR. | | ⬜ |
 
 **Why slice tests first?** They're fast and need no database, so `./mvnw test` stays a one-command check that every teammate and AI agent can run before every PR.
