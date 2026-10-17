@@ -9,6 +9,7 @@ import { Bell, Lock, Redo2, Undo2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DEMO_ADVISOR, DEMO_STUDENT } from "@/lib/demo/program";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isFeasible } from "@/lib/rules";
@@ -57,11 +58,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const mod = typeof navigator !== "undefined" && /Mac/.test(navigator.platform) ? "⌘" : "Ctrl+";
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-grid bg-white">
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header className="z-40 shrink-0 border-b border-grid bg-white">
         <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-6 px-4">
-          <Link href={isStudent ? "/plan" : "/advisor"} className="font-heading text-2xl font-extrabold tracking-tight [font-stretch:80%]">
-            syllo
+          <Link href={isStudent ? "/home" : "/advisor"} className="font-heading text-xl font-extrabold tracking-tight" aria-label="Syllo home">
+            syllo.
           </Link>
           <nav aria-label="Main" className="flex h-full items-stretch gap-1">
             {TABS.map((tab) => {
@@ -164,6 +165,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <span className="block text-xs font-normal text-muted-foreground">{isStudent ? `${student.year}, ${student.program}` : "Advisor"}</span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    store.login(isStudent ? { role: "advisor", name: DEMO_ADVISOR.name } : { role: "student", name: DEMO_STUDENT.name });
+                    router.push(isStudent ? "/advisor" : "/home");
+                  }}
+                >
+                  {isStudent ? "Switch to advisor demo" : "Switch to student demo"}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => store.resetDemo()}>Reset demo data</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { store.logout(); router.replace("/"); }}>Sign out</DropdownMenuItem>
               </DropdownMenuContent>
@@ -171,10 +180,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-5">{children}</main>
-      <footer className="border-t border-grid px-4 py-3 text-center text-xs text-muted-foreground">
-        Student hackathon prototype with made-up demo data. Not affiliated with Lehigh University, and it doesn&apos;t register you for classes.
-      </footer>
+      {/* One screen: pages fit this area and scroll only inside their own panels. */}
+      <main className="mx-auto min-h-0 w-full max-w-[1500px] flex-1 overflow-hidden px-4 py-3">{children}</main>
     </div>
   );
 }
