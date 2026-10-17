@@ -43,10 +43,10 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
 | Course search by code/title for a term | ✔ | ✅ Existing endpoints use the authoritative PostgreSQL catalogs; production has no hardcoded catalog |
 | AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
-| Editable preference form (works without AI too) | ✔ | ⬜ Planned |
+| Editable preference form (works without AI too) | ✔ | 🟡 AI assistant questions in Tab 1 (frontend on `feature/frontend-polish`) |
 | Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Authoritative PostgreSQL catalog, real native engine and actual HTTP verified |
 | Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); UI not built |
-| Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
+| Weekly calendar view of generated schedules | ✔ | 🟡 Built in the Next.js frontend (`feature/frontend-polish`), with the four tabs of the UI/UX spec |
 | AI explanation of a schedule | Stretch | ✅ Implemented; offline full-pipeline provider tests pass; paid-provider quality not evaluated |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
@@ -58,7 +58,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
 | Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views; no competing persistence architecture |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
-| Frontend | Next.js + TypeScript + Tailwind CSS *(planned)* | Typed UI, fast iteration, common team skill set |
+| Frontend | Next.js 16 + TypeScript + Tailwind CSS 4 + shadcn/ui | Typed UI, fast iteration, common team skill set; accessible Radix-based components |
 
 ## Architecture
 
@@ -231,15 +231,21 @@ curl -i http://localhost:8080/api/health
 
 Stop the server with `Ctrl+C`. PostgreSQL configuration is required for the production catalog; no AI key is required for generation.
 
-### 6. Run the frontend *(not yet implemented)*
+### 6. Run the frontend
 
-Once `frontend/` is scaffolded, the expected flow is below. Confirm against [frontend/README.md](frontend/README.md) once it exists.
+Needs Node 20+. Start the backend first; for a demo without PostgreSQL use the opt-in demo catalog:
 
 ```bash
+# Terminal 1
+cd backend && CATALOG_SOURCE=demo AI_PROVIDER=dummy ./mvnw spring-boot:run
+
+# Terminal 2
 cd frontend
 npm install
-npm run dev        # http://localhost:3000, talks to the backend at NEXT_PUBLIC_API_BASE_URL
+npm run dev        # http://localhost:3000; /api is proxied to BACKEND_URL (default http://localhost:8080)
 ```
+
+Sign in with a demo account (no real login). Details, design notes and known limits: [frontend/README.md](frontend/README.md).
 
 ### Troubleshooting
 
@@ -282,7 +288,7 @@ Full workflow, including conflicts, AI agents and onboarding: **[docs/developmen
 | Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures |
 | Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
-| Frontend | ⬜ Planned |
+| Frontend | 🟡 Four tabs per the UI/UX spec, on `feature/frontend-polish` (PR pending); demo data for prerequisites and requirements |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
 Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
