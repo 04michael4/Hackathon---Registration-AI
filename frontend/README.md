@@ -36,31 +36,35 @@ The browser only calls same-origin `/api/...`; `next.config.ts` forwards it to `
 |---|---|
 | `src/lib/api/` | `types.ts` mirrors `docs/api-contract.md`; `client.ts` turns Problem Details into readable errors |
 | `src/lib/demo/program.ts` | Demo-only data the backend doesn't model: degree requirements, prerequisites, offered terms, transcripts, people, mock ratings |
-| `src/lib/rules.ts` | One validation module: prerequisite order, "Recommended", requirement progress, drag checks, auto-fill. Time conflicts come from the backend engine (`/api/schedules/check`), never from here. |
+| `src/lib/rules.ts` | One validation module: prerequisite order, "Recommended", requirement progress, drag checks, auto-fill, course statuses (Done, In progress, Planned, Review, Withdraw). Time conflicts come from the backend engine (`/api/schedules/check`), never from here. |
+| `src/lib/interest.ts` | `searchByInterest`: the one function behind "Search by interest" (keyword + related-word match on titles and descriptions, electives first). Swap it out to change the matching. |
 | `src/lib/store.tsx` | App state with undo/redo history and autosave to `localStorage` |
 | `src/lib/catalog.tsx` | Loads the term's courses and sections from the backend once |
-| `src/components/` | Shared course card, week calendar, app shell; `plan/` holds Tab 1's panels |
-| `src/app/(app)/` | The four tabs: `plan`, `degree`, `advisor`, `saved` |
+| `src/components/` | Shared course card, week calendar, app shell, prerequisite map (`prereq-map.tsx`), advisor status filter; `plan/` holds Tab 1's search bar, Recommended/Planned sidebar, chips, drawer and AI panel |
+| `src/app/page.tsx` | Start page: one "Sign in with Lehigh SSO" button (a mock: nothing is asked for or sent) |
+| `src/app/(app)/` | The features hub `home`, then the four tabs: `plan`, `degree`, `advisor`, `saved` |
 
 ## Design
 
-Visual direction follows Anthropic's `frontend-design` guidance (avoid templated "AI-looking" defaults).
-Concept: engineering graph paper. The weekly calendar is the one bold element; everything else stays quiet.
+David's prototype (`Syllo-frontend-calendar-chat.zip`) is the baseline: its start page, features hub, planner layout (search on top, calendar, right sidebar with Recommended and Planned classes, AI panel) and typefaces.
+Lehigh brown and white are the palette, with gold as the one accent. Colors are defined once as CSS variables in `src/app/globals.css` (`:root`) and used through Tailwind tokens (`bg-brand`, `text-ink-muted`, …); components don't hard-code hex values.
 
 | Token | Value | Use |
 |---|---|---|
-| Paper | `#F4F7F9` | Background (cool, deliberately not cream) |
-| Ink | `#17324D` | Text and primary buttons |
-| Grid | `#C9D6E0` / `#E3EAF0` | Calendar hour / quarter-hour lines |
-| Marker | `#F5C842` | Highlighter: the lab a lecture still needs, active tab |
-| Signal | `#C23B30` | Conflicts only |
-| Requirement tabs | `#2F6DB5` `#B26E14` `#2E8A63` `#8457A8` | Major core, gen ed, elective, free elective |
+| `--brand` | `#562B0C` | Lehigh brown: primary buttons, selection, major-core courses |
+| `--brand-mid` / `--brand-soft` | `#9C6B45` / `#F5EDE6` | Gen-ed courses / selected backgrounds |
+| `--white`, `--page` | `#FFFFFF`, `#F8F7F5` | Surfaces, page background |
+| `--ink`, `--ink-muted` | `#181818`, `#686868` | Text |
+| `--line`, `--line-faint` | `#DDD8D3`, `#EEE9E4` | Borders, calendar lines |
+| `--gold` / `--gold-soft` | `#F1C84B` / `#FFF3CB` | The one accent: the section a lecture still needs, "Review" tags, electives |
+| `--danger` / `--danger-soft` | `#B3261E` / `#FBEAE8` | Status color for conflicts and errors only |
 
-Type: Archivo (condensed via its width axis) for headings, codes and times; Public Sans for body text.
-Avoided on purpose: cream + terracotta, all-caps eyebrow labels, identical rounded cards, arrows on buttons.
+Type: Manrope for headings, codes and times; DM Sans for body text (David's choices).
+Every screen fits 1440×900 without page scroll; long content scrolls inside its own panel, sits in the course drawer, or moves behind a tab (the prerequisite map) or a drawer (advisor comments).
 
 ## Known limits
 
 - Professor preferences in the AI flow aren't supported: the engine has no instructor constraint yet.
-- Prerequisites, requirements and transcripts are frontend demo data until the backend models them.
+- Prerequisites, requirements and transcripts are frontend demo data until the backend models them. The prerequisite map is built from that data (`COURSES[].prereqs`); the repo's real prerequisite research is mostly `NOT_COLLECTED`, and CSE 340's prerequisites (CSE 109, CSE 140) are an assumption.
+- There's no CSB program in `data/degree-requirements/`, so the map follows the demo CS program, not the CSB flowchart's courses.
 - Data is per browser (`localStorage`); student and advisor share it only when both sign in on the same browser, which is how the demo shows notifications.
