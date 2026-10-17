@@ -36,8 +36,8 @@ schema allow-list is still `catalog_api` / `catalog_live`.
 | `section` | CRN, section code, `LECTURE`/`LAB`, credits (a lab is always 0), `lecture_crn` (a lab points at a lecture of the same offering), Banner schedule type |
 | `section_meeting` | one row per day: day (1 = Monday), start, end, location |
 | `section_arranged_meeting` | a mandatory meeting with no published time (CSE 367 / 467); a warning, never a timetable slot |
-| `eligibility_rule` | class-standing / level / college / major / department-approval restrictions (structured values, verbatim Banner text) and prerequisites (text plus a parsed `{"op":"AND"/"OR","args":[...]}` expression only when the text parses exactly) |
-| `requirement_status` | for each offering and each of prerequisite / corequisite / enrollment restriction: `UNKNOWN`, `BANNER_NO_INFORMATION` (Banner is silent, which is **not** proof that nothing applies), `USER_CONFIRMED_NONE`, `TEXT_ONLY`, `RULE_DEFINED`, with the evidence level and the verbatim Banner text |
+| `eligibility_rule` | class-standing / level / college / major / department-approval restrictions (structured values, verbatim Banner text) and prerequisites (text plus a parsed `{"op":"AND"/"OR","args":[...],"course":..,"concurrent":..}` expression, from the strict parser or from `prerequisite_expressions.json`, hand-structured entries whose course set must equal Banner's own prerequisite text) |
+| `requirement_status` | for each offering and each of prerequisite / corequisite / enrollment restriction: `UNKNOWN`, `NONE_LISTED` (Banner lists nothing, and the designated reviewer decided on 2026-10-17 to treat that as none; user-supplied, labelled `USER_CLARIFICATION`, **not** Registrar certification), `USER_CONFIRMED_NONE`, `TEXT_ONLY`, `RULE_DEFINED`, with the evidence level and the verbatim Banner text |
 | `credit_exclusion` | one row per statement an offering makes; sources that disagree stay as separate rows (`SOURCES_CONFLICT`) |
 | `course_alias` | catalog aliases (another department's number); not a cross-list, no CRN, always unverified |
 | `tier_policy_decision` | append-only `TEAM_POLICY` decisions (CSE 217-010). CHECK constraints make `registrar_certified` and `guarantees_registration` impossible; one writer function; a changed Banner schedule type makes a decision stale |
@@ -47,7 +47,7 @@ Evidence levels: `BANNER` (Banner text), `RESEARCH_WORKBOOK` (stated in the rese
 `USER_CLARIFICATION` (user-supplied: exactly one lab, lab credits 0, "no prerequisite", standalone), `TEAM_POLICY` (a person's decision
 for the demo). None of them is Registrar certification.
 
-Views: `evidence_mismatch` (must be empty), `offering_tier`, `offering_status`, `unresolved_requirement`, `active_tier_policy_decision`,
+Views: `evidence_mismatch` and `prerequisite_banner_check` (both must be empty), `offering_tier`, `offering_status`, `unresolved_requirement`, `active_tier_policy_decision`,
 and `candidate_course_offering` / `candidate_section_offering` / `candidate_section_meeting`.
 
 ### Tier (derived, never stored)
@@ -95,11 +95,11 @@ owner; `grant_reader.sql` gives a read-only role `SELECT` only (no `EXECUTE` on 
 
 ## Verification
 
-`run_research_validation.py`: install and reinstall (identical definitions); 6 scenarios, **95 probes** on synthetic courses (consistent
+`run_research_validation.py`: install and reinstall (identical definitions); 6 scenarios, **97 probes** on synthetic courses (consistent
 import, 18 probes on evidence disagreement and malformed payloads, 22 impossible rows refused, policy decisions, special topics, privileges and isolation),
 each rolled back; **17 mutation checks** (one rule weakened at a time, each caught); the three serving-layer view sets unchanged.
-`test_import_research_catalog.py`: 19 unit tests. `verify_local_database.py`: field-by-field comparison with the export plus the serving
-boundary, 31 checks as the owner and 28 as the read-only role (it skips the checks that role may not read). Actual results are in
+`test_import_research_catalog.py`: 24 unit tests. `verify_local_database.py`: field-by-field comparison with the export plus the serving
+boundary, 32 checks as the owner and 30 as the read-only role (it skips the checks that role may not read). Actual results are in
 [HANDOFF.md](../../HANDOFF.md).
 
 ## What this does not do
