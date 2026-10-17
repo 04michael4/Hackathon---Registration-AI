@@ -44,7 +44,7 @@ catalog_promoted.servable_*  ------------>  catalog_live.*  <--  catalog_api.*  
 | `grant_reader.sql` | Gives the backend's read-only role (`psql -v reader=<role>`) schema `USAGE`, `SELECT` on the `catalog_api` and `catalog_live` views and `EXECUTE` on five hash/boolean functions; no table privileges |
 | `install.sql` | Installs both and checks structure in one transaction (rerunnable) |
 | `verify_structure.sql` | Exact objects, append-only triggers, capabilities off, no writable view, only `record_approval` inserts approvals, nothing writes evidence or the verified catalog |
-| `run_promotion_validation.py` | 12 scenarios on synthetic courses (99 probes, each always rolled back) plus 20 mutation checks |
+| `run_promotion_validation.py` | 13 scenarios on synthetic courses (104 probes, each always rolled back) plus 20 mutation checks. Passes on a fresh database **and** after `load_synthetic_fixture.py` has committed its courses (it compares row counts before and after, and reuses the fixture's clarification row only if its content is exactly the expected one, otherwise it fails) |
 | `tools/reconcile_tracker.py` (+ `test_reconcile_tracker.py`) | **Read-only** report comparing the exported research workbook with the collected Banner evidence (CRNs, credits, restrictions, time conflicts, missing review evidence, a tier preview). Never writes, approves or promotes; see below |
 | `load_synthetic_fixture.py` | Loads synthetic CSE-092/091/090 into a **test** database for the Java end-to-end test. Refuses the shared database |
 
