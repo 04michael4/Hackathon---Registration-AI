@@ -7,10 +7,13 @@ BEGIN
 	IF (SELECT array_agg(c.relname || ':' || c.relkind::text ORDER BY c.relname) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 			WHERE n.nspname = 'catalog_research' AND c.relkind IN ('r', 'v'))
 		IS DISTINCT FROM ARRAY['active_tier_policy_decision:v', 'candidate_course_offering:v', 'candidate_section_meeting:v', 'candidate_section_offering:v',
-			'course_alias:r', 'credit_exclusion:r', 'eligibility_rule:r', 'evidence_mismatch:v', 'import_run:r', 'offering:r', 'offering_status:v',
-			'offering_tier:v', 'prerequisite_banner_check:v', 'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_meeting:r', 'tier_policy_decision:r',
+			'catalog_course:r', 'catalog_course_equivalence:r', 'catalog_course_exclusion:r', 'course_alias:r', 'course_term_status:v', 'credit_exclusion:r',
+			'eligibility_rule:r', 'evidence_mismatch:v', 'exam_meeting:v', 'grid_extra_meeting_observation:r', 'grid_mismatch:v', 'grid_observation:r',
+			'grid_search_result:r', 'grid_source:r', 'import_run:r', 'offering:r', 'offering_status:v', 'offering_tier:v', 'prerequisite_banner_check:v',
+			'program:r', 'program_course_link:v', 'program_requirement:r', 'program_structure_problem:v', 'requirement_course_option:r', 'requirement_group:r',
+			'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_meeting:r', 'tier_policy_decision:r', 'unresolved_item:r',
 			'unresolved_requirement:v'] THEN
-		RAISE EXCEPTION 'catalog_research must contain exactly 10 tables and 9 views';
+		RAISE EXCEPTION 'catalog_research must contain exactly 22 tables and 14 views';
 	END IF;
 	-- Policy decisions and import runs are append-only (update/delete and truncate are refused).
 	IF (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -75,5 +78,5 @@ BEGIN
 			WHERE a.attrelid = 'catalog_live.section_meeting'::regclass AND a.attnum > 0 AND NOT a.attisdropped) THEN
 		RAISE EXCEPTION 'a candidate view no longer has the column names and types of its catalog_live counterpart';
 	END IF;
-	RAISE NOTICE 'PASS: catalog_research (10 tables, 9 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
+	RAISE NOTICE 'PASS: catalog_research (22 tables, 14 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
 END $$;

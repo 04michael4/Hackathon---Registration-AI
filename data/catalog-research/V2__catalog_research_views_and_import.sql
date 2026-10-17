@@ -119,8 +119,8 @@ COMMENT ON VIEW catalog_research.prerequisite_banner_check IS 'Structured prereq
 -- ---------------------------------------------------------------------------------------------------------
 -- Research tier, derived (never stored, so it cannot drift):
 --   READY        served by catalog_api today (the verified snapshot);
---   BLOCKED      stored data disagrees with evidence, or the topic-identity scheme is undecided, or a section type other than
---                lecture/lab has no active policy decision;
+--   BLOCKED      stored data disagrees with evidence, or the data is grid-staged (section details never inspected), or the topic-identity
+--                scheme is undecided, or a section type other than lecture/lab has no active policy decision;
 --   CONDITIONAL  everything else: stored and consistent, shown with its unresolved conditions.
 -- It is a research classification. It is not a promotion and does not serve anything.
 -- ---------------------------------------------------------------------------------------------------------
@@ -129,6 +129,7 @@ SELECT o.term_code, o.offering_id,
 	CASE
 		WHEN EXISTS (SELECT 1 FROM catalog_research.evidence_mismatch m JOIN catalog_research.section s ON s.term_code = m.term_code AND s.crn = m.crn
 			WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id) THEN 'BLOCKED'
+		WHEN o.data_source = 'BANNER_GRID_STAGING' THEN 'BLOCKED'
 		WHEN o.identity_status <> 'SINGLE' THEN 'BLOCKED'
 		WHEN u.crns IS NOT NULL THEN 'BLOCKED'
 		WHEN o.data_source = 'SNAPSHOT' AND COALESCE(a.schedulable, false) THEN 'READY'
@@ -136,6 +137,7 @@ SELECT o.term_code, o.offering_id,
 	CASE
 		WHEN EXISTS (SELECT 1 FROM catalog_research.evidence_mismatch m JOIN catalog_research.section s ON s.term_code = m.term_code AND s.crn = m.crn
 			WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id) THEN 'EVIDENCE_MISMATCH'
+		WHEN o.data_source = 'BANNER_GRID_STAGING' THEN 'GRID_ONLY_DETAILS_NOT_INSPECTED'
 		WHEN o.identity_status <> 'SINGLE' THEN 'TOPIC_IDENTITY_UNDECIDED'
 		WHEN u.crns IS NOT NULL THEN 'SECTION_TYPE_UNSUPPORTED:' || u.crns
 		WHEN o.data_source = 'SNAPSHOT' AND COALESCE(a.schedulable, false) THEN 'SERVED_BY_VERIFIED_CATALOG'
@@ -157,7 +159,7 @@ COMMENT ON VIEW catalog_research.offering_tier IS 'Derived research tier (READY 
 CREATE OR REPLACE VIEW catalog_research.offering_status AS
 SELECT o.term_code, o.offering_id, o.course_id, o.title, o.credits, o.administrative_type, t.tier AS research_tier, t.tier_reason,
 	(SELECT count(*) FROM catalog_research.section s WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id)::int AS stored_sections,
-	CASE WHEN o.data_source = 'SNAPSHOT' THEN 'VERIFIED_CATALOG' ELSE COALESCE(r.state, 'NO_EVIDENCE_GRID') END AS promotion_state,
+	CASE o.data_source WHEN 'SNAPSHOT' THEN 'VERIFIED_CATALOG' WHEN 'BANNER_GRID_STAGING' THEN 'GRID_STAGING_ONLY' ELSE COALESCE(r.state, 'NO_EVIDENCE_GRID') END AS promotion_state,
 	COALESCE(r.blockers, '{}'::text[]) AS promotion_blockers,
 	live.course_id IS NOT NULL AS served_by_catalog_live,
 	CASE WHEN live.course_id IS NOT NULL THEN 'SERVED' ELSE 'STORED_NOT_SERVED' END AS serving_status,
@@ -179,8 +181,9 @@ FROM catalog_research.requirement_status rs
 WHERE rs.status NOT IN ('USER_CONFIRMED_NONE', 'NONE_LISTED');
 
 -- ---------------------------------------------------------------------------------------------------------
--- Catalog-shaped candidate views: the same columns and types the adapter reads from catalog_api / catalog_live, over EVERY stored
--- offering. schedulable is true only for what catalog_live serves today. The adapter's schema allow-list does not include
+-- Catalog-shaped candidate views: the same columns and types the adapter reads from catalog_api / catalog_live, over every
+-- research-sourced offering (Banner evidence or the verified snapshot). Grid-staged offerings are deliberately absent: their lab and
+-- recitation pairings are not collected, so they have nothing safe to hand to a scheduler. schedulable is true only for what catalog_live serves today. The adapter's schema allow-list does not include
 -- catalog_research, so nothing here is served; these views let the stored data be compared with, and later promoted into, the
 -- serving path without a second catalog architecture. A special topic's course_id is its offering_id (CSE-398-042).
 -- (DISTINCT keeps the views from being auto-updatable; the rows are already unique.)
@@ -188,18 +191,21 @@ WHERE rs.status NOT IN ('USER_CONFIRMED_NONE', 'NONE_LISTED');
 CREATE OR REPLACE VIEW catalog_research.candidate_course_offering AS
 SELECT DISTINCT o.term_code::varchar AS term_code, o.offering_id::varchar AS course_id, o.title, o.credits::int AS credits,
 	EXISTS (SELECT 1 FROM catalog_live.course_offering l WHERE l.term_code = o.term_code AND l.course_id = o.offering_id AND l.schedulable) AS schedulable
-FROM catalog_research.offering o;
+FROM catalog_research.offering o
+WHERE o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT');
 
 CREATE OR REPLACE VIEW catalog_research.candidate_section_offering AS
 SELECT DISTINCT s.term_code::varchar AS term_code, s.offering_id::varchar AS course_id, s.crn::varchar AS crn, s.section_code::varchar AS section_code,
 	s.credits::int AS credits, s.component_type, s.lecture_crn, 'UNKNOWN'::text AS status
-FROM catalog_research.section s;
+FROM catalog_research.section s JOIN catalog_research.offering o USING (term_code, offering_id)
+WHERE o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT');
 
 CREATE OR REPLACE VIEW catalog_research.candidate_section_meeting AS
 SELECT DISTINCT m.term_code::varchar AS term_code, m.crn::varchar AS crn, m.day_of_week, to_char(m.start_time, 'HH24:MI') AS start_time,
 	to_char(m.end_time, 'HH24:MI') AS end_time, m.location
-FROM catalog_research.section_meeting m;
-COMMENT ON VIEW catalog_research.candidate_course_offering IS 'Every stored offering in the shape of catalog_api.course_offering. schedulable = served by catalog_live today. Not read by the backend.';
+FROM catalog_research.section_meeting m JOIN catalog_research.section s USING (term_code, crn) JOIN catalog_research.offering o USING (term_code, offering_id)
+WHERE o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT') AND m.meeting_kind = 'WEEKLY';
+COMMENT ON VIEW catalog_research.candidate_course_offering IS 'Every research-sourced offering in the shape of catalog_api.course_offering. schedulable = served by catalog_live today. Not read by the backend.';
 
 -- ---------------------------------------------------------------------------------------------------------
 -- record_tier_policy_decision: the only writer of tier_policy_decision. Records a person's decision; never an approval.
@@ -247,6 +253,8 @@ DECLARE
 	v_offerings int;
 	v_sections int;
 	v_bad text;
+	v_off text[];
+	v_crns text[];
 BEGIN
 	IF v_term IS NULL OR v_term !~ '^[0-9]{6}$' THEN
 		RAISE EXCEPTION 'payload.termCode must be a six-digit Banner term code' USING ERRCODE = 'invalid_parameter_value';
@@ -255,15 +263,27 @@ BEGIN
 		RAISE EXCEPTION 'payload.offerings must be a non-empty array' USING ERRCODE = 'invalid_parameter_value';
 	END IF;
 
-	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term;
-	DELETE FROM catalog_research.section_meeting WHERE term_code = v_term;
-	DELETE FROM catalog_research.credit_exclusion WHERE term_code = v_term;
-	DELETE FROM catalog_research.course_alias WHERE term_code = v_term;
-	DELETE FROM catalog_research.eligibility_rule WHERE term_code = v_term;
-	DELETE FROM catalog_research.requirement_status WHERE term_code = v_term;
-	DELETE FROM catalog_research.section WHERE term_code = v_term AND component_type = 'LAB';
-	DELETE FROM catalog_research.section WHERE term_code = v_term;
-	DELETE FROM catalog_research.offering WHERE term_code = v_term;
+	-- Replace only the research-sourced offerings of this term (Banner evidence and the verified snapshot). Offerings imported by
+	-- import_noncse_term (BANNER_GRID_STAGING) and policy decisions are never touched.
+	SELECT COALESCE(array_agg(offering_id), '{}') INTO v_off FROM catalog_research.offering WHERE term_code = v_term AND data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT');
+	SELECT COALESCE(array_agg(crn), '{}') INTO v_crns FROM catalog_research.section WHERE term_code = v_term AND offering_id = ANY (v_off);
+	DELETE FROM catalog_research.section_arranged_meeting WHERE term_code = v_term AND crn = ANY (v_crns);
+	DELETE FROM catalog_research.section_meeting WHERE term_code = v_term AND crn = ANY (v_crns);
+	DELETE FROM catalog_research.credit_exclusion WHERE term_code = v_term AND offering_id = ANY (v_off);
+	DELETE FROM catalog_research.course_alias WHERE term_code = v_term AND offering_id = ANY (v_off);
+	DELETE FROM catalog_research.eligibility_rule WHERE term_code = v_term AND offering_id = ANY (v_off);
+	DELETE FROM catalog_research.requirement_status WHERE term_code = v_term AND offering_id = ANY (v_off);
+	DELETE FROM catalog_research.section WHERE term_code = v_term AND crn = ANY (v_crns) AND component_type <> 'LECTURE';
+	DELETE FROM catalog_research.section WHERE term_code = v_term AND crn = ANY (v_crns);
+	DELETE FROM catalog_research.offering WHERE term_code = v_term AND offering_id = ANY (v_off);
+
+	IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_payload -> 'offerings') o(j) WHERE o.j ->> 'dataSource' NOT IN ('BANNER_EVIDENCE', 'SNAPSHOT')) THEN
+		RAISE EXCEPTION 'import_term takes only BANNER_EVIDENCE and SNAPSHOT offerings; grid-staged data uses import_noncse_term' USING ERRCODE = 'invalid_parameter_value';
+	END IF;
+	IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_payload -> 'offerings') o(j), jsonb_array_elements(o.j -> 'sections') s
+			WHERE s ->> 'component' <> 'LECTURE' AND (s ->> 'lectureCrn') IS NULL) THEN
+		RAISE EXCEPTION 'a research-sourced lab must link to its lecture (the link is never left uncollected here)' USING ERRCODE = 'integrity_constraint_violation';
+	END IF;
 
 	SELECT count(*) INTO v_offerings FROM jsonb_array_elements(p_payload -> 'offerings');
 	SELECT count(*) INTO v_sections FROM jsonb_array_elements(p_payload -> 'offerings') o(j), jsonb_array_elements(o.j -> 'sections');
@@ -277,8 +297,9 @@ BEGIN
 		j ->> 'crossListingStatus', j ->> 'identityStatus', v_run
 	FROM jsonb_array_elements(p_payload -> 'offerings') o(j);
 
-	INSERT INTO catalog_research.section (term_code, crn, offering_id, section_code, component_type, credits, lecture_crn, schedule_type)
-	SELECT v_term, s ->> 'crn', o.j ->> 'offeringId', s ->> 'sectionCode', s ->> 'component', (s ->> 'credits')::smallint, s ->> 'lectureCrn', s ->> 'scheduleType'
+	INSERT INTO catalog_research.section (term_code, crn, offering_id, section_code, component_type, credits, lecture_crn, link_status, schedule_type)
+	SELECT v_term, s ->> 'crn', o.j ->> 'offeringId', s ->> 'sectionCode', s ->> 'component', (s ->> 'credits')::smallint, s ->> 'lectureCrn',
+		CASE WHEN s ->> 'component' = 'LECTURE' THEN 'NOT_APPLICABLE' ELSE 'CONFIRMED' END, s ->> 'scheduleType'
 	FROM jsonb_array_elements(p_payload -> 'offerings') o(j), jsonb_array_elements(o.j -> 'sections') s;
 
 	INSERT INTO catalog_research.section_meeting (term_code, crn, day_of_week, start_time, end_time, location)
@@ -346,7 +367,7 @@ BEGIN
 			AND e.note_kind = k.note_kind) be ON true
 	LEFT JOIN LATERAL (SELECT cr.assessment_status FROM cse007_snapshot.course_requirement cr JOIN cse007_snapshot.course c ON c.course_id = cr.course_id
 		WHERE c.code = o.course_id AND cr.requirement_type = k.requirement_type) sn ON true
-	WHERE o.term_code = v_term;
+	WHERE o.term_code = v_term AND o.offering_id IN (SELECT j ->> 'offeringId' FROM jsonb_array_elements(p_payload -> 'offerings') j);
 
 	-- The result must agree with the evidence, or nothing is stored.
 	SELECT string_agg(DISTINCT m.problem || ':' || m.crn, ', ') INTO v_bad FROM catalog_research.evidence_mismatch m WHERE m.term_code = v_term;
