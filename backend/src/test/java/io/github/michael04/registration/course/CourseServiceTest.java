@@ -30,7 +30,8 @@ class CourseServiceTest {
 	@Test
 	void missingCatalogsAreA503() {
 		var empty = new DefaultListableBeanFactory();
-		var service = new CourseService(empty.getBeanProvider(CourseCatalog.class), empty.getBeanProvider(SectionCatalog.class));
+		var service = new CourseService(empty.getBeanProvider(CourseCatalog.class), empty.getBeanProvider(SectionCatalog.class),
+				empty.getBeanProvider(CourseMetadataCatalog.class));
 		assertThatThrownBy(() -> service.search("2027-SPRING", null, null, 0, 20))
 			.isInstanceOf(ResponseStatusException.class)
 			.hasMessageContaining("503");

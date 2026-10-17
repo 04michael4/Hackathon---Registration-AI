@@ -159,9 +159,9 @@ class EngineMapperTest {
 	}
 
 	@Test
-	void preparationCannotPassMoreThanEightOptionalCoursesEvenOutsideTheController() {
+	void preparationCannotPassMoreThanTenOptionalCoursesEvenOutsideTheController() {
 		Map<String, CourseSummary> oversized = new LinkedHashMap<>(courses);
-		for (int i = 0; i < 9; i++) {
+		for (int i = 0; i < 11; i++) {
 			String id = "OPT-" + i;
 			oversized.put(id, new CourseSummary(id, "Optional", 3));
 		}

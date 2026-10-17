@@ -13,7 +13,7 @@ catalog, and no Banner records are published in this repository.
 | `cse007_snapshot` | `data/cse007-snapshot/` | The verified CSE 007 schema and seed (3 sections, 5 meetings, one confirmed lecture/lab rule). Loaded unchanged and never modified in place |
 | `catalog_api` | `data/catalog-api/` | Five read-only views over the snapshot with six fail-closed readiness rules. The only thing the backend reads |
 | `banner_evidence` | `data/banner-evidence/` | An append-only evidence layer (what Banner or a user report showed, claims, human reviews) plus a read-only Banner collector. Not read by the backend; promotes nothing |
-| JDBC adapter | `backend/.../course/persistence/` | `JdbcCourseCatalog` and `JdbcSectionCatalog`, active only with `CATALOG_SOURCE=database` |
+| JDBC adapter | `backend/.../course/persistence/` | `JdbcCourseCatalog` and `JdbcSectionCatalog`, selected by `CATALOG_SOURCE` (`database` is the default on `pre-main`) |
 
 ## 1. Create the database (one command)
 
@@ -46,8 +46,9 @@ cd backend && ./mvnw spring-boot:run
 
 Startup fails with a clear message if `DB_URL`, `DB_USERNAME` or the term map is missing. The pool connects lazily, is
 read-only, and a database outage returns a safe `503`. `app.catalog.terms[2027-SPRING]=202710` maps the API term to the
-Banner term code (an explicit property, never a formula). **Without `CATALOG_SOURCE=database` the backend uses the
-made-up dummy catalog and needs no PostgreSQL**; the default build and tests never need a database.
+Banner term code (an explicit property, never a formula). **`CATALOG_SOURCE=database` is the default on `pre-main`
+and there is no fallback catalog**: the made-up dummy catalogs now live in `src/test` and are used only by the Maven test profile, so the default
+build and tests still never need a database.
 
 Try it (expect two schedules, each lecture 12275 plus exactly one of labs 13132 or 12638):
 

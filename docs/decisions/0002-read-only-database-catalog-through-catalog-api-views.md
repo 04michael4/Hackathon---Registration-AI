@@ -6,7 +6,7 @@
 ## Decision
 
 The backend reads course data only from five PostgreSQL views in the `catalog_api` schema, through `JdbcClient` and a
-HikariCP pool created by hand, and only when `CATALOG_SOURCE=database`. The views expose a course only if **every** one of
+HikariCP pool created by hand (`CATALOG_SOURCE=database`; since the follow-up merge with `pre-main` it is the default, and the dummy catalogs are test-only). The views expose a course only if **every** one of
 its sections passes six fail-closed readiness rules (known whole credits, each lab linked to exactly one lecture, a
 confirmed "exactly one lab" rule, and so on). Anything unknown keeps the whole course out of the scheduler.
 

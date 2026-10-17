@@ -14,7 +14,9 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import io.github.michael04.registration.course.CourseCatalog;
+import io.github.michael04.registration.course.CourseMetadataCatalog;
 import io.github.michael04.registration.course.SectionCatalog;
+import io.github.michael04.registration.course.SectionLookupCatalog;
 
 /**
  * Registers the PostgreSQL-backed catalogs, and the connection pool they need, only when
@@ -90,6 +92,21 @@ public class CatalogDatabaseConfiguration {
 	@Bean
 	SectionCatalog jdbcSectionCatalog(CatalogDao dao, TermMapping mapping) {
 		return new JdbcSectionCatalog(dao, mapping);
+	}
+
+	@Bean
+	CourseMetadataCatalog jdbcCourseMetadataCatalog(DataSource catalogDataSource, TermMapping mapping) {
+		return new JdbcCourseMetadataCatalog(JdbcClient.create(catalogDataSource), mapping);
+	}
+
+	@Bean
+	SectionLookupCatalog sectionLookupCatalog(CourseCatalog courses, SectionCatalog sections) {
+		return (term, crns) -> {
+			if (crns.isEmpty()) return java.util.List.of();
+			var ids = courses.listCourses(term).stream().map(course -> course.courseId()).toList();
+			var selected = new java.util.HashSet<>(crns);
+			return sections.sectionsFor(term, ids).stream().filter(section -> selected.contains(section.crn())).toList();
+		};
 	}
 
 }
