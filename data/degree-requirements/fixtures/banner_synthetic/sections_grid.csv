@@ -1,0 +1,12 @@
+term,course,section,crn,title,hours_grid,days,start,end,type,building,room,start_date,end_date,instructor,linked_flag,collected,origin,status
+202710,MATH 021,110,99001,Synthetic Calculus I,4,TR,09:20,10:35,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,MATH 021,111,99002,Synthetic Calculus I,0,M,12:10,13:00,Recitation,None,None,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,MATH 022,110,99010,Synthetic Calculus II,4,TR,10:45,12:00,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,CHM 030,010,99020,Synthetic Chemical Principles,4,MWF,09:20,10:10,Class,Synthetic Hall,001,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,CHM 030,114,99021,Synthetic Chemical Principles,0,M,13:35,16:15,Lab,Synthetic Lab,180,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,CHM 030,117,99022,Synthetic Chemical Principles,0,M,16:25,19:05,Lab,Synthetic Lab,180,2027-01-25,2027-05-07,NOT_STORED,LINKED,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,PHY 012,061,99030,Synthetic Physics Laboratory,1,M,13:35,16:15,Lab,Synthetic Lab,220,2027-01-25,2027-05-07,NOT_STORED,NONE_SHOWN,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,MATH 312,010,99040,Synthetic Statistical Computing,4,MW,13:35,14:50,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,NONE_SHOWN,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,MATH 312,011,99041,Synthetic Statistical Computing,3,MW,13:35,14:50,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,NONE_SHOWN,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,ECO 325,010,99050,Synthetic Consumer Insights,3,TR,12:10,13:25,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,NONE_SHOWN,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
+202710,MKT 325,010,99051,Synthetic Consumer Insights,3,TR,12:10,13:25,Class,None,None,2027-01-25,2027-05-07,NOT_STORED,NONE_SHOWN,synthetic,synthetic_test_fixture,SYNTHETIC_FIXTURE
