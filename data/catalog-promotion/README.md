@@ -139,6 +139,6 @@ RUN_LIVE_IT=true DB_URL=... DB_USERNAME=registration_reader PGPASSFILE=... ./mvn
 - **"Latest capture"** is by `recorded_at`; evidence identical to an earlier capture is deduplicated by the collector, so a change that later reverts
   to older content is not seen as newer. The approval fingerprint covers *every* distinct capture, so any new distinct capture still invalidates approvals.
 - The fingerprint is per course, not per fact: any new capture of any of a course's pages asks for re-review of all its approvals.
-- Only lectures and labs are supported. Recitations, independent study, online/TBA meetings and variable or fractional credits are blockers.
+- Only lectures and labs are supported. Recitations, independent study, online/TBA meetings and variable or fractional credits are blockers. A reviewer's recorded policy decision for a specific CRN (for example CSE 217's Independent Study section) is proposed in [ADR-0004](../../docs/decisions/0004-proposed-class-standing-eligibility.md) point 8; it is not implemented, so such a section stays blocked.
 - The scheduler cannot enforce prerequisites, restrictions or credit exclusions (see above).
 - Supporting evidence is a person's recorded statement in `banner_evidence` (inserting it is a write to the append-only evidence by a person).
