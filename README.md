@@ -149,7 +149,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `200000`; positive 32-bit integer |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
-| `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. Synthetic catalogs are test-only and absent from the application JAR. |
+| `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. `demo` (opt-in only) serves a made-up catalog of ~18 courses with sections so the frontend can be demonstrated without PostgreSQL; it is never selected automatically. |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
@@ -194,7 +194,9 @@ export DB_USERNAME='registration'  # use the provisioned read-only catalog role
 `CATALOG_SOURCE` defaults to `database`. API term `2027-SPRING` maps explicitly to Banner `202710`
 through `app.catalog.terms`; raw Banner codes are not API term identifiers. Terms and Course display metadata use the same read-only pool and the existing `cse007_snapshot.term`, `source_asset`, `course` and `section` tables; the catalog reader needs SELECT permission on those tables as well as the catalog_api views. No schema migration is introduced. The existing Hikari pool is
 read-only, bounded and lazy. Missing URL/username fails startup clearly; a configured but unreachable database
-starts the app and returns 503 on catalog use. There is no dummy catalog in the production artifact.
+starts the app and returns 503 on catalog use. The only non-database catalog in the artifact is the opt-in `CATALOG_SOURCE=demo` (made-up data, see `course.demo.DemoCatalog`); nothing falls back to it.
+
+To run the frontend demo without PostgreSQL: `CATALOG_SOURCE=demo AI_PROVIDER=dummy ./mvnw spring-boot:run`.
 
 The Maven test profile retains synthetic fixtures in `src/test`; ordinary `./mvnw test` needs no database.
 For real HTTP/JDBC/native-solver tests, use an isolated loopback PostgreSQL test server:
