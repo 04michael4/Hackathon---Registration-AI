@@ -6,8 +6,9 @@ import { AlertTriangle, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { AiAssistant } from "@/components/plan/ai-assistant";
+import { ClassSidebar } from "@/components/plan/class-sidebar";
 import { CourseDrawer } from "@/components/plan/course-drawer";
-import { CoursePanel } from "@/components/plan/course-panel";
+import { SearchBar } from "@/components/plan/search-bar";
 import { type CalendarBlock, WeekCalendar } from "@/components/week-calendar";
 import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -213,7 +214,7 @@ export default function PlanPage() {
   const conflictIssues = issues.filter((i) => i.type === "TIME_CONFLICT");
   const prompts = issues.filter((i) => ["MISSING_LINKED_SECTION", "LINKED_WITHOUT_LECTURE"].includes(i.type));
   const otherConflicts = issues.filter((i) => i.severity === "CONFLICT" && i.type !== "TIME_CONFLICT");
-  const creditTone = credits > max ? "text-signal" : credits >= min ? "text-req-elective" : "text-ink";
+  const creditTone = credits > max ? "text-signal" : credits >= min ? "text-brand" : "text-ink";
 
   if (catalog.state.status === "error") {
     return (
@@ -221,7 +222,7 @@ export default function PlanPage() {
         <h1 className="text-2xl font-bold">The course catalog isn&apos;t available</h1>
         <p className="mt-2 text-sm">{catalog.state.message}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          To run the demo, start the backend with <code className="rounded-sm bg-muted px-1">CATALOG_SOURCE=demo ./mvnw spring-boot:run</code>.
+          To run the demo, start the backend with <code className="rounded-sm bg-muted px-1">CATALOG_SOURCE=sample ./mvnw spring-boot:run</code>.
         </p>
         <Button className="mt-4" onClick={catalog.reload}>Try again</Button>
       </div>
@@ -229,44 +230,40 @@ export default function PlanPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
-        <div>
-          <p className="tabular text-sm text-muted-foreground">{countdown(now)}</p>
-          <h1 className="text-3xl font-bold [font-stretch:85%]">{termLabel(NEXT)}</h1>
-        </div>
-        <p className="tabular text-lg" aria-live="polite">
-          <span className={`font-heading text-2xl font-bold ${creditTone}`}>{credits}</span>
-          <span className="text-muted-foreground"> / {min}–{max} credits</span>
+    <div className="flex h-full min-h-0 flex-col gap-2.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-1">
+        <h1 className="font-heading text-2xl font-bold">{termLabel(NEXT)}</h1>
+        <p className="tabular text-sm text-ink-muted">{countdown(now)}</p>
+        <p className="tabular text-sm" aria-live="polite">
+          <span className={`font-heading text-xl font-bold ${creditTone}`}>{credits}</span>
+          <span className="text-ink-muted"> / {min}–{max} credits</span>
         </p>
         <div className="ml-auto flex items-center gap-2">
-          {checking && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Checking schedule" />}
+          {checking && <Loader2 className="size-4 animate-spin text-ink-muted" aria-label="Checking schedule" />}
           <Button variant="outline" onClick={() => setSaveOpen(true)} disabled={placed.length === 0}>Save version</Button>
-          {!aiOpen && (
-            <Button onClick={() => setAiOpen(true)}>
-              <Sparkles aria-hidden /> Build with AI
-            </Button>
-          )}
+          <Button variant={aiOpen ? "outline" : "default"} onClick={() => setAiOpen((open) => !open)} aria-pressed={aiOpen}>
+            <Sparkles aria-hidden /> {aiOpen ? "Hide Syllo AI" : "Build with AI"}
+          </Button>
         </div>
       </div>
 
-      <div className={`grid gap-4 ${aiOpen ? "lg:grid-cols-[19rem_1fr_22rem]" : "lg:grid-cols-[19rem_1fr]"}`}>
-        <div className="h-[calc(100vh-12rem)] min-h-[32rem] overflow-hidden rounded-sm border border-grid bg-white">
-          {catalog.state.status === "loading" ? (
-            <p className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Loading courses…</p>
-          ) : (
-            <CoursePanel placedCourses={placedCourses} onAdd={startAdding} onOpen={setDrawer} />
-          )}
-        </div>
+      <div className="shrink-0">
+        {catalog.state.status === "loading" ? (
+          <p className="flex h-9 items-center gap-2 text-sm text-ink-muted"><Loader2 className="size-4 animate-spin" aria-hidden /> Loading courses…</p>
+        ) : (
+          <SearchBar placedCourses={placedCourses} onAdd={startAdding} onOpen={setDrawer} />
+        )}
+      </div>
 
-        <div className="min-w-0 space-y-3">
+      {(conflictIssues.length > 0 || otherConflicts.length > 0 || prompts.length > 0 || pending) && (
+        <div className="max-h-28 shrink-0 space-y-1.5 overflow-y-auto">
           {conflictIssues.map((issue) => {
             const [a, b] = issue.crns.map((crn) => sectionByCrn.get(crn)?.course.courseId ?? crn);
             const alt = alternativeFor(b) ?? alternativeFor(a);
             const altCourse = alt?.courseId;
             const altSection = alt ? sectionByCrn.get(alt.crn)?.section : undefined;
             return (
-              <div key={issue.crns.join()} role="alert" className="flex flex-wrap items-center gap-2 rounded-sm border-2 border-signal bg-[#FBE4E1] px-3 py-2 text-sm">
+              <div key={issue.crns.join()} role="alert" className="flex flex-wrap items-center gap-2 rounded-md border border-signal bg-signal-soft px-3 py-1.5 text-sm">
                 <AlertTriangle className="size-4 text-signal" aria-hidden />
                 <span className="mr-auto">
                   {courseCode(a)} and {courseCode(b)} meet at the same time. Which one do you want to keep?
@@ -282,60 +279,70 @@ export default function PlanPage() {
             );
           })}
           {otherConflicts.map((issue) => (
-            <p key={issue.message} role="alert" className="rounded-sm border-2 border-signal bg-[#FBE4E1] px-3 py-2 text-sm">{issue.message}</p>
+            <p key={issue.message} role="alert" className="rounded-md border border-signal bg-signal-soft px-3 py-1.5 text-sm">{issue.message}</p>
           ))}
           {prompts.map((issue) => (
-            <p key={issue.message} className="rounded-sm bg-accent px-3 py-2 text-sm">
+            <p key={issue.message} className="rounded-md bg-accent px-3 py-1.5 text-sm">
               {promptText(issue.type, issue.message, issue.crns[0])}
             </p>
           ))}
           {pending && (
-            <div className="flex items-center gap-2 rounded-sm border border-dashed border-ink bg-white px-3 py-2 text-sm">
+            <div className="flex items-center gap-2 rounded-md border border-dashed border-brand bg-white px-3 py-1 text-sm">
               <span className="mr-auto">
                 Choose a section of <b>{courseCode(pending)}</b> on the calendar. Grey ones don&apos;t fit; hover to see why.
               </span>
               <Button size="sm" variant="ghost" onClick={() => setPending(null)}>Cancel</Button>
             </div>
           )}
+        </div>
+      )}
 
-          <WeekCalendar
-            blocks={blocks}
-            onDropCourse={startAdding}
-            onBlockClick={(block) => {
-              if (block.variant.startsWith("ghost")) place(block.crn);
-              else setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null);
-            }}
-            wrapBlock={(block, node) =>
-              block.variant.startsWith("ghost") ? (
-                node
-              ) : (
-                <ContextMenu>
-                  <ContextMenuTrigger asChild>{node}</ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onSelect={() => setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null)}>Details</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null)}>Professor rating</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => swap(block.crn)}>Swap section</ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem variant="destructive" onSelect={() => remove(block.crn)}>Remove</ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              )
-            }
-            emptyState={
-              <>
-                <p className="font-bold">Your week is empty.</p>
-                <p className="mt-1 text-muted-foreground">Drag a course here, press Add on a recommended course, or use Build with AI.</p>
-              </>
-            }
-          />
-          <p className="text-xs text-muted-foreground">Click a course for details. Right-click it to swap the section or remove it.</p>
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_21rem]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-1">
+          <div className="min-h-0 flex-1">
+            <WeekCalendar
+              blocks={blocks}
+              onDropCourse={startAdding}
+              onBlockClick={(block) => {
+                if (block.variant.startsWith("ghost")) place(block.crn);
+                else setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null);
+              }}
+              wrapBlock={(block, node) =>
+                block.variant.startsWith("ghost") ? (
+                  node
+                ) : (
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>{node}</ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onSelect={() => setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null)}>Details</ContextMenuItem>
+                      <ContextMenuItem onSelect={() => setDrawer(sectionByCrn.get(block.crn)?.course.courseId ?? null)}>Professor rating</ContextMenuItem>
+                      <ContextMenuItem onSelect={() => swap(block.crn)}>Swap section</ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem variant="destructive" onSelect={() => remove(block.crn)}>Remove</ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                )
+              }
+              emptyState={
+                <>
+                  <p className="font-bold">Your week is empty.</p>
+                  <p className="mt-1 text-ink-muted">Drag a recommended class here, press + on one, or use Build with AI.</p>
+                </>
+              }
+            />
+          </div>
+          <p className="shrink-0 text-xs text-ink-muted">Click a course for details. Right-click it to swap the section or remove it. Ctrl/Cmd+Z undoes.</p>
         </div>
 
-        {aiOpen && (
-          <div className="h-[calc(100vh-12rem)] min-h-[32rem] overflow-hidden rounded-sm border border-grid">
-            <AiAssistant placed={placed} onAccept={acceptAi} onClose={() => setAiOpen(false)} />
-          </div>
-        )}
+        <div className="min-h-0">
+          {aiOpen ? (
+            <div className="h-full overflow-hidden rounded-lg border border-grid">
+              <AiAssistant placed={placed} onAccept={acceptAi} onClose={() => setAiOpen(false)} />
+            </div>
+          ) : (
+            <ClassSidebar placed={placed} placedCourses={placedCourses} index={sectionByCrn} onAdd={startAdding} onOpen={setDrawer} onRemove={remove} />
+          )}
+        </div>
       </div>
 
       <CourseDrawer courseId={drawer} onClose={() => setDrawer(null)} onShowSections={startAdding} />

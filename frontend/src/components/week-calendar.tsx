@@ -24,7 +24,6 @@ export interface CalendarBlock {
 
 interface WeekCalendarProps {
   blocks: CalendarBlock[];
-  hourHeight?: number;
   onBlockClick?: (block: CalendarBlock) => void;
   wrapBlock?: (block: CalendarBlock, node: ReactNode) => ReactNode;
   onDropCourse?: (courseId: string) => void;
@@ -69,16 +68,19 @@ function layoutDay(day: Day, blocks: CalendarBlock[]): Placed[] {
 
 const VARIANT_CLASS: Record<BlockVariant, string> = {
   placed: "border-l-[3px] text-ink shadow-[0_1px_0_var(--grid)]",
-  conflict: "border-2 border-signal bg-[#FBE4E1] text-ink",
+  conflict: "border-2 border-signal bg-signal-soft text-ink",
   ghost: "border border-dashed bg-white/80 text-ink hover:bg-white",
   "ghost-highlight": "border-2 border-dashed border-ink bg-marker/70 text-ink hover:bg-marker",
   "ghost-blocked": "border border-dashed border-grid bg-paper/80 text-muted-foreground cursor-not-allowed",
 };
 
-export function WeekCalendar({ blocks, hourHeight = 44, onBlockClick, wrapBlock, onDropCourse, emptyState }: WeekCalendarProps) {
+/** Fills its parent's height: 8am–10pm always fits, positions are percentages of the day. */
+export function WeekCalendar({ blocks, onBlockClick, wrapBlock, onDropCourse, emptyState }: WeekCalendarProps) {
   const [dropping, setDropping] = useState(false);
-  const hours = Array.from({ length: (DAY_END - DAY_START) / 60 }, (_, i) => DAY_START / 60 + i);
-  const height = ((DAY_END - DAY_START) / 60) * hourHeight;
+  const span = DAY_END - DAY_START;
+  const hourCount = span / 60;
+  const hours = Array.from({ length: hourCount }, (_, i) => DAY_START / 60 + i);
+  const pct = (minute: number) => `${((minute - DAY_START) / span) * 100}%`;
 
   const onDragOver = (event: DragEvent) => {
     if (!onDropCourse) return;
@@ -94,36 +96,35 @@ export function WeekCalendar({ blocks, hourHeight = 44, onBlockClick, wrapBlock,
 
   return (
     <div
-      className={cn("relative rounded-sm border border-grid bg-white", dropping && "outline-2 outline-dashed outline-ink")}
+      className={cn("relative flex h-full min-h-0 flex-col rounded-lg border border-grid bg-white", dropping && "outline-2 outline-dashed outline-brand")}
       onDragOver={onDragOver}
       onDragLeave={() => setDropping(false)}
       onDrop={onDrop}
     >
-      <div className="sticky top-0 z-20 grid grid-cols-[3.25rem_repeat(5,1fr)] border-b border-grid bg-white">
+      <div className="z-20 grid shrink-0 grid-cols-[3.25rem_repeat(5,1fr)] border-b border-grid bg-white">
         <span />
         {WEEKDAYS.map((d) => (
-          <span key={d} className="border-l border-grid py-1.5 text-center font-heading text-sm font-semibold [font-stretch:85%]">
+          <span key={d} className="border-l border-grid py-1.5 text-center font-heading text-sm font-semibold">
             {DAY_SHORT[d]}
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-[3.25rem_repeat(5,1fr)]" style={{ height }}>
+      <div className="grid min-h-0 flex-1 grid-cols-[3.25rem_repeat(5,1fr)]">
         <div className="relative">
           {hours.map((h) => (
             <span
               key={h}
               className="tabular absolute right-1.5 -translate-y-1/2 text-[0.7rem] text-muted-foreground"
-              style={{ top: (h - DAY_START / 60) * hourHeight }}
+              style={{ top: pct(h * 60) }}
             >
               {h > DAY_START / 60 ? clock(`${h}:00`) : ""}
             </span>
           ))}
         </div>
         {WEEKDAYS.map((day) => (
-          <div key={day} className="graph-paper relative border-l border-grid" style={{ ["--hour" as string]: `${hourHeight}px` }}>
+          <div key={day} className="graph-paper relative border-l border-grid" style={{ ["--hours" as string]: hourCount }}>
             {layoutDay(day, blocks).map(({ block, lane, lanes }) => {
-              const top = ((minutes(block.start) - DAY_START) / 60) * hourHeight;
-              const blockHeight = Math.max(18, ((minutes(block.end) - minutes(block.start)) / 60) * hourHeight - 2);
+              const duration = minutes(block.end) - minutes(block.start);
               const ghost = block.variant.startsWith("ghost");
               const node = (
                 <button
@@ -139,16 +140,16 @@ export function WeekCalendar({ blocks, hourHeight = 44, onBlockClick, wrapBlock,
                     ghost ? "z-10" : "z-0",
                   )}
                   style={{
-                    top,
-                    height: blockHeight,
+                    top: pct(minutes(block.start)),
+                    height: `calc(${(duration / span) * 100}% - 2px)`,
                     left: `calc(${(lane / lanes) * 100}% + 2px)`,
                     width: `calc(${100 / lanes}% - 4px)`,
                     borderColor: block.variant === "placed" || block.variant === "ghost" ? block.color : undefined,
                     background: block.variant === "placed" ? `color-mix(in srgb, ${block.color} 13%, white)` : undefined,
                   }}
                 >
-                  <span className="block font-heading text-[0.8rem] font-semibold [font-stretch:85%]">{block.label}</span>
-                  {blockHeight > 40 && <span className="block truncate text-[0.7rem]">{block.sub}</span>}
+                  <span className="block font-heading text-[0.8rem] font-semibold">{block.label}</span>
+                  {duration >= 75 && <span className="block truncate text-[0.7rem]">{block.sub}</span>}
                 </button>
               );
               return wrapBlock ? <div key={`${block.id}-${day}-w`}>{wrapBlock(block, node)}</div> : node;

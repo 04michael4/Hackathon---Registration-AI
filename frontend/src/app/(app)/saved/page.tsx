@@ -61,14 +61,14 @@ export default function SavedPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="h-full space-y-4 overflow-y-auto">
       <div>
-        <h1 className="text-3xl font-bold [font-stretch:85%]">Saved schedules</h1>
+        <h1 className="text-3xl font-bold">Saved schedules</h1>
         <p className="text-sm text-muted-foreground">Versions you saved from Plan next semester. Mark one as final to keep it handy on registration day.</p>
       </div>
 
       {ordered.length === 0 ? (
-        <div className="max-w-md rounded-sm border border-grid bg-white p-6">
+        <div className="max-w-md rounded-lg border border-grid bg-white p-6">
           <p className="font-bold">No saved schedules yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">Build a week in Plan next semester, then press Save version.</p>
           <Button asChild className="mt-4"><Link href="/plan">Plan next semester</Link></Button>
@@ -85,7 +85,7 @@ export default function SavedPage() {
               }));
             });
             return (
-              <li key={s.id} className={cn("rounded-sm border bg-white p-4", isFinal ? "border-ink" : "border-grid")}>
+              <li key={s.id} className={cn("rounded-lg border bg-white p-4", isFinal ? "border-brand" : "border-grid")}>
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <h2 className="flex items-center gap-1.5 truncate text-lg font-bold">
