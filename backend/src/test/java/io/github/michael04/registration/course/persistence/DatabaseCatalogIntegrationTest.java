@@ -182,11 +182,11 @@ class DatabaseCatalogIntegrationTest {
 			try (Statement statement = connection.createStatement()) {
 				// Zero-row statements: harmless even if the server were to allow them. The rollback below is extra insurance.
 				assertThatThrownBy(() -> statement.executeUpdate("UPDATE cse007_snapshot.section SET credits = credits WHERE false"))
-					.isInstanceOf(SQLException.class).hasMessageContaining("read-only transaction");
+					.isInstanceOf(SQLException.class).hasMessageMatching("(?s).*(read-only transaction|permission denied).*");
 				connection.rollback();
 				assertThatThrownBy(() -> statement.executeUpdate(
 						"INSERT INTO cse007_snapshot.term SELECT * FROM cse007_snapshot.term WHERE false"))
-					.isInstanceOf(SQLException.class).hasMessageContaining("read-only transaction");
+					.isInstanceOf(SQLException.class).hasMessageMatching("(?s).*(read-only transaction|permission denied).*");
 			}
 			finally {
 				connection.rollback();

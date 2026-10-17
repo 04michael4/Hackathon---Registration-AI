@@ -48,4 +48,22 @@ class JdbcCatalogDaoSqlTest {
 		assertThat(JdbcCatalogDao.SECTIONS + JdbcCatalogDao.MEETINGS).doesNotContain("course_offering", "section_link_resolved");
 	}
 
+	@Test
+	void theLiveSchemaRewritesEveryQueryAndNeverLeavesTheOldSchemaBehind() {
+		for (String sql : ALL) {
+			String live = JdbcCatalogDao.inSchema(sql, "catalog_live");
+			assertThat(live).contains("catalog_live.").doesNotContain("catalog_api.");
+		}
+	}
+
+	@Test
+	void onlyTheTwoKnownSchemasAreAccepted() {
+		assertThat(JdbcCatalogDao.ALLOWED_SCHEMAS).containsExactly("catalog_api", "catalog_live");
+		for (String bad : new String[] { "public", "cse007_snapshot", "banner_evidence", "catalog_promoted", "catalog_api; DROP TABLE x", "",
+				"CATALOG_API" }) {
+			org.assertj.core.api.Assertions.assertThatThrownBy(() -> new JdbcCatalogDao(null, bad))
+				.isInstanceOf(IllegalArgumentException.class);
+		}
+	}
+
 }

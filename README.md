@@ -149,6 +149,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `CORS_ALLOWED_ORIGINS` | Backend | No | `http://localhost:3000` |
 | `SCHEDULING_NODE_CAP` | Schedule API | No | `200000`; positive 32-bit integer |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Backend, only when `CATALOG_SOURCE=database` | Only in database mode (`DB_URL` and `DB_USERNAME`) | — (an unset `DB_PASSWORD` falls back to `PGPASSFILE`) |
+| `DB_CATALOG_SCHEMA` | Backend, only when `CATALOG_SOURCE=database` | No | `catalog_api` (the verified snapshot). `catalog_live` also serves approved, still-valid promoted courses (see [data/catalog-promotion](data/catalog-promotion/README.md)); no other value is accepted |
 | `CATALOG_SOURCE` | Backend | Defaults to `database` | Authoritative PostgreSQL provider; `DB_URL` and `DB_USERNAME` required. Synthetic catalogs are test-only and absent from the application JAR. |
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
