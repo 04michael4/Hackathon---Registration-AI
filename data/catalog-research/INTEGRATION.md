@@ -59,9 +59,8 @@ meetings) are not exposed to the backend until the ADR-0004 decisions are made.
 ## 7. Compatibility issues and conflicts
 - **`origin/pre-main` has moved** (now `fa3f95e`; this work is based on `5aa3e82`). A test merge of the committed branch is clean. The
   new `JdbcCourseMetadataCatalog` reads `cse007_snapshot.term`, `.course` and `.section` directly (term names, descriptions, instructors).
-  Two consequences for `catalog_live`: a promoted Banner course has no `cse007_snapshot` row, so its description/instructor lookups would
-  come back empty; and `catalog-promotion/grant_reader.sql` deliberately gives the read-only role **no** privilege on `cse007_snapshot`,
-  so the new class needs either a grant or a different source. Decide before serving any promoted course.
+  `grant_reader.sql` now gives the read-only role column-level `SELECT` on exactly the `cse007_snapshot` columns those two queries read (fixed 2026-10-17; before that
+  both endpoints returned 503 for that role). One consequence remains for `catalog_live`: a promoted Banner course has no `cse007_snapshot` row, so its description/instructor lookups come back empty.
 - **PR #7's head** (`integrate/database-into-pre-main`) conflicts with this branch's earlier promotion commits in `HANDOFF.md`,
   `README.md`, `docs/architecture.md` and `DatabaseCatalogIntegrationTest.java` (the same assertion was widened on both sides). Not touched here.
 - **Types:** `catalog_live` columns are unbounded `varchar` (a `UNION` loses the length), so the candidate views cast to plain `varchar`.

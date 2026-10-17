@@ -41,7 +41,7 @@ catalog_promoted.servable_*  ------------>  catalog_live.*  <--  catalog_api.*  
 |---|---|
 | `V1__catalog_promoted_schema.sql` | Schema `catalog_promoted`: 9 tables, 13 views, functions, triggers, privileges |
 | `V2__catalog_live_views.sql` | Schema `catalog_live`: 6 read-only views (`course_offering`, `section_offering`, `section_meeting`, `schedulable_course`, `offering_source`, `section_requirement`) |
-| `grant_reader.sql` | Gives the backend's read-only role (`psql -v reader=<role>`) schema `USAGE`, `SELECT` on the `catalog_api` and `catalog_live` views and `EXECUTE` on five hash/boolean functions; no table privileges |
+| `grant_reader.sql` | Gives the backend's read-only role (`psql -v reader=<role>`) schema `USAGE`, `SELECT` on the `catalog_api` and `catalog_live` views and `EXECUTE` on five hash/boolean functions; no table privileges Also column-level `SELECT` on the few `cse007_snapshot` columns the course-metadata catalog reads (`/api/terms`, course detail). |
 | `install.sql` | Installs both and checks structure in one transaction (rerunnable) |
 | `verify_structure.sql` | Exact objects, append-only triggers, capabilities off, no writable view, only `record_approval` inserts approvals, nothing writes evidence or the verified catalog |
 | `run_promotion_validation.py` | 13 scenarios on synthetic courses (104 probes, each always rolled back) plus 20 mutation checks. Passes on a fresh database **and** after `load_synthetic_fixture.py` has committed its courses (it compares row counts before and after, and reuses the fixture's clarification row only if its content is exactly the expected one, otherwise it fails) |
