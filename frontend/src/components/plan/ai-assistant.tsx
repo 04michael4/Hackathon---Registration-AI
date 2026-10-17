@@ -17,7 +17,7 @@ import { API_TERM, NEXT_TERM } from "@/lib/demo/program";
 import { alwaysConflict, blockedCourse, creditsOfCrns, meetingsAsBlocks } from "@/lib/plan";
 import { courseCode, isSlot, kindOf, recommended } from "@/lib/rules";
 import { student, useStore } from "@/lib/store";
-import { KIND_COLOR, WEEKDAYS } from "@/lib/ui";
+import { KIND_COLOR, readableIds, WEEKDAYS } from "@/lib/ui";
 
 /** Times to avoid. Each is a hard rule for the engine (blocked time), so a clash is reported, not hidden. */
 const AVOID_RULES = {
@@ -255,7 +255,7 @@ export function AiAssistant({ placed, onAccept, onClose }: AiAssistantProps) {
                   const pair = alwaysConflict(d);
                   return (
                     <div key={d} className="space-y-2 rounded-sm border border-grid p-3">
-                      <p>{d}</p>
+                      <p>{readableIds(d)}</p>
                       <div className="flex flex-wrap gap-2">
                         {blocked && avoid.map((rule) => (
                           <Button key={rule} size="sm" variant="outline" onClick={() => rerun(chosen, avoid.filter((r) => r !== rule))}>

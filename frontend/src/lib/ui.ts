@@ -32,6 +32,20 @@ export function dayPattern(days: Day[]): string {
   return WEEKDAYS.filter((d) => days.includes(d)).map((d) => DAY_LETTER[d]).join("");
 }
 
+/** Dates in the UI's language, whatever the browser locale. */
+export function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** "CSE-109" -> "CSE 109" inside engine sentences. */
+export function readableIds(text: string): string {
+  return text.replace(/\b([A-Z]{2,5})-(\d{1,4})\b/g, "$1 $2");
+}
+
 export const KIND_LABEL: Record<RequirementKind, string> = {
   core: "Major core",
   gened: "Gen ed",

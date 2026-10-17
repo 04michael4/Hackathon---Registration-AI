@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useSyncExternalStore, type ReactNode } from "react";
 
 import { DEMO_ADVISOR, DEMO_STUDENT, NEXT_TERM, TERMS } from "./demo/program";
-import type { DegreePlan } from "./rules";
+import { autoFill, type DegreePlan } from "./rules";
 
 // ---------- State shape ----------
 
@@ -64,10 +64,12 @@ interface State {
 }
 
 const emptyDegree = (): DegreePlan => Object.fromEntries(TERMS.map((t) => [t.id, []]));
+/** The pre-filled four-year template the student starts from. */
+const templateDegree = (): DegreePlan => autoFill(DEMO_STUDENT, emptyDegree());
 
 const initialState = (): State => ({
   session: null,
-  doc: { crns: [], courses: [], degree: emptyDegree(), saved: [], finalId: null },
+  doc: { crns: [], courses: [], degree: templateDegree(), saved: [], finalId: null },
   past: [],
   future: [],
   status: "Draft",
@@ -148,7 +150,7 @@ function load(): State {
     return {
       ...fresh,
       ...saved,
-      doc: { ...fresh.doc, ...saved.doc, degree: { ...emptyDegree(), ...saved.doc?.degree } },
+      doc: { ...fresh.doc, ...saved.doc, degree: saved.doc?.degree ? { ...emptyDegree(), ...saved.doc.degree } : fresh.doc.degree },
       past: [],
       future: [],
     };

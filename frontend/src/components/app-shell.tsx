@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isFeasible } from "@/lib/rules";
 import { student, useStore } from "@/lib/store";
+import { formatWhen } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -139,7 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       <li key={n.id}>
                         <Link href={n.href} className={cn("block border-b border-grid px-3 py-2 text-sm last:border-b-0 hover:bg-paper", !n.read && "bg-accent/40")}>
                           {n.text}
-                          <span className="tabular block text-xs text-muted-foreground">{new Date(n.at).toLocaleString()}</span>
+                          <span className="tabular block text-xs text-muted-foreground">{formatWhen(n.at)}</span>
                         </Link>
                       </li>
                     ))}
