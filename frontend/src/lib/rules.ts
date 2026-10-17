@@ -3,6 +3,7 @@
 
 import {
   COURSES,
+  CURRENT_TERM,
   NEXT_TERM,
   PROGRAM,
   type Requirement,
@@ -235,4 +236,26 @@ export function autoFill(student: StudentAccount, current: DegreePlan, perTermCa
     }
   }
   return plan;
+}
+
+/** A course's status on a plan, as the advisor filters it. */
+export type CourseStatus = "Done" | "In progress" | "Planned" | "Review" | "Withdraw";
+export const COURSE_STATUSES: CourseStatus[] = ["Done", "In progress", "Planned", "Review", "Withdraw"];
+
+/**
+ * Transcript terms give Done, In progress or Withdraw. A planned course (or elective slot) is "Review"
+ * while the plan waits on the advisor, otherwise "Planned".
+ */
+export function courseStatus(student: StudentAccount, termId: string, item: string, underReview: boolean): CourseStatus {
+  if (student.withdrawn?.[termId]?.includes(item)) return "Withdraw";
+  if (student.transcript[termId]?.includes(item)) return termIndex(termId) >= termIndex(CURRENT_TERM) ? "In progress" : "Done";
+  return underReview ? "Review" : "Planned";
+}
+
+/** Every item the degree grid shows, term by term, with its status. Withdrawn courses come after the term's others. */
+export function planItems(student: StudentAccount, plan: DegreePlan, underReview: boolean): { termId: string; item: string; status: CourseStatus }[] {
+  return TERMS.flatMap((t) => {
+    const items = student.lockedTerms.includes(t.id) ? [...(student.transcript[t.id] ?? []), ...(student.withdrawn?.[t.id] ?? [])] : (plan[t.id] ?? []);
+    return items.map((item) => ({ termId: t.id, item, status: courseStatus(student, t.id, item, underReview) }));
+  });
 }

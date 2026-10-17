@@ -8,12 +8,14 @@ import { Lock, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import { DegreeGrid } from "@/components/degree-grid";
+import { StatusFilter, statusCounts } from "@/components/status-filter";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { DEMO_ADVISOR, OTHER_ADVISEES, PROGRAM, type StudentAccount, TERMS } from "@/lib/demo/program";
-import { autoFill, courseCode, type DegreePlan, isFeasible } from "@/lib/rules";
+import { autoFill, courseCode, type CourseStatus, type DegreePlan, isFeasible, planItems } from "@/lib/rules";
 import { type Comment, type PlanStatus, student, useStore } from "@/lib/store";
 import { formatDay, formatWhen } from "@/lib/ui";
 import { cn } from "@/lib/utils";
@@ -28,10 +30,10 @@ function useHashTarget(): string | null {
 }
 
 const STATUS_STYLE: Record<PlanStatus, string> = {
-  Draft: "bg-muted text-ink",
-  Submitted: "bg-accent text-ink",
-  "Changes requested": "bg-[#FBE4E1] text-signal",
-  Approved: "bg-[#DDF0E7] text-[#1F6B4B]",
+  Draft: "bg-brand-soft text-brand",
+  Submitted: "bg-gold text-ink",
+  "Changes requested": "bg-signal-soft text-signal",
+  Approved: "bg-brand text-white",
 };
 
 const emptyPlan = (): DegreePlan => Object.fromEntries(TERMS.map((t) => [t.id, []]));
@@ -47,7 +49,7 @@ function CommentList({ comments, highlight }: { comments: Comment[]; highlight: 
   return (
     <ul className="space-y-2">
       {[...comments].reverse().map((c) => (
-        <li key={c.id} className={cn("rounded-sm border border-grid bg-white p-3 text-sm", highlight === c.target && "ring-2 ring-marker")}>
+        <li key={c.id} className={cn("rounded-md border border-grid bg-white p-3 text-sm", highlight === c.target && "ring-2 ring-marker")}>
           <p className="text-xs text-muted-foreground">
             {c.author} on <b className="text-ink">{targetLabel(c.target)}</b>, {formatWhen(c.at)}
           </p>
@@ -65,6 +67,8 @@ export default function AdvisorPage() {
   const [openId, setOpenId] = useState<string>(student.id);
   const [composer, setComposer] = useState<{ target: string; label: string } | null>(null);
   const [text, setText] = useState("");
+  const [filter, setFilter] = useState<CourseStatus[]>([]);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   const others = useMemo(() => OTHER_ADVISEES.map((s) => ({ account: s, plan: autoFill(s, emptyPlan()) })), []);
 
@@ -75,7 +79,7 @@ export default function AdvisorPage() {
     const unlocked = isFeasible(student, doc.degree);
     if (!unlocked) {
       return (
-        <div className="mx-auto max-w-lg rounded-sm border border-grid bg-white p-6">
+        <div className="mx-auto max-w-lg rounded-lg border border-grid bg-white p-6">
           <Lock className="size-5" aria-hidden />
           <h1 className="mt-2 text-2xl font-bold">Advisor review is locked</h1>
           <p className="mt-2 text-sm">Complete your degree plan to unlock advisor review: place every requirement and keep prerequisites in order.</p>
@@ -83,19 +87,25 @@ export default function AdvisorPage() {
         </div>
       );
     }
+    const underReview = status === "Submitted";
     return (
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-end gap-4">
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className="flex shrink-0 flex-wrap items-end gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Reviewed by {DEMO_ADVISOR.name}</p>
-            <h1 className="text-3xl font-bold [font-stretch:85%]">Advisor review</h1>
+            <p className="text-sm text-ink-muted">Reviewed by {DEMO_ADVISOR.name}</p>
+            <h1 className="font-heading text-2xl font-bold">Advisor review</h1>
           </div>
-          <span className={cn("rounded-sm px-2 py-1 text-sm font-bold", STATUS_STYLE[status])}>{status}</span>
-          {status === "Draft" && <p className="text-sm text-muted-foreground">Submit your plan from Plan your degree when you&apos;re ready.</p>}
+          <span className={cn("rounded-md px-2 py-1 text-sm font-bold", STATUS_STYLE[status])}>{status}</span>
+          {status === "Draft" && <p className="text-sm text-ink-muted">Submit your plan from Plan your degree when you&apos;re ready.</p>}
         </div>
-        <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
-          <DegreeGrid student={student} plan={doc.degree} comments={comments} highlight={highlight} />
-          <aside className="space-y-2">
+        <div className="shrink-0">
+          <StatusFilter value={filter} onChange={setFilter} counts={statusCounts(planItems(student, doc.degree, underReview))} />
+        </div>
+        <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-h-0 min-w-0 overflow-auto">
+            <DegreeGrid student={student} plan={doc.degree} comments={comments} highlight={highlight} statusFilter={filter} underReview={underReview} />
+          </div>
+          <aside className="min-h-0 space-y-2 overflow-y-auto">
             <h2 className="text-lg font-bold">Comments</h2>
             <CommentList comments={comments} highlight={highlight} />
           </aside>
@@ -115,6 +125,7 @@ export default function AdvisorPage() {
     })),
   ];
   const open = rows.find((r) => r.account.id === openId) ?? rows[0];
+  const openUnderReview = open.status === "Submitted";
 
   const decide = (next: PlanStatus) => {
     store.setStatus(next);
@@ -135,8 +146,8 @@ export default function AdvisorPage() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[17rem_1fr]">
-      <aside className="h-fit rounded-sm border border-grid bg-white">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="max-h-full min-h-0 overflow-y-auto rounded-lg border border-grid bg-white">
         <h1 className="border-b border-grid px-3 py-2.5 text-lg font-bold">Advisees</h1>
         <ul className="divide-y divide-grid">
           {rows.map((r) => (
@@ -156,14 +167,17 @@ export default function AdvisorPage() {
         </ul>
       </aside>
 
-      <section className="min-w-0 space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <section className="flex min-h-0 min-w-0 flex-col gap-3">
+        <div className="flex shrink-0 flex-wrap items-end gap-3">
           <div className="mr-auto">
-            <p className="text-sm text-muted-foreground">{PROGRAM.name}, {open.account.year}</p>
-            <h2 className="text-3xl font-bold [font-stretch:85%]">{open.account.name}&apos;s plan</h2>
+            <p className="text-sm text-ink-muted">{PROGRAM.name}, {open.account.year}</p>
+            <h2 className="font-heading text-2xl font-bold">{open.account.name}&apos;s plan</h2>
           </div>
           {open.live ? (
             <>
+              <Button variant="ghost" onClick={() => setCommentsOpen(true)}>
+                Comments ({comments.length})
+              </Button>
               <Button variant="outline" onClick={() => setComposer({ target: "plan", label: "your plan" })}>
                 <MessageSquare aria-hidden /> Comment on plan
               </Button>
@@ -174,23 +188,36 @@ export default function AdvisorPage() {
             <p className="text-sm text-muted-foreground">Demo advisee: open {student.name}&apos;s plan to leave comments.</p>
           )}
         </div>
-        {open.live && status === "Draft" && (
-          <p className="rounded-sm bg-accent px-3 py-2 text-sm">{student.name} hasn&apos;t submitted this plan yet. You can still comment on the draft.</p>
-        )}
-        <DegreeGrid
-          student={open.account as StudentAccount}
-          plan={open.plan}
-          comments={open.live ? comments : []}
-          onComment={open.live ? (target, label) => setComposer({ target, label }) : undefined}
-          highlight={highlight}
-        />
-        {open.live && (
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold">Comments</h3>
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <StatusFilter value={filter} onChange={setFilter} counts={statusCounts(planItems(open.account, open.plan, openUnderReview))} />
+          {open.live && status === "Draft" && (
+            <p className="ml-auto rounded-md bg-accent px-3 py-1 text-sm">{student.name} hasn&apos;t submitted this plan yet. You can still comment on the draft.</p>
+          )}
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <DegreeGrid
+            student={open.account as StudentAccount}
+            plan={open.plan}
+            comments={open.live ? comments : []}
+            onComment={open.live ? (target, label) => setComposer({ target, label }) : undefined}
+            highlight={highlight}
+            statusFilter={filter}
+            underReview={openUnderReview}
+          />
+        </div>
+      </section>
+
+      <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Comments on {student.name}&apos;s plan</SheetTitle>
+            <SheetDescription>Newest first. Add one from a course, a term, or the whole plan.</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-6">
             <CommentList comments={comments} highlight={highlight} />
           </div>
-        )}
-      </section>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={composer !== null} onOpenChange={(o) => !o && setComposer(null)}>
         <DialogContent>

@@ -23,6 +23,8 @@ export const TERMS: TermInfo[] = [
   { id: "S2029", label: "Spring 2029", season: "SPRING" },
 ];
 
+/** The term in progress now: its courses show as "In progress", earlier ones as "Done". */
+export const CURRENT_TERM = "F2026";
 /** The term Tab 1 plans. */
 export const NEXT_TERM = "S2027";
 export const API_TERM = "2027-SPRING";
@@ -51,15 +53,19 @@ export const COURSES: Record<string, CourseMeta> = Object.fromEntries(
     c("CSE-007", "Introduction to Programming", 4, BOTH),
     c("CSE-017", "Programming and Data Structures", 3, BOTH, ["CSE-007"]),
     c("CSE-109", "Systems Software", 3, BOTH, ["CSE-017"]),
-    c("CSE-140", "Foundations of Discrete Structures and Algorithms", 3, BOTH, ["CSE-017"]),
+    // CSE 140: CSE 017 plus Calculus I, as in the repo's hand-structured expression (data/catalog-research).
+    c("CSE-140", "Foundations of Discrete Structures and Algorithms", 3, BOTH, ["CSE-017", "MATH-021"]),
     c("CSE-202", "Computer Organization and Architecture", 3, BOTH, ["CSE-109"]),
     c("CSE-216", "Software Engineering", 3, ["SPRING"], ["CSE-140"]),
     c("CSE-262", "Programming Languages", 3, ["FALL", "SPRING"], ["CSE-109", "CSE-140"]),
     c("CSE-303", "Operating System Design", 3, ["FALL"], ["CSE-202"]),
-    c("CSE-340", "Design and Analysis of Algorithms", 3, ["SPRING"], ["CSE-140", "MATH-205"]),
+    // Assumption (no collected prerequisite data for CSE 340): CSE 109 and CSE 140.
+    c("CSE-340", "Design and Analysis of Algorithms", 3, ["SPRING"], ["CSE-109", "CSE-140"]),
     c("CSE-241", "Database Systems and Applications", 3, BOTH, ["CSE-017"]),
     c("CSE-318", "Computer Networks", 3, ["FALL"], ["CSE-109"]),
     c("CSE-326", "Machine Learning", 3, ["SPRING"], ["CSE-140", "MATH-231"]),
+    c("CSE-343", "Computer Security", 3, BOTH, ["CSE-109"]),
+    c("FIN-125", "Introduction to Finance", 3, BOTH),
     c("MATH-021", "Calculus I", 4, BOTH),
     c("MATH-022", "Calculus II", 4, BOTH, ["MATH-021"]),
     c("MATH-205", "Linear Methods", 3, BOTH, ["MATH-022"]),
@@ -103,8 +109,8 @@ export const PROGRAM = {
     { id: "fys", label: "First-year seminar", kind: "gened", count: 1, options: ["FYS-001"] },
     { id: "hu", label: "Humanities", kind: "gened", count: 2, options: ["PHIL-105", "HIST-010", "ART-011"] },
     { id: "ss", label: "Social science", kind: "gened", count: 2, options: ["ECO-001", "PSY-001", "SOC-001"] },
-    { id: "tech", label: "Technical elective", kind: "elective", count: 2, options: ["CSE-241", "CSE-318", "CSE-326"] },
-    { id: "free", label: "Free elective", kind: "free", count: 2, options: ["BIO-041", "DSCI-001", "CHM-030", "ECO-001", "ART-011"] },
+    { id: "tech", label: "Technical elective", kind: "elective", count: 2, options: ["CSE-241", "CSE-318", "CSE-326", "CSE-343"] },
+    { id: "free", label: "Free elective", kind: "free", count: 2, options: ["BIO-041", "DSCI-001", "CHM-030", "ECO-001", "ART-011", "FIN-125"] },
   ] satisfies Requirement[],
 };
 
@@ -117,6 +123,8 @@ export interface StudentAccount {
   year: string;
   creditRange: [number, number];
   transcript: Transcript;
+  /** Courses dropped with a W: shown in their term, earn no credit and satisfy nothing. */
+  withdrawn?: Transcript;
   /** Terms already taken or in progress; they're locked in the degree grid. */
   lockedTerms: string[];
 }
@@ -133,6 +141,7 @@ export const DEMO_STUDENT: StudentAccount = {
     S2026: ["HIST-010", "SOC-001", "BIO-041", "DSCI-001"],
     F2026: ["CSE-017", "MATH-022", "ENGL-002", "PSY-001"],
   },
+  withdrawn: { S2026: ["CHM-030"] },
 };
 
 export const DEMO_ADVISOR = { id: "patel", name: "Dr. Maya Patel", title: "Faculty advisor, Computer Science" };
@@ -147,6 +156,7 @@ export const OTHER_ADVISEES: StudentAccount[] = [
       S2026: ["CSE-017", "MATH-022", "ENGL-002", "ECO-001"],
       F2026: ["CSE-109", "CSE-140", "MATH-205", "PHY-011"],
     },
+    withdrawn: { F2026: ["PHIL-105"] },
   },
   {
     id: "ava", name: "Ava Chen", program: PROGRAM.name, year: "Sophomore", creditRange: [12, 18],
