@@ -31,7 +31,7 @@ export function CourseDrawer({ courseId, onClose, onShowSections }: CourseDrawer
         {courseId && (
           <>
             <SheetHeader>
-              <SheetTitle className="font-heading text-2xl [font-stretch:85%]">
+              <SheetTitle className="font-heading text-2xl">
                 {courseCode(courseId)} <span className="font-sans text-lg font-normal">{detail?.title ?? meta?.title}</span>
               </SheetTitle>
               <SheetDescription>
@@ -51,7 +51,7 @@ export function CourseDrawer({ courseId, onClose, onShowSections }: CourseDrawer
                       const taken = historyTermOf(student, p);
                       return (
                         <li key={p} className="flex items-center gap-2">
-                          {missing.includes(p) ? <Clock className="size-4 text-signal" aria-hidden /> : <Check className="size-4 text-req-elective" aria-hidden />}
+                          {missing.includes(p) ? <Clock className="size-4 text-signal" aria-hidden /> : <Check className="size-4 text-brand" aria-hidden />}
                           <span>
                             {courseCode(p)}{" "}
                             <span className="text-muted-foreground">

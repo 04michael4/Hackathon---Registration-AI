@@ -223,7 +223,7 @@ export function AiAssistant({ placed, onAccept, onClose }: AiAssistantProps) {
                         onCheckedChange={(on) => setPicked(on ? [...chosen, id] : chosen.filter((c) => c !== id))}
                       />
                       <span className="h-4 w-1.5 rounded-sm" style={{ background: KIND_COLOR[kindOf(student, doc.degree, id)] }} aria-hidden />
-                      <span className="font-heading font-semibold [font-stretch:85%]">{courseCode(id)}</span>
+                      <span className="font-heading font-semibold">{courseCode(id)}</span>
                     </label>
                   </li>
                 ))}

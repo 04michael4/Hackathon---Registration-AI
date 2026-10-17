@@ -11,10 +11,16 @@
   --font-heading: var(--font-display);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
   --color-grid: var(--grid);
   --color-grid-faint: var(--grid-faint);
   --color-marker: var(--marker);
   --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-caution: var(--caution);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-gold: var(--gold);
   --color-req-core: var(--req-core);
   --color-req-gened: var(--req-gened);
   --color-req-elective: var(--req-elective);
@@ -58,52 +64,69 @@
 }
 
 :root {
-  /* Graph-paper planner. Cool paper, blueprint ink, one highlighter. */
-  --paper: #F4F7F9;
-  --ink: #17324D;
-  --grid: #C9D6E0;
-  --grid-faint: #E3EAF0;
-  --marker: #F5C842;
-  --signal: #C23B30;
-  /* Requirement index tabs: major core, gen ed, elective, free */
-  --req-core: #2F6DB5;
-  --req-gened: #B26E14;
-  --req-elective: #2E8A63;
-  --req-free: #8457A8;
+  /* Lehigh-style palette from David's baseline: brown and white, one gold accent.
+     Change colors here only; components use these tokens, never hex values. */
+  --brand: #562B0C;          /* Lehigh brown: primary actions, active states, major core */
+  --brand-mid: #9C6B45;      /* lighter brown: gen ed, cautions */
+  --brand-soft: #F5EDE6;     /* brown tint: selected rows, soft fills */
+  --gold: #F1C84B;           /* the single accent: highlights that need attention */
+  --gold-soft: #FFF3CB;
+  --white: #FFFFFF;
+  --page: #F8F7F5;           /* page background */
+  --ink: #181818;
+  --ink-muted: #686868;
+  --line: #DDD8D3;
+  --line-faint: #EEE9E4;
+  --danger: #B3261E;         /* status only: time conflicts and errors */
+  --danger-soft: #FBEAE8;
 
-  --background: var(--paper);
+  /* Aliases used by components */
+  --paper: var(--page);
+  --grid: var(--line);
+  --grid-faint: var(--line-faint);
+  --marker: var(--gold);
+  --signal: var(--danger);
+  --signal-soft: var(--danger-soft);
+  --caution: var(--brand-mid);
+  --req-core: var(--brand);
+  --req-gened: var(--brand-mid);
+  --req-elective: var(--gold);
+  --req-free: #A39A92;
+
+  --background: var(--page);
   --foreground: var(--ink);
-  --card: #FFFFFF;
+  --card: var(--white);
   --card-foreground: var(--ink);
-  --popover: #FFFFFF;
+  --popover: var(--white);
   --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: #FFFFFF;
-  --secondary: #E8EEF3;
-  --secondary-foreground: var(--ink);
-  --muted: #E8EEF3;
-  --muted-foreground: #4E6478;
-  --accent: #FBEAB0;
+  --primary: var(--brand);
+  --primary-foreground: var(--white);
+  --secondary: var(--brand-soft);
+  --secondary-foreground: var(--brand);
+  --muted: var(--line-faint);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--gold-soft);
   --accent-foreground: var(--ink);
-  --destructive: var(--signal);
-  --border: var(--grid);
-  --input: #AFC0CE;
-  --ring: #2F6DB5;
-  --chart-1: var(--req-core);
-  --chart-2: var(--req-gened);
-  --chart-3: var(--req-elective);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: var(--brand-mid);
+  --chart-3: var(--gold);
   --chart-4: var(--req-free);
-  --chart-5: var(--signal);
-  --radius: 0.25rem;
-  --sidebar: #FFFFFF;
+  --chart-5: var(--danger);
+  --radius: 0.5rem;
+  --sidebar: var(--white);
   --sidebar-foreground: var(--ink);
-  --sidebar-primary: var(--ink);
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #E8EEF3;
-  --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: var(--grid);
-  --sidebar-ring: #2F6DB5;
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--white);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--brand);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--brand);
 }
+
 
 @layer base {
   * {
@@ -137,13 +160,14 @@
   }
 }
 
-/* Calendar ink: hour lines solid, quarter-hours dotted, like engineering paper. */
+/* Calendar: hour lines solid, quarter-hours faint. */
 .graph-paper {
-  background-color: #FFFFFF;
+  background-color: var(--white);
   background-image:
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px),
-    repeating-linear-gradient(to bottom, transparent 0 calc(var(--hour) / 4 - 1px), var(--grid-faint) calc(var(--hour) / 4 - 1px) calc(var(--hour) / 4));
-  background-size: 100% var(--hour), 100% var(--hour);
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px);
+  background-size: 100% calc(100% / var(--hours)), 100% calc(100% / var(--hours) / 2);
+  background-position: 0 0, 0 calc(100% / var(--hours) / 2);
 }
 
 .tabular { font-variant-numeric: tabular-nums; }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Public_Sans } from "next/font/google";
+import { DM_Sans, Manrope } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,10 +8,9 @@ import { StoreProvider } from "@/lib/store";
 
 import "./globals.css";
 
-// Display: Archivo, condensed via its width axis, like a printed timetable.
-const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-display" });
-// Body: Public Sans, plain and institutional, with clear unslashed numerals for codes and times.
-const body = Public_Sans({ subsets: ["latin"], variable: "--font-body" });
+// David's baseline typefaces: Manrope for headings, DM Sans for body text.
+const display = Manrope({ subsets: ["latin"], variable: "--font-display" });
+const body = DM_Sans({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
   title: "Syllo course planner",

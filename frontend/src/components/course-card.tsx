@@ -74,7 +74,7 @@ export function CourseCard({
             type="button"
             onClick={onOpen}
             disabled={!onOpen}
-            className="shrink-0 whitespace-nowrap font-heading text-[0.95rem] font-semibold tracking-tight text-ink [font-stretch:85%] hover:underline disabled:no-underline"
+            className="shrink-0 whitespace-nowrap font-heading text-[0.95rem] font-semibold tracking-tight text-ink hover:underline disabled:no-underline"
           >
             {courseCode(courseId)}
           </button>
