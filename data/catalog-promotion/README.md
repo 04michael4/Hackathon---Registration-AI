@@ -45,6 +45,7 @@ catalog_promoted.servable_*  ------------>  catalog_live.*  <--  catalog_api.*  
 | `install.sql` | Installs both and checks structure in one transaction (rerunnable) |
 | `verify_structure.sql` | Exact objects, append-only triggers, capabilities off, no writable view, only `record_approval` inserts approvals, nothing writes evidence or the verified catalog |
 | `run_promotion_validation.py` | 12 scenarios on synthetic courses (99 probes, each always rolled back) plus 20 mutation checks |
+| `tools/reconcile_tracker.py` (+ `test_reconcile_tracker.py`) | **Read-only** report comparing the exported research workbook with the collected Banner evidence (CRNs, credits, restrictions, time conflicts, missing review evidence, a tier preview). Never writes, approves or promotes; see below |
 | `load_synthetic_fixture.py` | Loads synthetic CSE-092/091/090 into a **test** database for the Java end-to-end test. Refuses the shared database |
 
 ## Objects
@@ -107,6 +108,23 @@ SELECT catalog_promoted.retract_promotion(<promotion_id>, '<your name>', '<why>'
 ```
 
 Names that look automated (`script`, `bot`, `claude`, `auto`, `collector`, `system`) are refused for approvals and promotions.
+
+## Reconciling the research workbook (read-only)
+
+```
+python3 -I data/catalog-promotion/tools/test_reconcile_tracker.py          # synthetic tests, no database, no network
+PGHOST=127.0.0.1 PGPORT=... PGUSER=... PGDATABASE=<scratch copy> PGPASSFILE=... \
+  python3 -I data/catalog-promotion/tools/reconcile_tracker.py --workbook ~/Downloads/TRACKER.xlsx --db \
+  --export-evidence /path/outside/repo/evidence.json --out-dir /path/outside/repo/report
+python3 -I data/catalog-promotion/tools/reconcile_tracker.py --workbook TRACKER.xlsx --evidence-json evidence.json    # offline rerun
+```
+
+It reads the exported `.xlsx` and evidence (a scratch copy of `banner_evidence`, in a forced read-only session; it refuses a database
+named like the shared one), and prints: CRN agreement, credit consistency, Banner restrictions the workbook does not mention, whether each
+row of the `BANNER AUDIT GAPS` tab is backed by Banner evidence, stated and related time conflicts, missing review evidence, what the
+available evidence cannot resolve, and a **preview** of each offering's tier (`READY` / `CONDITIONAL` / `BLOCKED`, per ADR-0004). The
+workbook and the evidence are treated as data. Nothing from the workbook is committed, report files must be written outside the repository,
+and no reviewer or approval is ever named or implied. Keyword matching against workbook text is a heuristic: a person confirms each gap.
 
 ## Tests
 
