@@ -21,14 +21,23 @@ public class CourseService {
 	private final ObjectProvider<SectionCatalog> sectionCatalogs;
 	private final ObjectProvider<CourseMetadataCatalog> metadataCatalogs;
 	private final ObjectProvider<ConditionCatalog> conditionCatalogs;
+	private final ObjectProvider<RatingCatalog> ratingCatalogs;
 
 	@Autowired
 	public CourseService(ObjectProvider<CourseCatalog> catalogs, ObjectProvider<SectionCatalog> sectionCatalogs,
-			ObjectProvider<CourseMetadataCatalog> metadataCatalogs, ObjectProvider<ConditionCatalog> conditionCatalogs) {
+			ObjectProvider<CourseMetadataCatalog> metadataCatalogs, ObjectProvider<ConditionCatalog> conditionCatalogs,
+			ObjectProvider<RatingCatalog> ratingCatalogs) {
 		this.catalogs = catalogs;
 		this.sectionCatalogs = sectionCatalogs;
 		this.metadataCatalogs = metadataCatalogs;
 		this.conditionCatalogs = conditionCatalogs;
+		this.ratingCatalogs = ratingCatalogs;
+	}
+
+	/** Without a rating catalog: no predicted ratings and no instructor ratings. */
+	public CourseService(ObjectProvider<CourseCatalog> catalogs, ObjectProvider<SectionCatalog> sectionCatalogs,
+			ObjectProvider<CourseMetadataCatalog> metadataCatalogs, ObjectProvider<ConditionCatalog> conditionCatalogs) {
+		this(catalogs, sectionCatalogs, metadataCatalogs, conditionCatalogs, null);
 	}
 
 	/** For callers and tests that have no condition catalog: details then carry an empty conditions list. */
@@ -59,9 +68,13 @@ public class CourseService {
 					.stream()
 					.filter(s -> s.lectureLink() == null)
 					.collect(Collectors.groupingBy(CatalogSection::courseId, Collectors.counting()));
+		RatingCatalog ratings = ratingCatalogs == null ? null : ratingCatalogs.getIfAvailable();
+		Map<String, PredictedRating> predicted = ratings == null || pageItems.isEmpty() ? Map.of()
+				: ratings.courseRatings(term, pageItems.stream().map(CourseSummary::courseId).toList());
 		List<CourseSearchResponse.Item> items = pageItems.stream()
 			.map(c -> new CourseSearchResponse.Item(c.courseId(), CourseQuery.subject(c.courseId()),
-					CourseQuery.number(c.courseId()), c.title(), c.credits(), lectureCounts.getOrDefault(c.courseId(), 0L).intValue()))
+					CourseQuery.number(c.courseId()), c.title(), c.credits(), lectureCounts.getOrDefault(c.courseId(), 0L).intValue(),
+					predicted.get(c.courseId())))
 			.toList();
 		int totalPages = (int) ((matches.size() + (long) size - 1) / size);
 		return new CourseSearchResponse(items, page, size, matches.size(), totalPages);
@@ -76,21 +89,32 @@ public class CourseService {
 			.orElseThrow(() -> new NotFoundException("Unknown course"));
 		CourseMetadataCatalog metadata = metadataCatalogs.getIfAvailable();
 		var detail = metadata == null ? new CourseMetadataCatalog.Detail(null, Map.of()) : metadata.detail(term, courseId);
+		RatingCatalog ratings = ratingCatalogs == null ? null : ratingCatalogs.getIfAvailable();
+		Map<String, List<InstructorRating>> instructorRatings = ratings == null ? Map.of() : ratings.instructorsByCrn(term, courseId);
 		List<CourseDetailResponse.Section> sections = available(sectionCatalogs).sectionsFor(term, List.of(courseId))
 			.stream()
 			.filter(s -> s.courseId().equals(courseId) && s.term().equals(term))
 			.sorted(Comparator.comparing(CatalogSection::crn))
 			.map(s -> new CourseDetailResponse.Section(s.crn(), s.sectionCode(), s.componentType(), s.lectureLink(),
-					s.credits(), detail.instructorsByCrn().getOrDefault(s.crn(), List.of()), s.status(),
+					s.credits(), instructorNames(detail, instructorRatings, s.crn()), s.status(),
 					s.meetings().stream()
 						.map(m -> new CourseDetailResponse.Meeting(m.days().stream().distinct().sorted().toList(),
 								m.start(), m.end(), m.location()))
-						.toList()))
+						.toList(),
+					instructorRatings.getOrDefault(s.crn(), List.of())))
 			.toList();
 		ConditionCatalog conditionCatalog = conditionCatalogs == null ? null : conditionCatalogs.getIfAvailable();
 		List<CourseCondition> conditions = conditionCatalog == null ? List.of() : conditionCatalog.conditionsFor(term, courseId);
 		return new CourseDetailResponse(course.courseId(), CourseQuery.subject(course.courseId()),
-				CourseQuery.number(course.courseId()), course.title(), course.credits(), detail.description(), sections, conditions);
+				CourseQuery.number(course.courseId()), course.title(), course.credits(), detail.description(), sections, conditions,
+				ratings == null ? null : ratings.courseRatings(term, List.of(courseId)).get(courseId));
+	}
+
+	/** Instructors stored with the course metadata win; otherwise the names of the rating catalog (ordered by name). */
+	private static List<String> instructorNames(CourseMetadataCatalog.Detail detail, Map<String, List<InstructorRating>> ratings,
+			String crn) {
+		List<String> stored = detail.instructorsByCrn().getOrDefault(crn, List.of());
+		return !stored.isEmpty() ? stored : ratings.getOrDefault(crn, List.of()).stream().map(InstructorRating::name).toList();
 	}
 
 	private static <T> T available(ObjectProvider<T> provider) {

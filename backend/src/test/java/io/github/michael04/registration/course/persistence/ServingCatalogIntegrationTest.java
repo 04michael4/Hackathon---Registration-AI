@@ -84,6 +84,26 @@ class ServingCatalogIntegrationTest {
 	}
 
 	@Test
+	void courseSearchCarriesPredictedRatingsWithinRangeAndNeverMoreThanStored() throws Exception {
+		String list = body("/api/courses?term=" + TERM + "&size=100");
+		List<Object> ratings = JsonPath.read(list, "$.items[?(@.predictedRating != null)].predictedRating.quality");
+		assertThat(ratings).hasSizeGreaterThan(20);
+		assertThat((List<Double>) JsonPath.read(list, "$.items[*].predictedRating.quality")).allSatisfy(q -> assertThat(q).isBetween(1.0, 5.0));
+		assertThat((List<String>) JsonPath.read(list, "$.items[*].predictedRating.basis")).containsOnly("PREDICTED");
+	}
+
+	@Test
+	void sectionsListTheirInstructorsAndAnUnratedInstructorHasNoNumbers() throws Exception {
+		String detail = body("/api/courses/CSE-216?term=" + TERM);
+		assertThat((List<String>) JsonPath.read(detail, "$.sections[*].instructors[*]")).isNotEmpty();
+		List<Double> predicted = JsonPath.read(detail, "$.sections[*].instructorRatings[*].predictedQuality");
+		assertThat(predicted).allSatisfy(q -> assertThat(q == null || (q >= 1.0 && q <= 5.0)).isTrue());
+		// a course nobody has rated shows null, not a number
+		String unrated = body("/api/courses/CSE-252?term=" + TERM);
+		assertThat((Object) JsonPath.read(unrated, "$.predictedRating")).isNull();
+	}
+
+	@Test
 	void aScheduleOfResearchedCoursesIsGeneratedByTheRealEngine() throws Exception {
 		String result = mvc.perform(post("/api/schedules/generate").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"term\":\"" + TERM + "\",\"preferences\":{\"hardConstraints\":{\"requiredCourseIds\":[\"CSE-017\",\"CSE-252\"],"

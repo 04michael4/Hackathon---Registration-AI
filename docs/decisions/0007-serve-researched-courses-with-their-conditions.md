@@ -20,5 +20,8 @@ Through `catalog_api` or `catalog_live` the backend serves one course (CSE 007):
 - Schedule endpoints do not return conditions yet; the frontend can show them from the course detail.
 - When the 30 non-CSE courses' requirements are collected and they become `CONDITIONAL`, they appear here without a backend change.
 
+## Addendum (2026-10-17): instructors and predicted ratings
+`catalog_serving` also exposes `section_instructor` and `course_rating` over `professor_ratings`, and the backend returns them as `predictedRating` (course search and detail) and `instructorRatings` (sections), filling `instructors` when the catalog stores none. They are labelled predicted, carry a confidence, and are `null` when an instructor has no earlier rating. The backend degrades to no ratings if the views are unreadable, so supplementary data cannot take the course endpoints down. Exposing instructor names through the API relies on the project owner's decision to store them (ADR-0006 point 2); keep it inside the team's own app.
+
 ## Not decided here
 Enforcing prerequisites and class standing from a student's transcript ([ADR-0004](0004-proposed-class-standing-eligibility.md)), conditions on schedule responses, and installing `catalog_serving` in any shared database beyond the team's.

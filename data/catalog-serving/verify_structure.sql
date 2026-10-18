@@ -4,8 +4,8 @@ DO $$
 BEGIN
 	IF (SELECT array_agg(c.relname || ':' || c.relkind::text ORDER BY c.relname) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 			WHERE n.nspname = 'catalog_serving' AND c.relkind IN ('r', 'v'))
-		IS DISTINCT FROM ARRAY['course_condition:v', 'course_offering:v', 'section_meeting:v', 'section_offering:v', 'served_offering:v'] THEN
-		RAISE EXCEPTION 'catalog_serving must contain exactly the 5 views and no table';
+		IS DISTINCT FROM ARRAY['course_condition:v', 'course_offering:v', 'course_rating:v', 'section_instructor:v', 'section_meeting:v', 'section_offering:v', 'served_offering:v'] THEN
+		RAISE EXCEPTION 'catalog_serving must contain exactly the 7 views and no table';
 	END IF;
 	IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'catalog_serving' AND (is_updatable <> 'NO' OR is_insertable_into <> 'NO')) THEN
 		RAISE EXCEPTION 'a catalog_serving view is writable';
