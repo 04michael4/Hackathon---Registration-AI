@@ -26,5 +26,7 @@ Through `catalog_api` or `catalog_live` the backend serves one course (CSE 007):
 ## Addendum (2026-10-17): the non-CSE courses
 `catalog_research` V4 lets Class Details captured for the grid-staged non-CSE courses be imported (restrictions, prerequisites, corequisites, lab/recitation links). An inspected course is judged by the same rules as the CSE ones, so it becomes `CONDITIONAL` and `catalog_serving` V3 serves it with its conditions, but only when its labs and recitations are linked to lectures and its credits are known. Parsing is fail-closed: unrecognized text and ambiguous And/Or stay words. Banner's silence is recorded as "none listed" under the project owner's earlier rule (user-supplied evidence, not Registrar certification).
 
+On 2026-10-18 the first real Class Details were imported (39 captures, all 30 courses): 28 courses became `CONDITIONAL` and are served with their conditions (66 courses overall). Two stay blocked because their components cannot be linked to a single lecture (CHM 030's labs are shared by all four lectures; PHY 012 is a lab-only course), and two are not served because their credits vary by section. Supporting shared labs and lab-only courses needs a decision on the data model and the backend's one-lecture-per-component rule.
+
 ## Not decided here
 Enforcing prerequisites and class standing from a student's transcript ([ADR-0004](0004-proposed-class-standing-eligibility.md)), conditions on schedule responses, and installing `catalog_serving` in any shared database beyond the team's.

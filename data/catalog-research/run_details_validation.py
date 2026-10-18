@@ -87,6 +87,8 @@ def build():
              assert_sql("(SELECT count(*) FROM catalog_research.section WHERE offering_id = 'PHY-011' AND link_status = 'LISTED_BY_LECTURE_ONLY' AND lecture_crn = '" + pl + "') = " + str(len(precs)), "links not stored"))
     scenario("a credit difference between Class Details and the grid blocks the course",
              run_import(course("ISE-121", plain, credit_hours=plain[0]["credits"] + 1)) + assert_sql(tier("ISE-121") + " = 'BLOCKED:DETAIL_MISMATCH'", "credit mismatch did not block"))
+    scenario("Banner's 'Lecture' and the grid's 'Class' are the same type (no mismatch)",
+             run_import(course("ISE-121", plain, schedule_type="Lecture")) + assert_sql(tier("ISE-121") + " = 'CONDITIONAL:UNRESOLVED_CONDITIONS_REMAIN'", "Lecture vs Class blocked the course"))
     scenario("a schedule-type difference blocks the course",
              run_import(course("ISE-121", plain, schedule_type="Lab")) + assert_sql(tier("ISE-121") + " = 'BLOCKED:DETAIL_MISMATCH'", "type mismatch did not block"))
     scenario("silence is recorded as NONE_LISTED with user-supplied evidence and no text",

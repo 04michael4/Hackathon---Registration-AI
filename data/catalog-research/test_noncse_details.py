@@ -172,13 +172,20 @@ class LoaderTests(unittest.TestCase):
         with self.assertRaises(imp.ImportRefused):
             imp.build({"10001": popup("10001", "Class")}, {"20001": ("MATH-021", "LECTURE")})
 
-    def test_a_lab_linked_to_two_lectures_is_refused_before_the_database(self):
+    def test_a_lab_listed_by_two_lectures_is_dropped_and_reported_not_stored(self):
         import import_noncse_details as imp
-        lec1 = popup("10001", "Class", [("10002", "Recitation")])
+        lec1 = popup("10001", "Class", [("10002", "Recitation"), ("10003", "Recitation")])
         lec2 = popup("10009", "Class", [("10002", "Recitation")])
-        staged = {"10001": ("MATH-021", "LECTURE"), "10009": ("MATH-021", "LECTURE"), "10002": ("MATH-021", "RECITATION")}
+        staged = {"10001": ("MATH-021", "LECTURE"), "10009": ("MATH-021", "LECTURE"), "10002": ("MATH-021", "RECITATION"), "10003": ("MATH-021", "RECITATION")}
+        courses, shared = imp.build({"10001": lec1, "10009": lec2}, staged)
+        self.assertEqual(shared, {"MATH-021": ["10002"]})
+        self.assertEqual(courses[0]["links"], [{"lab": "10003", "lecture": "10001", "bothSides": False}])
+
+    def test_a_link_leaving_the_course_is_refused(self):
+        import import_noncse_details as imp
+        staged = {"10001": ("MATH-021", "LECTURE"), "20002": ("ECO-001", "RECITATION")}
         with self.assertRaises(imp.ImportRefused):
-            imp.build({"10001": lec1, "10009": lec2}, staged)
+            imp.build({"10001": popup("10001", "Class", [("20002", "Recitation")])}, staged)
 
 
 if __name__ == "__main__":

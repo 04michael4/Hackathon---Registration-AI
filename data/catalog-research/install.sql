@@ -8,5 +8,6 @@ BEGIN;
 \ir V2__catalog_research_views_and_import.sql
 \ir V3__noncse_grid_staging_and_programs.sql
 \ir V4__noncse_details.sql
+\ir V5__detail_type_normalized.sql
 \ir verify_structure.sql
 COMMIT;

@@ -88,19 +88,24 @@ def build(popups, staged):
     by_course = {}
     for crn, p in popups.items():
         by_course.setdefault(staged[crn][0], []).append(p)
-    courses, problems = [], []
+    courses, problems, shared = [], [], {}
     for course in sorted(by_course):
         payload = nd.build_course_payload(course, by_course[course])
-        lecture_of = {}
+        lectures_of = {}
         for link in payload["links"]:
-            if lecture_of.setdefault(link["lab"], link["lecture"]) != link["lecture"]:
-                problems.append(f"{course}: lab {link['lab']} is linked to more than one lecture")
+            lectures_of.setdefault(link["lab"], set()).add(link["lecture"])
             if staged.get(link["lab"], ("", ""))[0] != course or staged.get(link["lecture"], ("", ""))[0] != course:
                 problems.append(f"{course}: link {link['lab']} -> {link['lecture']} leaves the course")
+        # A lab that several lectures list (a shared pool) cannot be stored: a section has ONE lecture. Those links are dropped and reported;
+        # the lab stays unlinked, so the course stays BLOCKED (COMPONENT_LINKS_NOT_COLLECTED) until the model can hold shared labs.
+        ambiguous = {lab for lab, lecs in lectures_of.items() if len(lecs) > 1}
+        if ambiguous:
+            shared[course] = sorted(ambiguous)
+            payload["links"] = [l for l in payload["links"] if l["lab"] not in ambiguous]
         courses.append(payload)
     if problems:
         raise ImportRefused("; ".join(problems))
-    return courses
+    return courses, shared
 
 
 def guard(allow_shared):
@@ -119,7 +124,7 @@ def main(argv=None):
     try:
         guard(args.allow_shared)
         popups, capture_sha = load_popups(args.captures)
-        courses = build(popups, staged_sections())
+        courses, shared_labs = build(popups, staged_sections())
         payload = {"courses": courses, "captureSha256": capture_sha}
         sha = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         label = f"non-CSE Class Details captures ({len(popups)} sections)"
@@ -135,6 +140,9 @@ def main(argv=None):
     text_only = {k: [c["courseId"] for c in courses if c[key]["status"] == "TEXT_ONLY"] for k, key in (("restrictions", "restrictions"), ("prerequisites", "prerequisite"), ("corequisites", "corequisite"))}
     unmapped = sorted({u for c in courses for key in ("prerequisite", "corequisite") for u in c[key].get("unmapped", [])})
     disagree = {c["courseId"]: c["disagreements"] for c in courses if c["disagreements"]}
+    if shared_labs:
+        for course, labs in shared_labs.items():
+            print(f"  {course}: {len(labs)} lab/recitation section(s) are listed by more than one lecture (a shared pool); left unlinked, so the course stays BLOCKED")
     print(("DRY RUN (rolled back): " if args.dry_run else "stored: ") + f"{len(courses)} courses from {len(popups)} captured sections; capture sha256 {capture_sha[:16]}…")
     for line in out.splitlines():
         if line.startswith("tier|"):

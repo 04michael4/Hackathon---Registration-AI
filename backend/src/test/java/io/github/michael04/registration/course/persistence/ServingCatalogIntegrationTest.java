@@ -53,10 +53,42 @@ class ServingCatalogIntegrationTest {
 	@Test
 	void theResearchedCourseSetIsServedAndNothingBlockedIs() throws Exception {
 		List<String> ids = courses.listCourses(TERM).stream().map(CourseSummary::courseId).toList();
-		assertThat(ids).hasSize(40).contains("CSE-007", "CSE-017", "CSE-216", "CSE-217");
+		assertThat(ids).hasSizeGreaterThanOrEqualTo(40).contains("CSE-007", "CSE-017", "CSE-216", "CSE-217");
 		assertThat(ids).noneMatch(id -> id.startsWith("CSE-398-"));           // topics undecided at install time
-		assertThat(ids).noneMatch(id -> id.startsWith("MATH-021") || id.startsWith("WRT-"));   // grid-only non-CSE courses stay blocked
-		mvc.perform(get("/api/courses/MATH-021").param("term", TERM)).andExpect(status().isNotFound());
+		// never served, whatever else was imported: shared or unlinkable components, and credits that vary by section
+		for (String blocked : new String[] { "CHM-030", "PHY-012", "MATH-312", "MATH-334" }) {
+			assertThat(ids).doesNotContain(blocked);
+			mvc.perform(get("/api/courses/" + blocked).param("term", TERM)).andExpect(status().isNotFound());
+		}
+	}
+
+	@Test
+	void anInspectedNonCseCourseIsServedWithLinkedRecitationsAndItsConditions() throws Exception {
+		List<String> ids = courses.listCourses(TERM).stream().map(CourseSummary::courseId).toList();
+		org.junit.jupiter.api.Assumptions.assumeTrue(ids.contains("MATH-021"), "non-CSE Class Details are not imported in this database");
+		String detail = body("/api/courses/MATH-021?term=" + TERM);
+		List<String> lectureCrns = JsonPath.read(detail, "$.sections[?(@.componentType=='LECTURE')].crn");
+		List<String> links = JsonPath.read(detail, "$.sections[?(@.componentType=='RECITATION')].lectureLink");
+		assertThat(lectureCrns).hasSize(2);
+		assertThat(links).isNotEmpty().doesNotContainNull().allSatisfy(l -> assertThat(lectureCrns).contains(l));
+		assertThat((List<String>) JsonPath.read(detail, "$.conditions[*].code")).contains("PREREQUISITE", "ENROLLMENT_RESTRICTION");
+		assertThat((List<String>) JsonPath.read(detail, "$.conditions[*].outcome")).containsOnly("UNVERIFIED");
+	}
+
+	@Test
+	void theEngineSchedulesANonCseCourseTogetherWithItsRecitation() throws Exception {
+		List<String> ids = courses.listCourses(TERM).stream().map(CourseSummary::courseId).toList();
+		org.junit.jupiter.api.Assumptions.assumeTrue(ids.contains("MATH-021") && ids.contains("WRT-001"), "non-CSE Class Details are not imported");
+		String result = mvc.perform(post("/api/schedules/generate").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"term\":\"" + TERM + "\",\"preferences\":{\"hardConstraints\":{\"requiredCourseIds\":[\"MATH-021\",\"WRT-001\"],"
+						+ "\"minCredits\":6,\"maxCredits\":9}}}"))
+			.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+		List<?> schedules = JsonPath.read(result, "$.schedules");
+		assertThat(schedules).isNotEmpty();
+		for (int i = 0; i < schedules.size(); i++) {
+			List<String> mathSections = JsonPath.read(result, "$.schedules[" + i + "].sections[?(@.courseId=='MATH-021')].crn");
+			assertThat(mathSections).as("a lecture and its recitation").hasSize(2);
+		}
 	}
 
 	@Test
