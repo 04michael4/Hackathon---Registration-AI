@@ -73,6 +73,8 @@ Main user flow (status per package in [§4](#4-backend-package-structure)):
 
 The default semester workflow uses `ConnectedPlanner` and shared typed API clients. Browser requests go through an allowlisted same-origin Next.js `/api/backend` route to server-only `BACKEND_URL`, then the existing Spring controllers, production JDBC catalogs and native solver. JSON schemas and Problem Details mirror the existing contract; no client solver computes scores. Catalog facts/instructor names are private/no-store and are not persisted; browser-saved plans contain only identifiers, preferences and a user-entered name. AI extraction is reviewed before applying and AI-off is a useful 503 state. Explicit `FRONTEND_MODE=demo` retains the offline semester prototype. Degree/transcript/advisor workspaces still use labeled sample data because matching APIs do not exist. See the [integration runbook](frontend-backend-integration.md).
 
+The degree calendar's active planning semester now projects the live semester selection through an in-memory `syllo:semester-plan` event. `buildSemesterPlan` groups actual sections by course, sums their credits without duplicate CRNs, and marks required courses awaiting sections as planned. Search results can add required courses directly; existing meetings are rechecked through `/api/schedules/check`. Live degree cards open API details rather than the sample prerequisite graph. Other semesters and degree/advisor rules remain sample data; the projection never enters the persisted demo catalog and does not introduce a degree API.
+
 ```mermaid
 sequenceDiagram
     actor St as Student

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSyllo } from "@/context/SylloContext";
 import type { Screen } from "@/lib/types";
 
@@ -30,7 +31,7 @@ export function ProductNav() {
         ))}
       </div>
       <button className="product-role" onClick={switchRole}>{state.role === "advisor" ? "Advisor demo ⇄" : "Student demo ⇄"}</button>
-      <button className="product-brand" onClick={() => navigate("features")} aria-label="Syllo home">syllo.</button>
+      <button className="product-brand" onClick={() => navigate("features")} aria-label="Syllo home"><span className="syllo-lockup"><Image className="syllo-lockup-mark" src="/assets/syllo-mark.svg" alt="" width={28} height={28} /><span className="syllo-wordmark">Syllo</span></span></button>
     </nav>
   );
 }

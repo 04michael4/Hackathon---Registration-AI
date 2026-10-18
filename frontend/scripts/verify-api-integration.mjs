@@ -54,8 +54,16 @@ try {
   check(await evaluate("document.querySelector('.api-course-dialog').textContent.includes('40100')&&document.querySelector('.api-course-dialog').textContent.includes('40101')"), "Both real fixture sections appear");
   check(await evaluate("document.querySelector('.api-course-dialog').textContent.includes('Eligibility has not been verified')"), "Conditions remain explicitly unverified");
   await clickText("Close course details", ".api-course-dialog");
-  await setInput('[aria-label="MATH-021 selection"]', "required");
-  await search("ENGL-001"); await setInput('[aria-label="ENGL-001 selection"]', "required");
+  await search("MATH-021");
+  check(await evaluate("[...document.querySelectorAll('[data-api-course]')].every(card=>card.querySelector('[data-add-next-semester]'))"), "Every semester search result has an Add to next semester button");
+  await clickText("Add to next semester", '[data-api-course="MATH-021"]');
+  check(await evaluate("document.querySelector('[data-add-next-semester=\"MATH-021\"]').disabled"), "Already-added courses cannot be duplicated");
+  await evaluate("document.querySelector('[data-route=requirements]').click()");
+  await waitFor("document.querySelector('[data-api-degree-course=\"MATH-021\"]')", "newly selected course in degree calendar");
+  check(await evaluate("document.querySelector('.api-degree-term').textContent.includes('Choose sections')&&!document.querySelector('.api-degree-term [data-degree-course]')"), "Degree next semester shows the real planned course instead of sample courses without inventing meetings");
+  await evaluate("document.querySelector('.api-degree-term [data-action=degree-to-calendar]').click()");
+  check(await evaluate("document.body.dataset.activeScreen==='planner'"), "Degree calendar opens the matching weekly plan");
+  await search("ENGL-001"); await clickText("Add to next semester", '[data-api-course="ENGL-001"]');
   await setInput('[name="minCredits"]', "7"); await setInput('[name="maxCredits"]', "7"); await setInput('[name="maxResults"]', "2");
   await evaluate("document.querySelector('[aria-label=\"Close Intelligent Planning\"]').click()");
   await generate(); await waitFor("document.querySelectorAll('[data-schedule-rank]').length===2", "two real solver alternatives");
@@ -64,6 +72,20 @@ try {
   check(await evaluate(`document.querySelector('.api-schedule-facts').textContent.includes('Solver score: ${result.schedules[0].score} / 100')`), "Frontend displays the exact server score");
   check(await evaluate("document.querySelectorAll('.api-week > .api-calendar-scroll [data-event-crn]').length===1&&!document.querySelector('[data-event-crn=\"40200\"]')"), "TBA sections create no fake calendar events");
   check(await evaluate("document.querySelector('.api-section-list').textContent.includes('40200')&&document.querySelector('.api-section-list').textContent.includes('TBA')"), "TBA section is still listed");
+  await evaluate("document.querySelector('[data-route=requirements]').click()");
+  check(await evaluate("document.querySelectorAll('.api-degree-term [data-api-degree-course]').length===2&&document.querySelector('.api-degree-term .degree-term-heading').textContent.includes('7 credits')"), "All actual calendar courses and credits automatically prefill next semester in the degree calendar");
+  check(await evaluate("document.querySelector('[data-api-degree-course=\"ENGL-001\"]').textContent.includes('TBA / arranged')"), "Degree calendar keeps actual TBA courses without fake meeting times");
+  for (const [width, height] of [[1440,900], [800,700], [390,844]]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 600 }); await pause(100);
+    check(await evaluate("(()=>{const r=document.querySelector('.degree-calendar-scroll').getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1})()"), `${width}px: populated live degree calendar stays visible`);
+    check(await evaluate("document.querySelector('.api-degree-term .degree-term-courses').getBoundingClientRect().height>=28"), `${width}px: next-semester controls leave space for visible course cards`);
+    const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false }); await writeFile(path.join(output, `degree-next-semester-${width}.png`), Buffer.from(shot.data, "base64"));
+  }
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate("document.querySelector('[data-api-degree-course=\"MATH-021\"] button').click()");
+  await waitFor("document.querySelector('.api-course-dialog[open] .catalog-course-details')", "live course details from degree card");
+  check(await evaluate("document.body.dataset.activeScreen==='planner'&&document.querySelector('.api-course-dialog').textContent.includes('40100')"), "Degree course cards open actual API section details");
+  await clickText("Close course details", ".api-course-dialog");
   await evaluate("document.querySelectorAll('[data-schedule-rank]')[1].click()");
   check(await evaluate(`document.querySelector('.api-section-list').textContent.includes('${result.schedules[1].sections.find(s=>s.courseId==='MATH-021').crn}')`), "Choosing another alternative updates the actual CRN");
   for (const [width, height] of [[1440,900], [800,700], [390,844]]) {
@@ -76,10 +98,14 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate("window.prompt=()=> 'Synthetic saved plan'"); await clickText("Save schedule");
   check(await evaluate("JSON.parse(localStorage.getItem('smartcourse-api-plans-v1'))[0].crns.length===2&&!localStorage.getItem('smartcourse-api-plans-v1').includes('meetings')"), "Saved plans contain identifiers and preferences, not catalog snapshots");
+  await search("OPT-100"); await clickText("Add to next semester", '[data-api-course="OPT-100"]');
+  await waitFor("document.querySelector('.api-planner').textContent.includes('your existing meetings are kept')", "adding a course rechecks the existing schedule");
+  check(await evaluate("document.querySelectorAll('.api-section-list > li').length===2&&document.querySelector('[data-api-degree-course=\"OPT-100\"]').dataset.sectionState==='planned'"), "Adding another course preserves current sections and marks the new course as awaiting sections");
   await evaluate("document.querySelector('[data-route=saved]').click()"); await clickText("Open plan", ".api-saved");
   await waitFor("document.querySelector('[aria-label=\"Manual section validation\"]')?.textContent.includes('Section selection is complete')", "saved plan refreshed through real checker"); checks++;
   await evaluate("document.querySelector('[aria-label=\"Remove CRN 40200\"]').click()");
   await waitFor("document.querySelector('.api-schedule-facts')?.textContent.includes('4 credits')", "manual section removal");
+  check(await evaluate("document.querySelector('[data-api-degree-course=\"ENGL-001\"]').dataset.sectionState==='planned'"), "Removing sections updates the degree card to planned rather than retaining stale meetings");
   check(await evaluate("document.querySelector('[aria-label=\"Manual section validation\"]').textContent.includes('INCOMPLETE')"), "Manual checker identifies missing required sections");
   await clickText("Undo"); await waitFor("document.querySelector('.api-schedule-facts')?.textContent.includes('7 credits')", "undo rechecks real sections"); checks++;
   await clickText("Redo"); await waitFor("document.querySelector('.api-schedule-facts')?.textContent.includes('4 credits')", "redo rechecks real sections"); checks++;

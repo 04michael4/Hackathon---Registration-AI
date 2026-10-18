@@ -10,6 +10,10 @@
   let reviewCourse = '';
   let courseSearchQuery='',courseSearchOpen=false,courseSearchTerm='spring-2027';
   let searchTags=new Set(),profileOpen=false,inspectorOpen=false;
+  // Live next-semester facts stay in memory, outside the sample curriculum and browser-persisted demo store.
+  let semesterPlan={term:'',name:'',courses:[]};
+  const liveMode=()=>document.documentElement.dataset.sylloMode==='api';
+  function liveTermId(){const match=semesterPlan.term.match(/^(\d{4})-(SPRING|FALL)$/);return match?`${match[2].toLowerCase()}-${match[1]}`:api().nextTerm;}
   // Multi-select: course ids picked with Shift+click or a marquee box. Never stored in the plan.
   const selected=new Set();
   let marquee=null;
@@ -72,7 +76,7 @@
     const focus=document.activeElement?.id;
     shell.innerHTML = `
       <header class="dp-header">
-        <div class="dp-title"><span class="dp-university ${document.documentElement.dataset.sylloMode==='api'?'api-prototype-label':''}" title="This degree workspace uses sample data, separate from the live semester plan.">${document.documentElement.dataset.sylloMode==='api'?'Sample degree data · Demo':'Lehigh University'}</span><h1>Degree Planner</h1></div>
+        <div class="dp-title"><span class="dp-university ${liveMode()?'api-prototype-label':''}" title="Next semester follows your live semester plan. Other terms and degree requirements use sample data.">${liveMode()?'Next semester synced · Other terms demo':'Lehigh University'}</span><h1>Degree Planner</h1></div>
         ${renderProfile()}
       </header>
       <section class="degree-course-search dp-search" aria-label="Search courses, minors and concentrations">
@@ -158,7 +162,7 @@
     S.showToast(`${result.moved.length===1?S.catalog[result.moved[0]].code:result.moved.length+' courses'} moved`,to==='bucket'?(result.warnings?.length?result.warnings.join(' '):'In the staging area. Drag them into a semester when you are ready.'):`${termById(to).label} · Prerequisites and term offering checked.`);
     return true;
   }
-  function moveSelection(to){const ids=[...selected];if(!ids.length)return;if(reportMove(api().moveCourses(ids,to),to))clearSelection()}
+  function moveSelection(to){const ids=[...selected];if(!ids.length)return;if(liveMode()&&to===liveTermId()){api().showToast('Use the live semester search','Add courses in Plan My Semester to update this semester.');return;}if(reportMove(api().moveCourses(ids,to),to))clearSelection()}
   function removeSelection(){
     const S=api(),removed=S.removeCourses([...selected]);
     if(removed.length){clearSelection();S.showToast(`${removed.length===1?S.catalog[removed[0]].code:removed.length+' courses'} removed`,'Press Ctrl or ⌘ + Z to undo.')}
@@ -167,6 +171,7 @@
   function addCourseReasons(id){
     const S=api(),c=S.catalog[id],term=termById(courseSearchTerm),index=S.terms.indexOf(term),reasons=[];
     if(!c||!term||term.past)return ['Choose a future semester.'];
+    if(liveMode()&&term.id===liveTermId())return ['Add live courses for this semester in Plan My Semester.'];
     if(S.completed.has(id))return ['Already completed'];
     const plannedTerm=S.terms.find(t=>termCourses(t.id).includes(id))||S.terms.find(t=>slotList().some(slot=>slot.term===t.id&&S.state.electives[slot.id]===id));
     // Staged (bucket) courses aren't "planned" yet, so they can still be added straight to a semester.
@@ -229,9 +234,18 @@
   }
 
   function renderTerm(term) {
+    if(liveMode()&&term.id===liveTermId())return renderLiveTerm(term);
     const ids = termCourses(term.id);
     const slots = termSlots(term.id);
     return `<section class="degree-term ${term.past?'is-completed':'is-future'} ${term.id===api().nextTerm?'is-next-semester':''}" data-degree-term="${safe(term.id)}" aria-label="${safe(term.label)}${term.past?', completed':''}"><div class="degree-term-heading"><h3>${term.past?'<span aria-hidden="true">▣ </span>':''}${safe(term.label)}</h3><span>${term.past?'Completed':`${futureCredits(term)} credits${term.id===api().nextTerm?' · Next semester':''}`}</span><button class="degree-remove-term" type="button" data-degree-action="hide-term" data-term="${safe(term.id)}" aria-label="Remove ${safe(term.label)} from view" title="Remove semester from view">×</button></div><div class="degree-term-courses">${ids.map(id=>renderDegreeCourse(id,term)).join('')}${slots.map(slot=>renderSlot(slot)).join('')}${!ids.length&&!slots.length?`<p class="degree-term-empty">${term.past?'Recorded in transcript.':'Drag a course here.'}</p>`:''}</div>${term.id===api().nextTerm?'<button class="degree-calendar-link" data-action="degree-to-calendar">Open weekly calendar →</button>':''}${term.past?'<small class="degree-history-note">Read-only transcript summary</small>':''}</section>`;
+  }
+
+  function renderLiveTerm(term){
+    const courses=semesterPlan.courses,credits=courses.reduce((sum,c)=>sum+(c.credits||0),0),unknown=courses.some(c=>c.credits===null);
+    return `<section class="degree-term is-future is-next-semester api-degree-term" data-degree-term="${safe(term.id)}" aria-label="${safe(semesterPlan.name||term.label)}, next semester">
+      <div class="degree-term-heading"><h3 title="${safe(semesterPlan.name||term.label)}">${safe(term.label)}</h3><span>${credits}${unknown?'+':''} credits · Next semester</span><button class="degree-remove-term" type="button" data-degree-action="hide-term" data-term="${safe(term.id)}" aria-label="Remove ${safe(term.label)} from view" title="Remove semester from view">×</button></div>
+      <div class="degree-term-courses">${courses.map(c=>`<article class="degree-course cat-elective api-degree-course" data-api-degree-course="${safe(c.courseId)}" data-section-state="${c.crns.length?'chosen':'planned'}"><button class="degree-course-info" type="button" data-degree-action="live-details" data-course="${safe(c.courseId)}"><span>${safe(c.courseId)} <small>${c.credits===null?'Credits unavailable':`${c.credits} cr`}</small></span><strong>${safe(c.title)}</strong><b class="dp-cat-tag">${c.crns.length?'Sections chosen':'Planned'}</b></button><small class="api-degree-status">${c.crns.length?(c.hasMeetings?'In your semester calendar':'TBA / arranged · no meeting times'):'Choose sections in Plan My Semester'}</small></article>`).join('')||'<p class="degree-term-empty">Add courses in Plan My Semester. They will appear here automatically.</p>'}</div>
+      <button class="degree-calendar-link" data-action="degree-to-calendar" aria-label="Open weekly calendar">Open weekly calendar →</button></section>`;
   }
 
   function renderDegreeCourse(id,term) {
@@ -341,6 +355,12 @@
 
   function init() {
     if(initialized||!api())return;initialized=true;
+    document.addEventListener('syllo:semester-plan',event=>{
+      const plan=event.detail;
+      if(!liveMode()||!plan||typeof plan.term!=='string'||typeof plan.name!=='string'||!Array.isArray(plan.courses))return;
+      semesterPlan={term:plan.term,name:plan.name,courses:plan.courses.filter(c=>c&&typeof c.courseId==='string'&&typeof c.title==='string'&&(c.credits===null||(Number.isFinite(c.credits)&&c.credits>=0))&&Array.isArray(c.crns)&&c.crns.every(crn=>typeof crn==='string')&&typeof c.hasMeetings==='boolean')};
+      render();
+    });
     const modal=document.createElement('div');modal.id='degree-elective-dialog';modal.className='degree-elective-dialog hidden';document.body.append(modal);
     document.addEventListener('click',event=>{
       const tag=event.target.closest('[data-degree-tag]');
@@ -349,7 +369,10 @@
       else if(profileOpen&&event.target.closest('#dp-profile-menu [data-action]')){profileOpen=false;}
       const button=event.target.closest('[data-degree-action]');if(!button||button.disabled)return;
       const action=button.dataset.degreeAction,S=api();
-      if(action==='details'){
+      if(action==='live-details'){
+        S.navigate('planner');document.dispatchEvent(new CustomEvent('syllo:open-semester-course',{detail:button.dataset.course}));
+      }
+      else if(action==='details'){
         const id=button.dataset.course,inCard=button.closest('[data-degree-course]');
         if(event.shiftKey&&inCard){event.preventDefault();toggleSelected(id);return}
         clearSelection();closeInspector();S.openCourse(id);
@@ -450,6 +473,7 @@
     document.addEventListener('drop',event=>{
       const zone=event.target.closest('.degree-term,[data-degree-bucket]');if(!zone)return;const raw=event.dataTransfer.getData('application/syllo-degree');if(!raw)return;
       event.preventDefault();document.body.classList.remove('degree-is-dragging');zone.classList.remove('is-drop-target');
+      if(zone.classList.contains('api-degree-term')){api().showToast('Use the live semester search','Sample degree courses cannot replace your live semester plan.');return;}
       if(zone.classList.contains('is-completed')){api().showToast('Completed semester is locked','Move this course into a future semester instead.');return}
       try{
         const data=JSON.parse(raw),to=zone.matches('[data-degree-bucket]')?'bucket':zone.dataset.degreeTerm,ids=Array.isArray(data.ids)?data.ids:[data.id];
