@@ -124,7 +124,7 @@ If a conflict touches someone else's module and the intent isn't obvious, stop a
 | `./mvnw clean test` | When something behaves strangely (clears stale build output) |
 | `./mvnw spring-boot:run`, then `curl` the changed endpoint | When you change or add an endpoint |
 
-Frontend test commands: _TBD once `frontend/` is scaffolded._
+Frontend commands (run from `frontend/`): `npm run lint` · `npm test` · `npm run build`. Use Node.js 24 LTS and install the pinned dependencies with `npm ci`.
 
 ## 7. Working with Claude Code and Codex
 
@@ -173,3 +173,16 @@ Both agents read project instructions automatically: **Claude Code** reads [`CLA
 - [ ] Read [CLAUDE.md](../CLAUDE.md); its rules apply to humans too.
 - [ ] Agree with the team on a module, and add yourself to the README team table and HANDOFF.md.
 - [ ] Make a first small PR (e.g. a docs fix) to practice the workflow end to end.
+
+## 11. Working with the course database
+
+The team can share one development PostgreSQL so everyone sees the same schema and data. It is a development database, not production.
+
+1. **The repo is the source of truth for structure.** Tables, views and importers live under `data/` and change only through a pull request into `pre-main`. Nobody edits tables by hand in a GUI client. Browse with a read-only role; a request for a change is a migration in a PR.
+2. **Rebuild, don't patch.** The database is rebuilt from the scripts (`data/catalog-research/README.md`, "Build and use"). The imports are repeatable and abort if stored rows disagree with the evidence. Announce a rebuild or any shared-interface change before it lands.
+3. **Connect with environment variables, never committed.** Put `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` and (if needed) `DB_CATALOG_SCHEMA` in your own git-ignored `.env`. Passwords are shared privately, never in Git, chat messages, docs, logs or test output.
+4. **Know which schema the backend reads.** Default `catalog_api`; `catalog_live` adds promoted courses. `catalog_research` stores the researched catalog and is **not** read by the backend (the adapter's allow-list refuses it). Reading it from the backend is a shared-interface change: update the docs in the same PR and ask the consuming modules to review.
+5. **Storing is not approving.** An import never makes a course schedulable. A person records approvals with a supporting source, then promotes (`data/catalog-promotion/README.md`). Do not mark research data as Registrar-certified anywhere.
+6. **Real course data stays local.** Banner-derived files and dumps are not committed and do not appear in tests, docs or logs, because permission to redistribute them is not verified. Committed tests use synthetic fixtures (fake CRNs). Share a dump only if the team agrees, directly and privately.
+7. **Tests never use the shared database.** The database integration tests (`-Pdatabase-it`) build their own throwaway database from `TEST_DATABASE_URL`; point that at a local test cluster, not at the shared one.
+8. **Student data is not course data.** A transcript or student profile is not stored in the course database, not written to logs or error messages, and never sent to an AI prompt.

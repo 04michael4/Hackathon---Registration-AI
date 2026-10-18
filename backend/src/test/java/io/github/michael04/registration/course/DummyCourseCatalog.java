@@ -8,13 +8,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
- * TEMPORARY dummy catalog with a few made-up courses for one made-up term.
- * Not real Lehigh data, and needs no database.
+ * Test-only catalog with made-up courses. Kept for resolver, validation and fixture regression tests.
+ * This class is compiled into test-classes only and is absent from the executable application.
  *
- * <p>Active only when {@code app.catalog.source=dummy} (the default; env var {@code CATALOG_SOURCE}).
- * A database-backed catalog should be annotated
- * {@code @ConditionalOnProperty(name = "app.catalog.source", havingValue = "database")},
- * so exactly one {@link CourseCatalog} exists for any setting.
+ * <p>The Maven test profile selects {@code app.catalog.source=dummy}; database integration tests explicitly
+ * select the authoritative production provider instead. Missing properties are allowed for isolated context runners.
  */
 @Component
 @ConditionalOnProperty(name = CourseCatalog.SOURCE_PROPERTY, havingValue = "dummy", matchIfMissing = true)

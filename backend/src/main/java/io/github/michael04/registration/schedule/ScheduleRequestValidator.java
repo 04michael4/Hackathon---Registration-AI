@@ -5,6 +5,12 @@ import jakarta.validation.ConstraintValidatorContext;
 
 /** Cross-field rules and constraints on generic preference values. Numeric ranges use Bean Validation. */
 public class ScheduleRequestValidator implements ConstraintValidator<ValidScheduleRequest, GenerateScheduleRequest> {
+	/**
+	 * Original-entry limit required by final integration. The separately configured node cap bounds search;
+	 * capped results remain valid but are not claimed exhaustive (see architecture.md § 7).
+	 */
+	static final int MAX_OPTIONAL_COURSES = 10;
+
 	@Override
 	public boolean isValid(GenerateScheduleRequest request, ConstraintValidatorContext context) {
 		if (request == null || request.preferences() == null) {
@@ -23,8 +29,8 @@ public class ScheduleRequestValidator implements ConstraintValidator<ValidSchedu
 		if (soft.optionalCourseIds() != null && soft.optionalCourseIds().value() != null) {
 			var ids = soft.optionalCourseIds().value();
 			// Check the original list before de-duplication or required/optional overlap removal.
-			if (ids.size() > 10) {
-				violation(context, "must contain at most 10 optional courses", "softPreferences", "optionalCourseIds", "value");
+			if (ids.size() > MAX_OPTIONAL_COURSES) {
+				violation(context, "must contain at most " + MAX_OPTIONAL_COURSES + " optional courses", "softPreferences", "optionalCourseIds", "value");
 				valid = false;
 			}
 			if (ids.stream().anyMatch(id -> id == null || id.isBlank())) {

@@ -25,7 +25,7 @@ class ClaudeExtractionValidatorTest {
 			 "minCredits":12,"maxCredits":null,
 			 "blockedTimes":[{"days":["TUESDAY","THURSDAY"],"start":"15:00","end":"18:00"}],
 			 "earliestStart":"10:00","earliestStartWeight":4,"latestEnd":null,"latestEndWeight":null,
-			 "daysOff":["FRIDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"assumptions":[]}
+			 "daysOff":["FRIDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 			""";
 
 	private static ObjectNode valid() {
@@ -40,7 +40,7 @@ class ClaudeExtractionValidatorTest {
 	void theRequiredPropertiesAreExactlyTheContract() {
 		assertThat(ClaudeExtractionValidator.requiredProperties()).containsExactly("requiredCourses", "optionalCourses",
 				"optionalCoursesWeight", "minCredits", "maxCredits", "blockedTimes", "earliestStart", "earliestStartWeight",
-				"latestEnd", "latestEndWeight", "daysOff", "daysOffWeight", "minimizeGapsWeight", "assumptions");
+				"latestEnd", "latestEndWeight", "daysOff", "daysOffWeight", "minimizeGapsWeight", "minBreakMinutes", "minBreakWeight", "interestTopics", "latestStart", "assumptions");
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class ClaudeExtractionValidatorTest {
 				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,"minCredits":null,"maxCredits":null,
 				 "blockedTimes":[{"days":["MONDAY"],"start":"08:00","end":"09:00"},{"days":["TUESDAY"],"start":"08:00"}],
 				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
-				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				""");
 
 		assertThat(problem(node)).contains("missing property 'blockedTimes[1].end'");
@@ -96,7 +96,7 @@ class ClaudeExtractionValidatorTest {
 		assertThat(ClaudeExtractionValidator.firstProblem("""
 				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,"minCredits":null,"maxCredits":null,
 				 "blockedTimes":[],"earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
-				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				""")).isEmpty();
 	}
 

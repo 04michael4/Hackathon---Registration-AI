@@ -19,4 +19,14 @@ public class ScheduleController {
 	public GenerateScheduleResponse generate(@Valid @RequestBody GenerateScheduleRequest request) {
 		return service.generate(request);
 	}
+
+	@PostMapping("/check")
+	public CheckScheduleResponse check(@Valid @RequestBody CheckScheduleRequest request) {
+		return service.check(request);
+	}
+
+	@PostMapping("/suggest-electives")
+	public SuggestElectivesResponse suggestElectives(@Valid @RequestBody SuggestElectivesRequest request) {
+		return service.suggestElectives(request);
+	}
 }

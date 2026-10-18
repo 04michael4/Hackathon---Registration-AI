@@ -1,0 +1,177 @@
+/* One institutional palette. Neutral shades plus Lehigh brown and one gold accent. */
+:root{--theme-brown:#562b0c;--theme-white:#ffffff;--theme-ink:#211b17;--theme-muted:#6d625a;--theme-line:#ded7d1;--theme-surface:#f7f5f2;--theme-tint:#eee6df;--theme-accent:#b78a29;--theme-accent-tint:#faf4e5;--theme-shadow:rgba(86,43,12,.10);--ink:var(--theme-ink);--muted:var(--theme-muted);--soft:var(--theme-surface);--line:var(--theme-line);--green:var(--theme-brown);--green-2:var(--theme-tint);--gold:var(--theme-accent);--blue:var(--theme-tint);--lav:var(--theme-tint);--peach:var(--theme-accent-tint);--mint:var(--theme-tint)}
+:root{--theme-white-glass:rgba(255,255,255,.97);--theme-white-muted:rgba(255,255,255,.76);--theme-surface-glass:rgba(247,245,242,.74);--theme-overlay:rgba(33,27,23,.35)}
+[hidden]{display:none!important}
+/* Course lists stay concise at every viewport, not just the laptop workspace. */
+.planner-layout .planner-course-sidebar .planner-sidebar-course{position:relative;min-height:56px;padding:8px 10px;gap:8px;align-items:center}
+.planner-course-sidebar .planner-sidebar-course>div{min-width:0;padding-right:28px}
+.planner-course-sidebar .sem-course-link{gap:3px;text-align:left}
+.planner-course-sidebar .planner-sidebar-course .sem-course-link strong{font-size:13px;line-height:1.3}
+.planner-course-sidebar .planner-sidebar-course .sem-course-link span{font-size:14px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.planner-course-sidebar .planner-sidebar-course>button{position:absolute;right:8px;bottom:8px;width:28px;height:28px;min-width:0;padding:0;font-size:17px;border-radius:6px}
+.planner-course-sidebar .planner-sidebar-course .sidebar-course-color{height:30px}
+.planner-course-sidebar>section>p{display:none}
+.planner-calendar-event>small,.sem-full-event>small{display:none}
+.planner-calendar-event>span,.sem-full-event>span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+body{background:var(--theme-surface)}
+.sso-demo-note{display:block;margin-top:16px;font-size:12px;color:var(--muted)}
+.interest-search{position:relative;min-width:0;margin-top:10px}
+.interest-search>label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+.interest-controls{display:flex;gap:8px}
+.interest-controls input{min-width:0;flex:1;border:1px solid var(--line);border-radius:7px;background:var(--theme-white);padding:9px 12px;font-size:14px;color:var(--ink)}
+.interest-controls button,.interest-results button,.map-help button,.advisor-status-editor button{padding:9px 13px;border:1px solid var(--line);border-radius:7px;background:var(--theme-white);color:var(--green);cursor:pointer;font-size:13px;min-height:36px}
+.interest-results{position:absolute;top:100%;left:0;right:0;max-height:340px;overflow:auto;z-index:45;background:var(--theme-white);border:1px solid var(--line);border-radius:9px;box-shadow:0 12px 30px var(--theme-shadow);padding:12px}
+.interest-result-heading{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:10px}
+.interest-results article{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:12px 0}
+.interest-results article>div:first-child{display:flex;flex-direction:column;gap:5px}
+.interest-results strong{font-size:14px}.interest-results span,.interest-results small{font-size:12px;line-height:1.5;color:var(--muted)}
+.interest-actions{display:flex;gap:6px;flex-shrink:0}.interest-results button:disabled{opacity:.55;cursor:default}
+.degree-workspace-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding:0 0 7px;margin:15px 0 0}
+.degree-workspace-tabs button{border:0;background:transparent;color:var(--muted);padding:10px 15px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer}
+.degree-workspace-tabs button[aria-selected=true]{background:var(--theme-tint);color:var(--green)}
+.prerequisite-map{background:var(--theme-white);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:0}
+.map-help{display:flex;align-items:center;gap:8px;padding:0 3px 10px}.map-help p{margin:0 auto 0 0;font-size:14px;line-height:1.5}
+.map-scroll{overflow:auto;max-height:440px}.map-canvas{position:relative;background:var(--theme-surface);border-radius:8px}
+.map-canvas svg{position:absolute;inset:0;pointer-events:none}.map-canvas svg g path{fill:none;stroke:var(--theme-brown);stroke-width:2}.map-canvas marker path{fill:var(--theme-brown)}
+.map-column-title{position:absolute;top:8px;font-size:12px;color:var(--muted)}
+.map-course{position:absolute;width:196px;height:64px;text-align:left;border:1px solid var(--line);background:var(--theme-white);border-radius:7px;padding:9px 10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;color:var(--ink)}
+.map-course strong{font-size:13px}.map-course span{font-size:12px;line-height:1.3}.map-course.selected{background:var(--theme-brown);border-color:var(--theme-brown);color:var(--theme-white)}
+.map-course.prerequisite{border:2px solid var(--theme-brown);background:var(--theme-tint)}.map-course.unlocked{border:2px solid var(--theme-accent);background:var(--theme-accent-tint)}.map-course.unrelated{opacity:.28}
+.map-disclaimer{display:block;font-size:12px;line-height:1.4;color:var(--muted);padding-top:10px}
+.advisor-status-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0;font-size:13px}.advisor-status-filter>div{display:flex;flex-wrap:wrap;gap:6px}.advisor-status-filter button{padding:7px 11px;border:1px solid var(--line);border-radius:20px;background:var(--theme-white);color:var(--green);cursor:pointer}.advisor-status-filter button[aria-pressed=true]{background:var(--theme-brown);color:var(--theme-white);border-color:var(--theme-brown)}
+.advisor-status-filter small{color:var(--muted)}.advisor-course-status{align-self:flex-start;font-size:12px!important;background:var(--theme-tint);color:var(--theme-brown);border-radius:20px;padding:3px 8px}
+.advisor-status-editor{margin:10px 0;font-size:13px}.advisor-status-editor summary{cursor:pointer;font-weight:600}.advisor-status-editor p{color:var(--muted);font-size:12px}.advisor-status-editor select{max-width:260px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--theme-white);font-size:13px}.advisor-status-editor label{display:inline-flex;align-items:center;gap:6px;margin-right:10px}
+.planner-sidebar-course:not(.planned)>div>small{display:none}.planner-sidebar-course:not(.planned) .sem-course-link{gap:4px}.planner-sidebar-course:not(.planned) .sem-course-link strong{font-size:13px}.planner-sidebar-course:not(.planned) .sem-course-link span{font-size:14px;line-height:1.3}.planner-layout .planner-sidebar-course:not(.planned){padding:9px 10px;gap:8px}.planner-sidebar-course:not(.planned) .sem-seed{font-size:12px;margin-top:7px}.planner-sidebar-course em{font-size:11px}
+.planner-sidebar-course:not(.planned){position:relative;min-height:68px}.planner-sidebar-course:not(.planned)>div{padding-right:25px}.planner-sidebar-course:not(.planned) .sem-seed{position:absolute;right:8px;top:8px;font-size:0;margin:0;line-height:1}.planner-sidebar-course:not(.planned) .sem-seed input{width:17px;height:17px;margin:0}.planner-sidebar-course:not(.planned)>em{display:none}.planner-sidebar-course:not(.planned)>button{position:absolute;right:7px;bottom:7px;width:27px;height:27px}.planner-sidebar-course:not(.planned) .sem-course-link span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* The laptop application is a fixed-height workspace; each content pane scrolls independently. */
+@media(min-width:1100px) and (min-height:650px){
+ html,body{height:100%;overflow:hidden}.app-shell{height:100dvh;min-height:0}#main-content{height:100%;display:flex;flex-direction:column;overflow:hidden}
+ .product-nav{position:relative;flex:0 0 64px;height:64px;padding-top:0;padding-bottom:0}.screen.active{flex:1;min-height:0;overflow:hidden;animation:none}.screen.login-screen.active{height:100%;min-height:0;display:grid;place-items:center;padding:20px}
+ .login-shell{min-height:0;padding:0;gap:20px}.login-card{padding:30px 40px}.login-brand strong{font-size:42px}.login-crest{width:44px;height:54px}.login-kicker{margin-top:16px}.login-card h1{margin-top:15px}
+ .features-screen.active{padding:24px 4vw}.features-shell{height:100%;max-height:770px;display:flex;flex-direction:column;padding:0}.features-header{padding:8px 0 20px;margin:0 0 22px}.features-header h1{font-size:42px}.features-grid{flex:1;min-height:0;gap:18px}.feature-card{padding:25px 28px;min-height:0}.feature-card p{font-size:17px;line-height:1.65}.feature-card .feature-link{margin-top:auto}
+ .planner-screen.active{padding:18px 3vw}.planner-shell{height:100%;display:flex;flex-direction:column;gap:0}.screen-topline{margin-bottom:8px}.planner-header{margin:0 0 12px;align-items:center}.planner-header h1{font-size:32px;margin:5px 0}.planner-header p{font-size:14px;margin:4px 0}.planner-total strong{font-size:30px}.sem-toolbar{margin:0 0 14px}.sem-registration{padding:10px 15px}.sem-registration>strong{font-size:29px}.sem-registration b{font-size:14px}.sem-registration small{font-size:12px}
+ .planner-layout,.planner-layout:not(.ai-closed){flex:1;min-height:0;align-items:stretch;gap:18px}.planner-layout.ai-closed{grid-template-columns:minmax(0,1fr) 150px}.planner-layout:not(.ai-closed){grid-template-columns:minmax(0,1fr) 350px}.manual-planner{padding:18px;min-height:0;overflow:hidden;display:flex;flex-direction:column}.course-search-area{flex-shrink:0}.course-search>div{height:45px}.catalog-note{margin:7px 0;font-size:11px}.sem-search-controls{margin:5px 0}.interest-search{margin-top:7px}.interest-controls input{padding:7px 10px}.interest-controls button{min-height:34px;padding:7px 12px}
+ .schedule-workspace,.planner-layout:not(.ai-closed) .schedule-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;border-top:1px solid var(--line);margin-top:14px;padding-top:12px;overflow:hidden}
+ .planner-layout:not(.ai-closed) .schedule-workspace{grid-template-columns:minmax(0,1fr) 235px}.schedule-calendar-column{min-height:0;display:flex;flex-direction:column;overflow:hidden}.manual-schedule-heading{flex-shrink:0;margin:0 0 9px}.manual-schedule-heading h2{font-size:20px}.planner-week-calendar{flex:1;min-height:230px;overflow:auto}.planner-calendar-grid{height:500px;min-height:500px}.planner-calendar-days{position:sticky;top:0;z-index:3;min-height:44px;height:44px;background:var(--theme-surface)}.planner-calendar-days strong{font-size:11px}.planner-time-labels span{font-size:12px}
+ .planner-course-sidebar,.planner-layout:not(.ai-closed) .planner-course-sidebar{display:flex;flex-direction:column;overflow:auto;min-height:0;gap:12px;padding-right:3px}.planner-course-sidebar>section{padding:12px}.planner-sidebar-heading h3{font-size:17px}.planner-course-sidebar>section>p{font-size:11px;line-height:1.5;margin-bottom:10px}.planner-sidebar-course .sem-course-link span{font-size:13px}.planner-sidebar-course>div>small{font-size:11px}.planner-sidebar-list{gap:7px}
+ .ai-assistant-shell{position:static;min-height:0;display:flex;flex-direction:column;overflow:hidden}.syllo-ai-toggle{flex-shrink:0;margin-left:auto;margin-bottom:10px}.intelligence-panel{flex:1;min-height:0;max-height:none;overflow:auto;padding:18px}.intelligence-panel.is-collapsed{flex:0;padding:0;border:0}.intelligence-heading strong{font-size:21px}.sem-conversation .planner-chat{max-height:200px;min-height:100px}.sem-conversation .chat-message>p{font-size:14px}
+ .progress-screen.active,.advisor-screen.active,.saved-screen.active{padding:18px 3vw}.degree-shell,.advisor-shell,.saved-shell{height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:0}.degree-page-heading{flex-shrink:0;margin:0}.degree-page-heading h1{font-size:30px;margin:5px 0}.degree-page-heading p{font-size:13px;margin:4px 0}.degree-credit-summary{margin:0;font-size:12px;padding:8px 12px;flex-shrink:0}.degree-course-search{margin:0;padding:12px 16px;flex-shrink:0}.degree-search-heading{display:none}.degree-search-controls{gap:12px}.degree-search-query input,.degree-search-term select{height:38px;font-size:14px}.degree-search-controls label>span{font-size:12px}
+ .degree-course-search .interest-search{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:10px;margin-top:8px}.degree-course-search .interest-search>label{margin:0}.degree-workspace-tabs{margin:0;flex-shrink:0}.degree-workspace-tabs button{padding:8px 13px}
+ [data-degree-panel]{flex:1;min-height:0;margin:0!important;overflow:auto}.degree-four-year-plan{display:flex;flex-direction:column;gap:9px}.degree-section-heading{margin:0;flex-shrink:0}.degree-section-heading h2{font-size:18px}.degree-section-heading p{font-size:12px;margin:4px 0}.degree-view-controls{padding:8px;margin:0;gap:8px;flex-shrink:0}.degree-year-grid{flex:1;min-height:0;overflow:auto;align-items:start;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 3px 10px}.degree-year{min-width:0}.degree-term{padding:10px}.degree-review-callout{margin:0;padding:10px 14px;flex-shrink:0}.degree-review-callout p{margin:3px 0;font-size:12px}.degree-review-status{font-size:11px}.degree-demo-note{display:none}.degree-audit-details{margin:0;max-height:100px;overflow:auto;flex-shrink:0}.degree-ai-card{padding:16px}.degree-ai-card .degree-ai-conversation{max-height:170px}.prerequisite-map{display:flex;flex-direction:column}.map-scroll{flex:1;min-height:0;max-height:none}
+ .advisor-plan-summary{flex-shrink:0;margin:0;padding:12px}.advisor-connected-layout{flex:1;min-height:0;overflow:hidden;align-items:stretch}.advisor-full-plan,.advisor-feedback{min-height:0;overflow:auto;padding:16px}.advisor-term-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.advisor-gate{overflow:auto}.saved-heading{flex-shrink:0;margin-bottom:10px}.saved-heading h1{font-size:32px}.saved-list{overflow:auto;min-height:0}
+}
+@media(max-width:700px){.degree-workspace-tabs{overflow:auto;flex-shrink:0}.degree-workspace-tabs button{white-space:nowrap;padding:10px}.interest-results article{align-items:stretch;flex-direction:column}.interest-actions{justify-content:flex-end}.map-help{flex-wrap:wrap}.map-help p{flex-basis:100%}.map-scroll{max-height:430px}.advisor-status-editor label{display:flex;margin:10px 0}.advisor-status-editor select{min-width:0;max-width:100%;flex:1}}
+/* Normal document scrolling takes precedence over the earlier fixed-height workspace. */
+.planner-layout .planner-course-sidebar .planner-sidebar-course{display:grid;grid-template-columns:3px minmax(0,1fr) auto;align-items:center;gap:9px}
+.planner-course-sidebar .planner-sidebar-course>div{padding-right:0}
+.planner-course-sidebar .planner-sidebar-course>.sem-card-actions{display:flex;flex-direction:row;align-items:center;gap:12px;padding:0}
+.planner-course-sidebar .planner-sidebar-course .sem-card-actions .sem-seed{position:static;display:flex;align-items:center;justify-content:center;width:24px;min-height:32px;margin:0;font-size:0;line-height:1;cursor:pointer}
+.planner-course-sidebar .planner-sidebar-course .sem-card-actions .sem-seed input{width:17px;height:17px;margin:0;cursor:pointer}
+.planner-course-sidebar .sem-card-actions>button{position:static;flex-shrink:0;width:30px;height:32px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--theme-white);color:var(--green);font-size:18px;cursor:pointer}
+.planner-course-sidebar .sem-card-actions>.course-add-button{width:auto;min-width:50px;padding:0 9px;font-size:12px;font-weight:600}
+.planner-course-sidebar .sem-card-actions>.course-add-button:disabled{background:var(--theme-tint);border-color:transparent;color:var(--muted);cursor:default}
+/* Semester-column calendar, adapted from the reference branch's DegreeGrid. */
+.degree-calendar-scroll{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 2px 12px;min-height:0}
+.degree-calendar-scroll .degree-semester-calendar{display:grid;grid-template-columns:repeat(var(--visible-terms),minmax(168px,1fr));min-width:calc(var(--visible-terms)*176px);align-items:stretch;gap:8px;overflow:visible;padding:0}
+.degree-semester-calendar>.degree-year{display:contents}
+.degree-semester-calendar .degree-year-heading{display:none}
+.degree-semester-calendar .degree-term{display:flex;flex-direction:column;min-height:330px;padding:0;margin:0;border:1px solid var(--line);border-radius:7px;background:var(--theme-white);overflow:hidden}
+.degree-semester-calendar .degree-term-heading{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:70px;padding:12px 27px 10px 10px;border-bottom:1px solid var(--line);margin:0;background:var(--theme-surface)}
+.degree-semester-calendar .degree-term-heading h3{font-size:14px;line-height:1.4;margin:0}
+.degree-semester-calendar .degree-term-heading>span{margin:0;font-size:12px;line-height:1.4}
+.degree-semester-calendar .degree-remove-term{position:absolute;right:5px;top:7px;width:22px;height:24px;font-size:18px;margin:0}
+.degree-semester-calendar .is-next-semester{border-color:var(--green)}
+.degree-semester-calendar .is-next-semester>.degree-term-heading{background:var(--green);color:var(--theme-white);border-color:var(--green)}
+.degree-semester-calendar .is-next-semester>.degree-term-heading h3,.degree-semester-calendar .is-next-semester>.degree-term-heading>span,.degree-semester-calendar .is-next-semester .degree-remove-term{color:var(--theme-white)}
+.degree-semester-calendar .degree-term-courses{display:flex;flex-direction:column;gap:7px;padding:8px;margin:0;flex:1}
+.degree-semester-calendar .degree-course{position:relative;margin:0;border-radius:5px;min-width:0;background:var(--theme-white)}
+.degree-semester-calendar .is-completed.degree-course{background:var(--theme-surface)}
+.degree-semester-calendar .degree-locked-label{display:none}
+.degree-semester-calendar .degree-drag-handle{position:absolute;z-index:2;top:6px;right:5px;font-size:0;padding:0;border:0;background:none;width:16px;line-height:1;cursor:grab}
+.degree-semester-calendar .degree-drag-handle>span{font-size:15px}
+.degree-semester-calendar .degree-course-info{padding:8px;gap:5px}
+.degree-semester-calendar .degree-course-info>span{display:flex;align-items:center;gap:5px;font-size:13px;padding-right:14px}
+.degree-semester-calendar .degree-course-info>span>small{font-size:13px;padding:3px 5px;margin-left:auto}
+.degree-semester-calendar .degree-course-info>strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.35;font-weight:500}
+.degree-semester-calendar .degree-course-info>em{display:none}
+.degree-semester-calendar .degree-move-label{padding:0 8px 8px;margin:0;display:block}
+.degree-semester-calendar .degree-move-label>span{display:none}
+.degree-semester-calendar .degree-move-label select{width:100%;height:25px;padding:2px 5px;font-size:11px;max-width:100%}
+.degree-semester-calendar .degree-elective-slot{padding:10px 8px;min-height:83px;border-style:dashed;gap:5px}
+.degree-semester-calendar .degree-elective-slot strong{font-size:13px}.degree-semester-calendar .degree-elective-slot small{font-size:12px}
+.degree-semester-calendar .degree-calendar-link{font-size:12px;padding:10px 8px;margin:0;border-top:1px solid var(--line)}
+.degree-semester-calendar .degree-term-empty{font-size:12px;padding:5px 2px;color:var(--muted);line-height:1.5}
+.degree-semester-calendar .degree-slot-actions{padding:0 6px 6px;gap:7px}.degree-semester-calendar .degree-slot-actions button{font-size:11px;padding:4px}
+.degree-calendar-scroll .degree-semester-calendar{grid-template-columns:repeat(var(--visible-terms),minmax(0,1fr));min-width:0;width:100%;gap:6px}
+.degree-semester-calendar .degree-term{min-width:0;min-height:280px}
+.degree-semester-calendar .degree-term-heading{height:74px;min-height:74px;padding:9px 22px 9px 7px;gap:3px}
+.degree-semester-calendar .degree-term-heading h3{font-size:13px}.degree-semester-calendar .degree-term-heading>span{font-size:11px}
+.degree-semester-calendar .degree-term-courses{padding:5px;gap:6px}
+.degree-semester-calendar .degree-course-info{padding:7px 6px;gap:4px}
+.degree-semester-calendar .degree-course-info>span{font-size:12px;padding-right:0;gap:3px}
+.degree-semester-calendar .degree-course[draggable=true],.degree-semester-calendar .degree-course[draggable=true]>.degree-course-info{cursor:grab}
+.degree-semester-calendar .degree-course-info>span>small{font-size:12px;padding:2px 3px}
+.degree-semester-calendar .degree-course-info>strong{font-size:12px;line-height:1.35}
+.degree-semester-calendar .degree-move-label{padding:0 6px 6px}.degree-semester-calendar .degree-move-label select{font-size:11px;padding:2px 3px}
+.degree-semester-calendar .degree-term-empty{font-size:11px;overflow-wrap:anywhere}
+.degree-semester-calendar .degree-calendar-link{font-size:11px;line-height:1.4}
+.degree-semester-calendar .degree-course.is-course-selected{outline:2px solid var(--theme-brown);outline-offset:1px;background:var(--theme-tint)}
+.degree-semester-calendar .degree-course.is-course-prerequisite{border-color:var(--theme-brown);background:var(--theme-tint)}
+.degree-semester-calendar .degree-course.is-course-unlocked{border-color:var(--theme-accent);background:var(--theme-accent-tint)}
+.degree-semester-calendar .degree-course.is-course-unrelated{opacity:.3;filter:grayscale(1)}
+.degree-course-focus-note{display:flex;align-items:center;justify-content:flex-start;gap:14px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--theme-white);font-size:12px;line-height:1.4;margin-bottom:8px}
+.degree-course-focus-note button{order:-1;border:0;background:transparent;color:var(--green);font-size:12px;cursor:pointer;flex-shrink:0}
+body.degree-course-focus #drawer-backdrop{background:transparent;pointer-events:none;backdrop-filter:none}
+:root{--theme-focus-yellow:#ffe34f;--theme-focus-border:#d0a400;--theme-focus-before:#9ddcff;--theme-focus-before-border:#176896;--theme-focus-after:#9ee6af;--theme-focus-after-border:#27733f;--theme-focus-scrim:rgba(0,0,0,.6)}
+body.degree-course-focus::after{content:"";position:fixed;inset:0;z-index:202;background:var(--theme-focus-scrim);pointer-events:none}
+body.degree-course-focus .progress-screen.active{animation:none;transform:none}
+body.degree-course-focus .degree-course-focus-note{position:relative;z-index:203}
+.degree-semester-calendar .degree-course:is(.is-course-selected,.is-course-prerequisite,.is-course-unlocked){position:relative;z-index:203;opacity:1;filter:none;background:var(--course-focus-fill,var(--theme-focus-yellow));border-color:var(--course-focus-border,var(--theme-focus-border));box-shadow:0 0 0 1px var(--course-focus-fill,var(--theme-focus-yellow))}
+.degree-semester-calendar .degree-course.is-course-prerequisite{--course-focus-fill:var(--theme-focus-before);--course-focus-border:var(--theme-focus-before-border)}
+.degree-semester-calendar .degree-course.is-course-unlocked{--course-focus-fill:var(--theme-focus-after);--course-focus-border:var(--theme-focus-after-border)}
+.degree-course-focus-note{flex-wrap:wrap;gap:8px 14px}
+.degree-focus-key{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+.degree-focus-key i{display:inline-block;width:13px;height:13px;flex-shrink:0;border:1px solid var(--theme-focus-border);border-radius:3px;background:var(--theme-focus-yellow)}
+.degree-focus-key.before i{background:var(--theme-focus-before);border-color:var(--theme-focus-before-border)}
+.degree-focus-key.after i{background:var(--theme-focus-after);border-color:var(--theme-focus-after-border)}
+.degree-semester-calendar .degree-course.is-course-selected{outline:3px solid var(--theme-brown);outline-offset:1px}
+.degree-semester-calendar .degree-course:is(.is-course-selected,.is-course-prerequisite,.is-course-unlocked) .degree-course-info,.degree-semester-calendar .degree-course:is(.is-course-selected,.is-course-prerequisite,.is-course-unlocked) .degree-course-info:hover{background:transparent;color:var(--theme-ink)}
+.degree-semester-calendar .degree-course:is(.is-course-selected,.is-course-prerequisite,.is-course-unlocked) .degree-course-info>span{color:var(--theme-ink)}
+.degree-semester-calendar .degree-course.is-course-unrelated{opacity:1;filter:grayscale(1) brightness(.8)}
+body.degree-details-open #drawer-backdrop{background:transparent;pointer-events:none;backdrop-filter:none}
+@media(min-width:760px){
+ body.degree-details-open{--degree-details-width:320px}
+ body.degree-details-open .progress-screen.active{margin-right:var(--degree-details-width)}
+ body.degree-details-open #detail-drawer{width:var(--degree-details-width);box-shadow:none;border-left:1px solid var(--line);transition:none}
+ body.degree-details-open #detail-drawer .drawer-content{padding:20px}
+ body.degree-details-open #detail-drawer h2{font-size:22px;line-height:1.3}
+ body.degree-details-open .course-info-row{grid-template-columns:92px minmax(0,1fr);font-size:12px}
+ body.degree-details-open .degree-calendar-scroll{min-width:0}
+}
+@media(min-width:760px) and (max-width:1350px){body.degree-details-open .degree-calendar-scroll .degree-semester-calendar{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:759px){
+ body.degree-details-open #detail-drawer.open{position:relative;top:auto;right:auto;bottom:auto;width:calc(100% - 24px);height:auto;margin:12px;transform:none;box-shadow:none;border:1px solid var(--line);border-radius:9px;transition:none}
+ body.degree-details-open #detail-drawer .drawer-content{height:auto;overflow:visible;padding:20px}
+ body.degree-details-open #detail-drawer .drawer-top{height:52px}
+}
+@media(max-width:999px){.degree-calendar-scroll .degree-semester-calendar{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:600px){.degree-calendar-scroll .degree-semester-calendar{grid-template-columns:repeat(2,minmax(0,1fr))}.degree-course-focus-note{align-items:flex-start;flex-direction:column}}
+@media(min-width:1100px) and (min-height:650px){
+ html,body{height:auto;overflow:visible}
+ .app-shell{height:auto;min-height:100dvh}
+ #main-content{height:auto;display:block;overflow:visible}
+ .screen.active{min-height:calc(100dvh - 64px);overflow:visible}
+ .screen.login-screen.active{height:auto;min-height:100dvh}
+ .planner-shell,.degree-shell,.advisor-shell,.saved-shell{height:auto;overflow:visible}
+ .features-shell{height:auto;max-height:none;min-height:calc(100dvh - 112px)}
+ .planner-layout,.planner-layout:not(.ai-closed){flex:none;align-items:start}
+ .manual-planner,.schedule-workspace,.planner-layout:not(.ai-closed) .schedule-workspace{overflow:visible}
+ .schedule-calendar-column{display:block;overflow:visible}
+ .planner-week-calendar{height:545px;min-height:545px;overflow:visible}
+ .planner-course-sidebar,.planner-layout:not(.ai-closed) .planner-course-sidebar{overflow:visible}
+ .ai-assistant-shell{overflow:visible}
+ .intelligence-panel{flex:none;max-height:none;overflow:visible}
+ [data-degree-panel],.degree-year-grid{flex:none;overflow:visible}
+ .map-scroll{flex:none;max-height:440px;overflow:auto}
+ .advisor-connected-layout,.advisor-full-plan,.advisor-feedback,.advisor-gate,.saved-list{overflow:visible}
+}

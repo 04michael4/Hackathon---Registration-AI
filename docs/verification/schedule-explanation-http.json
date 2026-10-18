@@ -1,0 +1,88 @@
+{
+  "verifiedAt": "2026-10-16T22:26:03.486266+00:00",
+  "baseUrl": "http://127.0.0.1:54382",
+  "provider": "local fake Anthropic HTTP server; real official SDK, database and native selection checker; no external API calls",
+  "passed": 3,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "complete grounded selection",
+      "method": "POST",
+      "path": "/api/schedules/explain",
+      "request": {
+        "term": "TEST-2027",
+        "crns": [
+          "12275",
+          "13132"
+        ],
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4
+          }
+        }
+      },
+      "actualStatus": 200,
+      "expectedStatus": 200,
+      "response": {
+        "explanation": "This 4-credit schedule pairs the lecture with its required lab.",
+        "highlights": [
+          "Includes CSE-007",
+          "Lecture and lab have no time conflict"
+        ]
+      },
+      "passed": true
+    },
+    {
+      "name": "incomplete selection",
+      "method": "POST",
+      "path": "/api/schedules/explain",
+      "request": {
+        "term": "TEST-2027",
+        "crns": [
+          "12275"
+        ],
+        "preferences": {
+          "hardConstraints": {
+            "requiredCourseIds": [
+              "CSE-007"
+            ],
+            "minCredits": 4,
+            "maxCredits": 4
+          }
+        }
+      },
+      "actualStatus": 422,
+      "expectedStatus": 422,
+      "response": {
+        "detail": "Selected sections do not form a complete feasible schedule",
+        "instance": "/api/schedules/explain",
+        "status": 422,
+        "title": "Unprocessable Content",
+        "type": "about:blank",
+        "requestId": "2d306cf2-25d4-4051-b77c-4baf4395afa0"
+      },
+      "passed": true
+    },
+    {
+      "name": "invalid JSON",
+      "method": "POST",
+      "path": "/api/schedules/explain",
+      "request": "{",
+      "actualStatus": 400,
+      "expectedStatus": 400,
+      "response": {
+        "detail": "Request is invalid",
+        "instance": "/api/schedules/explain",
+        "status": 400,
+        "title": "Bad Request",
+        "type": "about:blank",
+        "requestId": "dbcdd38a-6621-403c-8cd8-285f2aa94f0f"
+      },
+      "passed": true
+    }
+  ]
+}

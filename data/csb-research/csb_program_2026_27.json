@@ -1,0 +1,246 @@
+{
+  "note": "Structure of the Computer Science and Business Honors (CSB) degree, transcribed from the public 2026-27 Lehigh catalog page (the primary authority) with the program's own website (csb.lehigh.edu) and the CSE department's older elective page kept as SEPARATE secondary sources. Course codes, credit numbers and the shape of the rules only; no catalog prose. Where sources disagree both statements are kept (see 'source_conflicts') and nothing is chosen silently. Spring 2027 availability is NOT in this file: it comes from Banner.",
+  "sources": {
+    "CATALOG": {
+      "level": "PUBLIC_CATALOG",
+      "locator": "https://catalog.lehigh.edu/coursesprogramsandcurricula/interdisciplinaryundergraduatestudy/computerscienceandbusinessprogram/ (Undergraduate tab)",
+      "catalog_year": "2026-27",
+      "read_on": "2026-10-18",
+      "authority": "PRIMARY"
+    },
+    "CSB_SITE_CURRICULUM": {
+      "level": "PROGRAM_WEBSITE",
+      "locator": "https://csb.lehigh.edu/curriculum",
+      "read_on": "2026-10-18",
+      "authority": "SECONDARY_PROGRAM_PAGE"
+    },
+    "CSB_SITE_ELECTIVES": {
+      "level": "PROGRAM_WEBSITE",
+      "locator": "https://csb.lehigh.edu/computer-science-business-electives",
+      "read_on": "2026-10-18",
+      "authority": "SECONDARY_PROGRAM_PAGE"
+    },
+    "CSB_SITE_TRACKS": {
+      "level": "PROGRAM_WEBSITE",
+      "locator": "https://csb.lehigh.edu/csb-tracks",
+      "read_on": "2026-10-18",
+      "authority": "SECONDARY_PROGRAM_PAGE"
+    },
+    "CSE_DEPT_ELECTIVE_PAGE": {
+      "level": "DEPARTMENT_WEBSITE",
+      "locator": "https://engineering.lehigh.edu/cse/academics/undergraduate/computer-science-business-bs/csb-elective-choices",
+      "read_on": "2026-10-18",
+      "authority": "SECONDARY_DEPARTMENT_PAGE_POSSIBLY_STALE"
+    }
+  },
+  "program": {
+    "id": "LEHIGH_CSB_HONORS",
+    "name": "Computer Science and Business Honors Program",
+    "degree_type": "BS",
+    "colleges": ["College of Business", "P.C. Rossin College of Engineering and Applied Science"],
+    "catalog_year": "2026-27",
+    "total_credits": 136,
+    "no_pass_fail": true,
+    "no_pass_fail_note": "The catalog states that none of the CSB program requirements may be taken pass/fail.",
+    "transfer_in": {
+      "min_cumulative_gpa": 3.25,
+      "min_grade": "B-",
+      "grade_courses": ["ECO-001", "CSE-007"],
+      "grade_course_alternatives": [["MATH-021", "MATH-031", "MATH-076"]],
+      "other": "All curriculum-change requirements satisfied by the end of the Spring term of application; summer or fall coursework cannot be used; applications Jan 1 to May 15; not recommended beyond the second year."
+    }
+  },
+  "requirements": [
+    {
+      "key": "CS_REQUIRED", "title": "Required Computer Science courses", "credits": 35,
+      "items": [
+        {"key": "INTRO_PROGRAMMING", "type": "ANY_OF", "credits": 4, "alternatives": [["CSE-003", "CSE-004"], ["CSE-007"]],
+         "note": "Catalog row: CSE 003 and CSE 004 together, or CSE 007; one credit figure (4) is printed for the row."},
+        {"key": "CSE-017", "type": "COURSE", "course": "CSE-017", "credits": 3},
+        {"key": "CSE-109", "type": "COURSE", "course": "CSE-109", "credits": 4},
+        {"key": "CSE-140", "type": "COURSE", "course": "CSE-140", "credits": 3},
+        {"key": "CSE-202", "type": "COURSE", "course": "CSE-202", "credits": 3},
+        {"key": "CSE-216", "type": "COURSE", "course": "CSE-216", "credits": 3},
+        {"key": "DATABASE", "type": "ANY_OF", "credits": 3, "alternatives": [["CSE-241"], ["CSE-341"]]},
+        {"key": "CSE-262", "type": "COURSE", "course": "CSE-262", "credits": 3},
+        {"key": "CSE-303", "type": "COURSE", "course": "CSE-303", "credits": 3},
+        {"key": "CSE-340", "type": "COURSE", "course": "CSE-340", "credits": 3},
+        {"key": "CSE_ELECTIVE", "type": "CHOOSE_FROM_LIST", "credits": 3, "n": 1, "list": "CS_ELECTIVE_LIST",
+         "note": "One course from the approved list (the catalog's 'Computer Science & Business Electives'); the co-directors may approve others."}
+      ]
+    },
+    {
+      "key": "BUSINESS_REQUIRED", "title": "Required Business courses", "credits": 32,
+      "items": [
+        {"key": "BUS-001", "type": "COURSE", "course": "BUS-001", "credits": 1},
+        {"key": "ACCT-151", "type": "COURSE", "course": "ACCT-151", "credits": 3},
+        {"key": "ACCT-152", "type": "COURSE", "course": "ACCT-152", "credits": 3},
+        {"key": "ECO-001", "type": "COURSE", "course": "ECO-001", "credits": 4},
+        {"key": "ECO_INTERMEDIATE", "type": "ANY_OF", "credits": 3, "alternatives": [["ECO-146"], ["ECO-119"]]},
+        {"key": "FIN-125", "type": "COURSE", "course": "FIN-125", "credits": 3},
+        {"key": "LAW-201", "type": "COURSE", "course": "LAW-201", "credits": 3},
+        {"key": "SCM-186", "type": "COURSE", "course": "SCM-186", "credits": 3},
+        {"key": "MGT-043", "type": "COURSE", "course": "MGT-043", "credits": 3},
+        {"key": "MKT-111", "type": "COURSE", "course": "MKT-111", "credits": 3},
+        {"key": "MGT-301", "type": "COURSE", "course": "MGT-301", "credits": 3}
+      ]
+    },
+    {
+      "key": "MATH_REQUIRED", "title": "Required Mathematics and statistics courses", "credits": 14,
+      "items": [
+        {"key": "CALCULUS_1", "type": "ANY_OF", "credits": 4, "alternatives": [["MATH-021"], ["MATH-075", "MATH-076"]],
+         "note": "MATH 021, or MATH 075 followed by MATH 076 (taken in that order)."},
+        {"key": "MATH-022", "type": "COURSE", "course": "MATH-022", "credits": 4},
+        {"key": "MATH-205", "type": "COURSE", "course": "MATH-205", "credits": 3},
+        {"key": "STATISTICS", "type": "ANY_OF", "credits": 3, "alternatives": [["MATH-231"], ["ECO-045"]]}
+      ]
+    },
+    {
+      "key": "NATURAL_WORLD", "title": "Natural World (NW) courses", "credits": 12,
+      "items": [
+        {"key": "NW_12_CREDITS", "type": "CATEGORY", "credits": 12,
+         "rule": "12 credits of NS-designated natural science: at least one of the courses includes a laboratory, and two of them form a laboratory-science sequence in which the first is a prerequisite of the second. Some laboratory-science courses have no laboratory of their own; the lab is a separate course number.",
+         "designation_required": "NS",
+         "sequences": "NS_SEQUENCES",
+         "note": "The suggested sequences are examples, not required courses; the remaining credits may be any NS-designated courses."}
+      ]
+    },
+    {
+      "key": "CSB_REQUIRED", "title": "Required CSB courses", "credits": 10,
+      "items": [
+        {"key": "CSB-010", "type": "COURSE", "course": "CSB-010", "credits": 1},
+        {"key": "CSB-310", "type": "COURSE", "course": "CSB-310", "credits": 3},
+        {"key": "CSB-312", "type": "COURSE", "course": "CSB-312", "credits": 3},
+        {"key": "CSB-313", "type": "COURSE", "course": "CSB-313", "credits": 3}
+      ]
+    },
+    {
+      "key": "CSB_PROFESSIONAL_ELECTIVES", "title": "Required CSB professional electives", "credits": 9,
+      "items": [
+        {"key": "PROFESSIONAL_ELECTIVES_9", "type": "CHOOSE_FROM_LIST", "credits": 9, "list": "CSB_PROFESSIONAL_ELECTIVES", "approval": "PROGRAM_CO_DIRECTORS",
+         "note": "Courses approved by the program co-directors. A track is optional. This 9-credit requirement is separate from the 3-credit CSE elective in CS_REQUIRED."}
+      ]
+    },
+    {
+      "key": "HUMANITIES_SOCIAL", "title": "Humanities and social science requirements", "credits": 18,
+      "items": [
+        {"key": "BUS-003", "type": "COURSE", "course": "BUS-003", "credits": 1.5},
+        {"key": "WRT-001", "type": "COURSE", "course": "WRT-001", "credits": 3},
+        {"key": "BUS-203", "type": "COURSE", "course": "BUS-203", "credits": 1.5},
+        {"key": "CSE-252", "type": "COURSE", "course": "CSE-252", "credits": 3},
+        {"key": "HE_AL_ELECTIVES", "type": "CATEGORY", "credits": 6, "rule": "6 credits of electives designated HE, AL or both", "designation_required": "HE/AL",
+         "note": "A category, not specific courses. The program website describes the same credits as Humanities (HU) designated courses."},
+        {"key": "SW_ELECTIVES", "type": "CATEGORY", "credits": 3, "rule": "Social World (SW) electives", "designation_required": "SW",
+         "note": "A category, not specific courses. The program website describes the same credits as Social Science (SS) designated courses."}
+      ]
+    },
+    {
+      "key": "FREE_ELECTIVES", "title": "Free electives", "credits": 6,
+      "items": [
+        {"key": "FREE_ELECTIVES_6", "type": "CATEGORY", "credits": 6, "rule": "Free electives", "designation_required": null}
+      ]
+    }
+  ],
+  "lists": {
+    "CS_ELECTIVE_LIST": {
+      "title": "Computer Science & Business Electives (approved CSE elective list)",
+      "authority": "CATALOG_2026_27",
+      "status": "CATALOG_LISTED",
+      "also_approved": "other courses that the program co-directors approve",
+      "members": [
+        {"course": "CSE-160", "listed_credits": "3"}, {"course": "CSE-217", "listed_credits": "3"}, {"course": "CSE-242", "listed_credits": "3"},
+        {"course": "CSE-260", "listed_credits": "3"}, {"course": "CSE-264", "listed_credits": "3"}, {"course": "CSE-265", "listed_credits": "3"},
+        {"course": "CSE-271", "listed_credits": "3"}, {"course": "CSE-302", "listed_credits": "3"}, {"course": "CSE-307", "listed_credits": "3"},
+        {"course": "CSE-308", "listed_credits": "3"}, {"course": "CSE-310", "listed_credits": "3"}, {"course": "CSE-313", "listed_credits": "3"},
+        {"course": "CSE-318", "listed_credits": "3"}, {"course": "CSE-320", "listed_credits": "3"}, {"course": "CSE-323", "listed_credits": "3"},
+        {"course": "CSE-325", "listed_credits": "3"}, {"course": "CSE-326", "listed_credits": "3"}, {"course": "CSE-327", "listed_credits": "3"},
+        {"course": "CSE-331", "listed_credits": "3"}, {"course": "CSE-333", "listed_credits": "3"}, {"course": "CSE-335", "listed_credits": "3"},
+        {"course": "CSE-336", "listed_credits": "3"}, {"course": "CSE-337", "listed_credits": "3"}, {"course": "CSE-342", "listed_credits": "3"},
+        {"course": "CSE-343", "listed_credits": "3"}, {"course": "CSE-345", "listed_credits": "3"}, {"course": "CSE-347", "listed_credits": "3"},
+        {"course": "CSE-348", "listed_credits": "3"}, {"course": "CSE-349", "listed_credits": "3"}, {"course": "CSE-351", "listed_credits": "3"},
+        {"course": "CSE-360", "listed_credits": "3"}, {"course": "CSE-367", "listed_credits": "0,3"}, {"course": "CSE-371", "listed_credits": "3"},
+        {"course": "CSE-375", "listed_credits": "3"}, {"course": "CSE-376", "listed_credits": "3"}, {"course": "CSE-392", "listed_credits": "1-3"}
+      ]
+    },
+    "CSB_PROFESSIONAL_ELECTIVES": {
+      "title": "CSB professional electives (9 credits, approved by the program co-directors)",
+      "authority": "NO_PUBLISHED_APPROVED_LIST",
+      "status": "APPROVAL_NOT_VERIFIED",
+      "statement": "Neither the catalog nor the program website publishes a closed list of approved professional electives. The website says the electives 'include, but are not limited to' approved CSE courses, approved business courses and Prague internship credits, and gives example tracks. Every candidate below is therefore APPROVAL_NOT_VERIFIED until the co-directors or the academic advisor confirm it.",
+      "candidate_groups": [
+        {"group": "CSB_SUBJECT_CATALOG_COURSES", "basis": "CSB-prefixed courses in the 2026-27 catalog; the catalog does not say whether each counts as a professional elective",
+         "courses": ["CSB-242", "CSB-314", "CSB-389", "CSB-392", "CSB-442"]},
+        {"group": "CSE_APPROVED_LIST_COURSES", "basis": "The program website says approved CSE courses can serve as professional electives; the closed list is the catalog's CS elective list (one of them must be used for the 3-credit CSE elective, a different one could be a professional elective)",
+         "courses_from_list": "CS_ELECTIVE_LIST"},
+        {"group": "WEBSITE_TRACK_EXAMPLES", "basis": "Courses named in the example tracks on csb.lehigh.edu/csb-tracks ('not all of these courses are offered on a regular basis')",
+         "tracks": {
+           "Accounting": ["ACCT-315", "ACCT-320", "ACCT-324"],
+           "Artificial Intelligence": ["CSE-326", "CSE-327", "CSE-348"],
+           "Business Economics Consulting": ["ECO-301", "ECO-322", "ECO-333", "ECO-357"],
+           "Computer Science Graduate School": ["CSE-271", "CSE-302", "CSE-392", "CSE-318", "CSE-342"],
+           "Corporate IT Development": ["CSE-271", "CSE-313", "CSE-342", "CSE-343"],
+           "Entrepreneurship": ["ENTP-101", "ENTP-201", "ENTP-304", "ENTP-315"],
+           "Finance": ["FIN-323", "FIN-328", "FIN-334"],
+           "Management": ["MGT-328", "MGT-333", "MGT-342", "MGT-363"],
+           "Marketing Analytics": ["CSE-347", "MKT-312", "MKT-325", "MKT-326"],
+           "Marketing Sales": ["CSE-347", "MKT-330", "MKT-328", "MKT-332"],
+           "Software Development": ["CSE-271", "CSE-265", "CSE-334", "CSE-343"],
+           "Supply-Chain Management": ["SCM-309", "SCM-342", "SCM-354"]
+         },
+         "track_alias_notes": ["CSE 327 / COGS 327", "ENTP 304 / CSB 304", "MGT 328 / SCM 328", "MKT 328 / SCM 328", "MKT 325 / ECO 325", "CSE 302 or CSE 392 (one course in the Graduate School track)", "CSE 342 or CSE 343 (one course in the Corporate IT track)", "MGT 342 or MGT 363 (one course in the Management track)"]},
+        {"group": "UNPUBLISHED", "basis": "'Approved business courses' and 'Prague internship credits' are mentioned on the website with no course list",
+         "courses": []}
+      ]
+    }
+  },
+  "ns_sequences": {
+    "rule": "A sequence is two (or three) courses in a laboratory science, the first a prerequisite to the second, whose NS credits sum to between 7 and 9. They are suggestions (the catalog calls its list incomplete), not required courses, and which ones exist in a given term depends on the science departments. Every course used must carry the NS designation in the catalog; some CHM, BIOS and EES courses are ND (not designated).",
+    "footnotes": {
+      "1": "optional 1-credit lab: CHM 111",
+      "2": "optional 1-credit lab: PHY 012",
+      "3": "CSB students need EES 002 and EES 022 before EES 102 can serve as the upper-level NW course"
+    },
+    "sequences": [
+      {"key": "ASTR_PHY005_ASTR105", "family": "Astronomy", "courses": ["PHY-005", "ASTR-105"], "listed_credits": "7", "footnote_marks": []},
+      {"key": "ASTR_PHY010_ASTR105", "family": "Astronomy", "courses": ["PHY-010", "ASTR-105"], "listed_credits": "3-7", "footnote_marks": ["2"]},
+      {"key": "ASTR_PHY011_ASTR105", "family": "Astronomy", "courses": ["PHY-011", "ASTR-105"], "listed_credits": "3-7", "footnote_marks": ["2"]},
+      {"key": "BIO_CHM030_BIOS041", "family": "Biology", "courses": ["CHM-030", "BIOS-041"], "listed_credits": "7", "footnote_marks": []},
+      {"key": "CHEM_CHM030_CHM031", "family": "Chemistry", "courses": ["CHM-030", "CHM-031"], "listed_credits": "8", "footnote_marks": []},
+      {"key": "CHEM_CHM030_CHM110", "family": "Chemistry", "courses": ["CHM-030", "CHM-110"], "listed_credits": "7", "footnote_marks": []},
+      {"key": "CHEM_CHM030_BIOS041", "family": "Chemistry", "courses": ["CHM-030", "BIOS-041"], "listed_credits": "7", "footnote_marks": []},
+      {"key": "CHEM_CHM040_CHM041", "family": "Chemistry", "courses": ["CHM-040", "CHM-041"], "listed_credits": "8", "footnote_marks": []},
+      {"key": "CHEM_CHM040_CHM110", "family": "Chemistry", "courses": ["CHM-040", "CHM-110"], "listed_credits": "7", "footnote_marks": ["1"]},
+      {"key": "CHEM_CHM040_BIOS041", "family": "Chemistry", "courses": ["CHM-040", "BIOS-041"], "listed_credits": "7", "footnote_marks": []},
+      {"key": "PHYS_PHY011_PHY021", "family": "Physics", "courses": ["PHY-011", "PHY-021"], "listed_credits": "8", "footnote_marks": ["2"]},
+      {"key": "PHYS_PHY010_PHY013", "family": "Physics", "courses": ["PHY-010", "PHY-013"], "listed_credits": "7", "footnote_marks": ["2"]},
+      {"key": "PHYS_PHY011_PHY013", "family": "Physics", "courses": ["PHY-011", "PHY-013"], "listed_credits": "7", "footnote_marks": ["2"]},
+      {"key": "EES_021_022_131", "family": "Earth and Environmental Science", "courses": ["EES-021", "EES-022", "EES-131"], "listed_credits": "8", "footnote_marks": []},
+      {"key": "EES_025_022_152", "family": "Earth and Environmental Science", "courses": ["EES-025", "EES-022", "EES-152"], "listed_credits": "8", "footnote_marks": []},
+      {"key": "EES_028_022_152", "family": "Earth and Environmental Science", "courses": ["EES-028", "EES-022", "EES-152"], "listed_credits": "8", "footnote_marks": []},
+      {"key": "EES_002_022_102", "family": "Earth and Environmental Science", "courses": ["EES-002", "EES-022", "EES-102"], "listed_credits": "8", "footnote_marks": [],
+       "special_rule": "CSB students need EES 002 and EES 022 before EES 102 can serve as the upper-level NW course. (The catalog prints this as footnote 3 and as a note under the NW row; the footnote's row marker is not visible in the page text, so the rule is attached to this sequence.)"}
+    ],
+    "optional_labs": {"CHM-111": {"credits_text": "1", "applies_to_footnote": "1"}, "PHY-012": {"credits_text": "1", "applies_to_footnote": "2"}}
+  },
+  "source_conflicts": [
+    {"key": "CSB_REQUIRED_CREDITS", "catalog": "The four required CSB courses (CSB 010 1, CSB 310 3, CSB 312 3, CSB 313 3) total 10 credits and the catalog's degree table sums to 136.",
+     "other": "csb.lehigh.edu/curriculum heads the same list '9 credit hours' although its own four items sum to 10.", "status": "SOURCES_CONFLICT_CATALOG_ARITHMETIC_CONSISTENT"},
+    {"key": "CS_ELECTIVE_CREDITS", "catalog": "CSE elective: 3 credits. Every catalog list entry is printed as 3 credits except CSE 367 ('0,3') and CSE 392 ('1-3').",
+     "other": "csb.lehigh.edu says the technical elective is 3-4 credits, and the CSE department page lists CSE 342 as 4 credits.", "status": "SOURCES_CONFLICT_NOT_RESOLVED"},
+    {"key": "FREE_ELECTIVE_CREDITS", "catalog": "Free electives: 6 credits (total 136).", "other": "csb.lehigh.edu says 6-7 credits.", "status": "SOURCES_CONFLICT_NOT_RESOLVED"},
+    {"key": "CS_ELECTIVE_LIST_CONTENT", "catalog": "The 2026-27 catalog list has 36 courses (for example CSE 160, 217, 242, 260, 307, 308, 310, 323, 325, 326 'Fundamentals of Machine Learning', 351, 376, 392).",
+     "other": "The CSE department page lists a shorter, older set that includes courses absent from the catalog list (CSE 319, 334, 363) and a different title for CSE 326 ('Pattern Recognition').", "status": "DEPARTMENT_PAGE_LIKELY_STALE_CATALOG_IS_PRIMARY"},
+    {"key": "HUMANITIES_LABELS", "catalog": "the HE/AL electives (6 credits) and the SW electives (3 credits)",
+     "other": "csb.lehigh.edu describes them as Humanities (HU) and Social Science (SS) designated courses.", "status": "TERMINOLOGY_DIFFERS_CATALOG_IS_PRIMARY"},
+    {"key": "NW_LABEL", "catalog": "Natural World (NW) courses; designation 'NS' is required on each course used.", "other": "csb.lehigh.edu says 'Investigating the Natural World (NW)' on the curriculum page and 'Natural Sciences (NS)' on the electives page.", "status": "TERMINOLOGY_DIFFERS_CATALOG_IS_PRIMARY"},
+    {"key": "CSE252_TITLE", "catalog": "CSE 252 'Computing Ethics'.", "other": "csb.lehigh.edu calls it 'Computers, Internet and Society'.", "status": "TITLE_DIFFERS_CATALOG_IS_PRIMARY"}
+  ],
+  "unresolved": [
+    {"subject": "CSB_PROFESSIONAL_ELECTIVES", "detail": "No closed approved list exists on the public pages. Approval is by the program co-directors (the catalog) and every candidate is APPROVAL_NOT_VERIFIED."},
+    {"subject": "TRACKS", "detail": "The website says tracks are examples and that not all of their courses are offered regularly. A track is never required."},
+    {"subject": "TOTAL_CREDITS", "detail": "The catalog's degree table sums to 136; the website's alternate ranges (technical elective 3-4, free electives 6-7, CSB courses '9') do not."},
+    {"subject": "INTRO_PROGRAMMING", "detail": "The catalog prints one credit figure (4) for 'CSE 003 and CSE 004, or CSE 007'; CSE 007's own credits come from the catalog course page."},
+    {"subject": "EES-102", "detail": "The catalog's Prerequisites line for EES 102 is empty and its description asks only for earlier EES credit, while the CSB rule requires EES 002 and EES 022 first, before EES 102 can serve as the upper-level NW course. The CSB rule is attached to its sequence; whether Banner enforces it is not known."},
+    {"subject": "ECO-045", "detail": "ECO 045 is the alternative to MATH 231; its Spring 2027 sections and prerequisites are collected from Banner and the catalog like the other new courses."}
+  ]
+}

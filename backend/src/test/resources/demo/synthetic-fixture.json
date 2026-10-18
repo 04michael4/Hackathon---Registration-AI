@@ -1,0 +1,572 @@
+{
+ "term": "2027-SPRING",
+ "source": "synthetic test fixture",
+ "caution": "Synthetic data for tests. Proposed scheduling options only.",
+ "offerings": [
+  {
+   "offeringId": "SYN-101",
+   "courseId": "SYN-101",
+   "subject": "SYN",
+   "number": "101",
+   "topic": null,
+   "title": "Synthetic Lecture Only",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91001",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "MONDAY",
+        "WEDNESDAY"
+       ],
+       "start": "09:00",
+       "end": "10:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "kind": "CLASS_STANDING",
+     "polarity": "CANNOT",
+     "values": [
+      "FR"
+     ],
+     "source": "BANNER"
+    }
+   ],
+   "prerequisiteNote": "SYN 100 (synthetic)",
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-102",
+   "courseId": "SYN-102",
+   "subject": "SYN",
+   "number": "102",
+   "topic": null,
+   "title": "Synthetic Lecture With Lab",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91101",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "TUESDAY",
+        "THURSDAY"
+       ],
+       "start": "09:00",
+       "end": "10:15",
+       "location": "TBA"
+      }
+     ]
+    },
+    {
+     "crn": "91102",
+     "sectionCode": "060",
+     "component": "LAB",
+     "credits": 0,
+     "lectureCrn": "91101",
+     "meetings": [
+      {
+       "days": [
+        "WEDNESDAY"
+       ],
+       "start": "13:00",
+       "end": "14:00",
+       "location": "Synthetic Hall 1"
+      }
+     ]
+    },
+    {
+     "crn": "91103",
+     "sectionCode": "061",
+     "component": "LAB",
+     "credits": 0,
+     "lectureCrn": "91101",
+     "meetings": [
+      {
+       "days": [
+        "WEDNESDAY"
+       ],
+       "start": "15:00",
+       "end": "16:00",
+       "location": "Synthetic Hall 1"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "LABS_USER_SUPPLIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-103",
+   "courseId": "SYN-103",
+   "subject": "SYN",
+   "number": "103",
+   "topic": null,
+   "title": "Synthetic Overlaps 101",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91201",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "MONDAY",
+        "WEDNESDAY"
+       ],
+       "start": "09:30",
+       "end": "10:45",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-201-010",
+   "courseId": "SYN-201-010",
+   "subject": "SYN",
+   "number": "201",
+   "topic": "Synthetic Topic Alpha",
+   "title": "Synthetic Topic Alpha",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91301",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "MONDAY",
+        "WEDNESDAY"
+       ],
+       "start": "11:00",
+       "end": "12:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "kind": "CLASS_STANDING",
+     "polarity": "MUST",
+     "values": [
+      "GR",
+      "JR",
+      "SR"
+     ],
+     "source": "BANNER"
+    }
+   ],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": [
+    "Special-topic number: each Spring 2027 topic is its own offering (separate CRN, title and requirements)."
+   ]
+  },
+  {
+   "offeringId": "SYN-201-020",
+   "courseId": "SYN-201-020",
+   "subject": "SYN",
+   "number": "201",
+   "topic": "Synthetic Topic Beta",
+   "title": "Synthetic Topic Beta",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91302",
+     "sectionCode": "020",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "TUESDAY",
+        "THURSDAY"
+       ],
+       "start": "11:00",
+       "end": "12:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "kind": "CLASS_STANDING",
+     "polarity": "MUST",
+     "values": [
+      "GR",
+      "JR",
+      "SR"
+     ],
+     "source": "BANNER"
+    }
+   ],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": [
+    "Special-topic number: each Spring 2027 topic is its own offering (separate CRN, title and requirements)."
+   ]
+  },
+  {
+   "offeringId": "SYN-301",
+   "courseId": "SYN-301",
+   "subject": "SYN",
+   "number": "301",
+   "topic": null,
+   "title": "Synthetic Independent Study Type",
+   "credits": 3,
+   "administrativeType": "Independent Study",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91401",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "MONDAY",
+        "WEDNESDAY"
+       ],
+       "start": "15:00",
+       "end": "16:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "kind": "CLASS_STANDING",
+     "polarity": "CANNOT",
+     "values": [
+      "FR"
+     ],
+     "source": "BANNER"
+    }
+   ],
+   "prerequisiteNote": "SYN 100",
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": [
+    "TEAM_POLICY: included as a conditional option (synthetic fixture); the section type is kept as metadata."
+   ]
+  },
+  {
+   "offeringId": "SYN-401",
+   "courseId": "SYN-401",
+   "subject": "SYN",
+   "number": "401",
+   "topic": null,
+   "title": "Synthetic Arranged Meeting",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91501",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "FRIDAY"
+       ],
+       "start": "10:45",
+       "end": "12:00",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": "A mandatory additional team/instructor meeting has no published time. Time to be arranged.",
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-501",
+   "courseId": "SYN-501",
+   "subject": "SYN",
+   "number": "501",
+   "topic": null,
+   "title": "Synthetic Many Restrictions",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91601",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "TUESDAY",
+        "THURSDAY"
+       ],
+       "start": "13:00",
+       "end": "14:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "kind": "LEVEL",
+     "polarity": "MUST",
+     "values": [
+      "GR"
+     ],
+     "source": "BANNER"
+    },
+    {
+     "kind": "COLLEGE",
+     "polarity": "MUST",
+     "values": [
+      "EN"
+     ],
+     "source": "BANNER"
+    },
+    {
+     "kind": "MAJOR",
+     "polarity": "MUST",
+     "values": [
+      "CSE"
+     ],
+     "source": "BANNER"
+    },
+    {
+     "kind": "DEPARTMENT_APPROVAL",
+     "polarity": "NEEDS",
+     "values": [
+      "Department Permission Required"
+     ],
+     "source": "BANNER"
+    }
+   ],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-601",
+   "courseId": "SYN-601",
+   "subject": "SYN",
+   "number": "601",
+   "topic": null,
+   "title": "Synthetic Exclusion A",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91701",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "MONDAY",
+        "WEDNESDAY"
+       ],
+       "start": "13:00",
+       "end": "14:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [
+    {
+     "with": "SYN-602",
+     "kind": "NO_DOUBLE_CREDIT",
+     "text": "no credit for both SYN 601 and SYN 602"
+    }
+   ],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-602",
+   "courseId": "SYN-602",
+   "subject": "SYN",
+   "number": "602",
+   "topic": null,
+   "title": "Synthetic Exclusion B",
+   "credits": 3,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "CONDITIONAL",
+   "sections": [
+    {
+     "crn": "91801",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 3,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "TUESDAY",
+        "THURSDAY"
+       ],
+       "start": "15:00",
+       "end": "16:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "COMPONENTS_UNVERIFIED",
+   "arrangedMeeting": null,
+   "creditExclusions": [
+    {
+     "with": "SYN-601",
+     "kind": "NO_DOUBLE_CREDIT",
+     "text": "no credit for both SYN 601 and SYN 602"
+    }
+   ],
+   "aliases": [
+    "ALT 602"
+   ],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  },
+  {
+   "offeringId": "SYN-701",
+   "courseId": "SYN-701",
+   "subject": "SYN",
+   "number": "701",
+   "topic": null,
+   "title": "Synthetic Verified Course",
+   "credits": 4,
+   "administrativeType": "Lecture",
+   "dataSource": "SYNTHETIC",
+   "tier": "READY",
+   "sections": [
+    {
+     "crn": "91901",
+     "sectionCode": "010",
+     "component": "LECTURE",
+     "credits": 4,
+     "lectureCrn": null,
+     "meetings": [
+      {
+       "days": [
+        "FRIDAY"
+       ],
+       "start": "13:00",
+       "end": "14:15",
+       "location": "TBA"
+      }
+     ]
+    }
+   ],
+   "rules": [],
+   "prerequisiteNote": null,
+   "components": "NOT_APPLICABLE",
+   "arrangedMeeting": null,
+   "creditExclusions": [],
+   "aliases": [],
+   "crossListing": "UNVERIFIED",
+   "notes": []
+  }
+ ]
+}

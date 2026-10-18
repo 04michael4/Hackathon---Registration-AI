@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="708" height="708" viewBox="176 176 708 708" role="img" aria-label="Syllo">
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<g stroke="#5A3420" stroke-width="64">
+<path d="M 418 262 C 384 206, 226 198, 228 306 C 230 396, 424 368, 428 462 C 432 556, 296 586, 236 520"/>
+<path d="M 222 692 L 566 692"/>
+<path d="M 222 800 L 566 800"/>
+<path d="M 462 214 L 566 470"/>
+</g>
+<g stroke="#D9A877" stroke-width="20">
+<path d="M 418 262 C 384 206, 226 198, 228 306 C 230 396, 424 368, 428 462 C 432 556, 296 586, 236 520"/>
+<path d="M 222 692 L 566 692"/>
+<path d="M 222 800 L 566 800"/>
+<path d="M 462 214 L 566 470"/>
+</g>
+<path d="M 566 470 L 566 846" stroke="#5A3420" stroke-width="64"/>
+<path d="M 566 470 L 566 846" stroke="#D9A877" stroke-width="20"/>
+<path d="M 690 210 L 566 470" stroke="#5A3420" stroke-width="64"/>
+<path d="M 690 210 L 566 470" stroke="#D9A877" stroke-width="20"/>
+<circle cx="770" cy="738" r="82" stroke="#5A3420" stroke-width="56"/>
+<circle cx="770" cy="738" r="82" stroke="#D9A877" stroke-width="18"/>
+</g>
+<circle cx="770" cy="468" r="66" fill="#5A3420"/>
+<circle cx="770" cy="468" r="26" fill="#D9A877"/>
+</svg>

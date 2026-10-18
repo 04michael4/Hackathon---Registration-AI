@@ -7,7 +7,19 @@ import java.util.List;
 import java.util.Map;
 
 public record GenerateScheduleResponse(String term, List<ScheduleResponse> schedules,
-		List<String> diagnostics, boolean searchLimitReached) {
+		List<String> diagnostics, boolean searchLimitReached, List<ElectiveAdviceResponse> electiveAdvice) {
+
+	public GenerateScheduleResponse(String term, List<ScheduleResponse> schedules, List<String> diagnostics,
+			boolean searchLimitReached) {
+		this(term, schedules, diagnostics, searchLimitReached, List.of());
+	}
+
+	/**
+	 * For each elective the student typed in: whether it made the suggestions and, if not, why and how to
+	 * get it in. {@code status} is IN_TOP_SCHEDULE, IN_OTHER_SUGGESTION, FITS_WITH_CHANGES or CANNOT_FIT.
+	 */
+	public record ElectiveAdviceResponse(String courseId, String status, String summary, List<String> fixes,
+			List<String> alternativeCrns) {}
 
 	public record ScheduleResponse(int rank, BigDecimal score, int totalCredits, boolean overload,
 			List<SectionResponse> sections, Map<String, BigDecimal> scoreBreakdown) {}

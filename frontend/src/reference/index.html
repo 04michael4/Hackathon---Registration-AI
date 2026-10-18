@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Syllo — a simple course planning assistant for Lehigh students." />
+  <title>Syllo — Course Planning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="product.css" />
+  <link rel="stylesheet" href="semester.css" />
+  <link rel="stylesheet" href="degree.css" />
+  <link rel="stylesheet" href="polish.css?v=degree-relation-colors-6" />
+</head>
+<body class="welcome-only">
+  <div class="app-shell">
+    <main id="main-content">
+      <section class="screen login-screen active" data-screen="login">
+        <div class="login-shell">
+          <div class="login-brand" aria-label="Syllo by Lehigh University"><span class="syllo-lockup"><img class="syllo-lockup-mark" src="assets/syllo-mark.svg" alt=""><span class="syllo-wordmark">Syllo</span></span><span>LEHIGH UNIVERSITY</span></div>
+          <div class="login-card">
+            <img class="login-crest" src="assets/syllo-icon.svg" alt="Syllo">
+            <span class="login-kicker">COURSE PLANNING, CONNECTED</span>
+            <h1>Welcome to <span class="syllo-wordmark">Syllo</span>.</h1>
+            <p>Less planning. More possibilities.</p>
+            <button class="button primary large login-button" data-action="login">
+              <span>Sign in with Lehigh SSO</span><b>→</b>
+            </button>
+            <small class="sso-demo-note">Demo entry · SSO is not connected</small>
+          </div>
+        </div>
+      </section>
+
+      <nav id="product-nav" class="product-nav hidden" aria-label="Planning sections">
+        <button class="product-brand" data-action="back-features" aria-label="Syllo, go to Plan My Semester"><span class="syllo-lockup"><img class="syllo-lockup-mark" src="assets/syllo-mark.svg" alt=""><span class="syllo-wordmark">Syllo</span></span></button>
+        <div class="product-nav-panel" id="product-nav-panel">
+          <div class="product-nav-tabs">
+            <button data-action="open-schedules" data-route="planner">Plan My Semester</button>
+            <button data-action="open-degree" data-route="requirements">Degree Planner</button>
+            <button data-action="open-advisor" data-route="advisor">Advisor portal <span id="advisor-alert" class="hidden"></span></button>
+            <button data-action="open-saved" data-route="saved">Saved schedules</button>
+          </div>
+          <button class="product-role" id="role-switch" data-action="switch-role">Student demo ⇄</button>
+        </div>
+      </nav>
+      <div id="feedback-notification" class="feedback-notification hidden" role="status"></div>
+      <section class="screen saved-screen" data-screen="saved"><div class="saved-shell"><div class="saved-heading"><div><span class="features-kicker">SAVED SCHEDULES</span><h1>Your plans, kept together.</h1><p>Save options from the semester planner and reopen them here.</p></div><button class="button primary" data-action="open-schedules">Plan My Semester →</button></div><div id="saved-list" class="saved-list"></div></div></section>
+
+      <section class="screen planner-screen" data-screen="planner">
+        <div class="planner-shell">
+          <div class="planner-header">
+            <h1>Plan My Semester</h1>
+            <div class="planner-header-aside">
+              <button class="syllo-ai-toggle" id="syllo-ai-toggle" type="button" data-action="toggle-ai" aria-expanded="false" aria-controls="syllo-ai-panel" aria-label="Open Syllo AI, your AI planning assistant">
+                <span class="syllo-ai-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3.5 11.7 8.3 16.5 10l-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7z"/><path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+                <span class="syllo-ai-text"><span class="syllo-ai-label">Ask Syllo AI</span><small class="syllo-ai-hint">AI planning assistant</small></span>
+              </button>
+              <div class="sem-registration"><strong id="sem-countdown-number"></strong><span><b>until registration opens</b><small id="sem-countdown-detail"></small></span></div>
+            </div>
+          </div>
+
+          <div class="planner-layout ai-closed">
+            <div class="manual-planner">
+              <div class="course-search-area" id="course-search-area">
+                <label class="course-search"><span>Search courses &amp; interests</span><div><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="course-search" type="search" placeholder="Course code, title, or interest (e.g. finance)" autocomplete="off" aria-expanded="false" aria-controls="course-search-results"></div></label>
+                <div class="catalog-note">Only available prototype records are shown. Descriptions, prerequisites, and live seat availability may be unavailable.</div>
+                <div class="course-search-results" id="course-search-results" aria-live="polite"></div>
+              </div>
+
+              <div class="schedule-workspace">
+                <div class="schedule-calendar-column">
+                  <div class="manual-schedule-heading">
+                    <div class="schedule-title"><h2>My schedule</h2><p class="sem-credit-meter" aria-live="polite"><strong id="planner-credit-total">0</strong> credits <span id="planner-credit-target"></span></p></div>
+                    <div class="schedule-tools">
+                      <button class="button quiet sem-undo" id="sem-undo" type="button" data-sem-action="undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span></button>
+                      <button class="button primary sem-save" type="button" data-sem-action="save">Save schedule</button>
+                      <button class="button quiet sem-expand-calendar" type="button" data-sem-action="expand-calendar">View bigger <span aria-hidden="true">↗</span></button>
+                    </div>
+                  </div>
+                  <div class="sem-section-preview" id="sem-section-preview" role="status" hidden></div>
+                  <div class="planner-week-calendar" id="planner-week-calendar" aria-label="Monday through Friday class calendar">
+                    <div class="planner-calendar-days"><span></span><strong>MONDAY</strong><strong>TUESDAY</strong><strong>WEDNESDAY</strong><strong>THURSDAY</strong><strong>FRIDAY</strong></div>
+                    <div class="planner-calendar-grid">
+                      <div class="planner-time-labels" aria-hidden="true"><span style="--slot:0">8:00 AM</span><span style="--slot:1">9:00 AM</span><span style="--slot:2">10:00 AM</span><span style="--slot:3">11:00 AM</span><span style="--slot:4">12:00 PM</span><span style="--slot:5">1:00 PM</span><span style="--slot:6">2:00 PM</span><span style="--slot:7">3:00 PM</span><span style="--slot:8">4:00 PM</span><span style="--slot:9">5:00 PM</span></div>
+                      <div class="planner-calendar-lines" aria-hidden="true"></div>
+                      <div class="planner-calendar-events" id="planner-calendar-events"></div>
+                    </div>
+                  </div>
+                </div>
+                <aside class="planner-course-sidebar" aria-label="Course list">
+                  <section class="course-list-panel">
+                    <div class="planner-sidebar-heading"><h3 id="course-list-title">Course list</h3><strong id="course-list-count" aria-label="Courses shown">0</strong></div>
+                    <p class="course-list-key"><span><b class="class-type class-type--planned" aria-hidden="true">P</b>Planned</span><span><b class="class-type class-type--recommended" aria-hidden="true">R</b>Recommended</span></p>
+                    <div class="course-list-tools">
+                      <div class="course-list-filter" role="group" aria-label="Show class type">
+                        <button type="button" data-course-filter="all" aria-pressed="true">All</button>
+                        <button type="button" data-course-filter="planned" aria-pressed="false">Planned</button>
+                        <button type="button" data-course-filter="recommended" aria-pressed="false">Recommended</button>
+                      </div>
+                      <input type="search" id="course-list-query" placeholder="Filter this list" autocomplete="off" aria-label="Filter the course list by code or title">
+                    </div>
+                    <details class="rating-legend"><summary>Professor rating colors</summary><ul id="rating-legend-list"></ul></details>
+                    <div class="planner-sidebar-list" id="course-list-items" role="list" aria-labelledby="course-list-title"></div>
+                  </section>
+                </aside>
+              </div>
+              <div class="calendar-context-menu hidden" id="calendar-context-menu" role="menu" aria-label="Calendar course actions">
+                <button role="menuitem" data-action="context-view-course"><span>Course details</span><small>View information</small></button>
+                <button class="danger" role="menuitem" data-action="context-remove-course"><span>Remove course</span><small>Delete from this plan</small></button>
+              </div>
+            </div>
+
+            <div class="ai-assistant-shell">
+              <aside class="intelligence-panel is-collapsed" id="syllo-ai-panel" aria-hidden="true" inert>
+              <div class="intelligence-heading"><span class="spark">✦</span><div><strong>Intelligent Planning</strong><small id="planner-chat-context">Ask Syllo to adjust your plan</small></div></div>
+              <div class="planner-chat" id="planner-chat" role="log" aria-live="polite">
+                <div class="chat-message assistant"><span>Syllo</span><p>Tell me how you want your week to look. For example, ask me to keep Fridays free, avoid early classes, or balance your workload.</p></div>
+              </div>
+              <div class="chat-starters" aria-label="Suggested prompts">
+                <button data-action="quick-prompt" data-prompt="Keep Fridays free and avoid early classes.">Keep Fridays free</button>
+                <button data-action="quick-prompt" data-prompt="Suggest a course that helps my degree progress.">Help degree progress</button>
+                <button data-action="quick-prompt" data-prompt="Make my workload feel more balanced.">Balance workload</button>
+              </div>
+              <form class="planner-chat-form" id="planner-chat-form">
+                <textarea id="planner-chat-input" rows="3" placeholder="Ask Syllo to adjust your plan…" aria-label="Message Intelligent Planning"></textarea>
+                <button type="submit" aria-label="Send message">↑</button>
+              </form>
+              <p class="chat-disclaimer">Prototype responses use only the available demo course data. They do not confirm prerequisites or live availability.</p>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen advisor-screen" data-screen="advisor">
+        <div class="advisor-shell">
+          <button class="text-button advisor-back" data-action="back-features">← Plan My Semester</button>
+          <span class="features-kicker">ACADEMIC ADVISOR PORTAL</span>
+          <h1>David Hwang’s degree plan</h1>
+          <p class="advisor-intro">Review the proposed schedule, leave feedback, or approve the plan.</p>
+          <div class="advisor-review">
+            <div><span>SPRING 2027</span><strong>5 courses · 15 credits</strong><small>Computer Science, B.S. · Data Science minor</small></div>
+            <span class="review-status">Demo plan · Ready for review</span>
+          </div>
+          <div class="advisor-comment"><span>DH</span><div><strong>Advisor note</strong><p>This plan keeps the major requirements on track. Consider confirming the CSE 252 lab section before registration.</p></div></div>
+          <div class="advisor-actions"><button class="button quiet" data-action="request-changes">Request changes</button><button class="button primary" data-action="approve-plan">Approve plan</button></div>
+        </div>
+      </section>
+
+      <section class="screen welcome-screen" data-screen="welcome">
+        <div class="welcome-grid">
+          <div class="welcome-copy">
+            <span class="eyebrow"><span></span> Built for Lehigh students</span>
+            <h1>Your semester,<br><em>made simple.</em></h1>
+            <p>Syllo turns your academic history, degree goals, and preferences into one clear plan for next semester.</p>
+            <div class="welcome-actions">
+              <button class="button primary large" data-action="start">Start planning <span>→</span></button>
+              <button class="button quiet large" data-action="demo">Explore a sample plan</button>
+            </div>
+            <div class="trust-row">
+              <span><svg viewBox="0 0 24 24"><path d="m9 12 2 2 4-4"/><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z"/></svg> Your data stays private</span>
+              <span><svg viewBox="0 0 24 24"><path d="M12 2v20M5 7h14M5 17h14"/></svg> Change anything later</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen onboarding-screen" data-screen="onboarding">
+        <div class="stepper" aria-label="Planning progress">
+          <div class="step active" data-step-indicator="1"><span>1</span><div><strong>Academic history</strong><small>Upload transcript</small></div></div>
+          <i></i>
+          <div class="step" data-step-indicator="2"><span>2</span><div><strong>Degree goals</strong><small>Program details</small></div></div>
+          <i></i>
+          <div class="step" data-step-indicator="3"><span>3</span><div><strong>Preferences</strong><small>Your ideal week</small></div></div>
+        </div>
+
+        <div class="onboarding-card" data-onboarding-step="1">
+          <div class="card-heading"><span class="step-label">STEP 1 OF 3</span><h2>Start with your academic history.</h2><p>Upload your transcript so we can identify completed courses and prerequisites.</p></div>
+          <label class="upload-zone" id="upload-zone">
+            <input type="file" id="transcript-input" accept=".pdf,.doc,.docx" />
+            <span class="upload-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 15v4h14v-4"/></svg></span>
+            <strong>Drop your transcript here</strong>
+            <span>or <u>choose a file</u> · PDF or DOCX, up to 10 MB</span>
+          </label>
+          <div class="privacy-note"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/></svg><div><strong>Your transcript is private</strong><span>It is used only to identify your academic progress and is never shared.</span></div></div>
+          <div class="card-footer"><button class="text-button" data-action="back-welcome">← Back</button><button class="button primary" id="upload-continue" disabled data-action="next-onboarding">Continue <span>→</span></button></div>
+        </div>
+
+        <div class="onboarding-card hidden" data-onboarding-step="2">
+          <div class="card-heading"><span class="step-label">STEP 2 OF 3</span><h2>Tell us where you're headed.</h2><p>We'll align your plan with the right degree requirements and catalog year.</p></div>
+          <div class="form-grid">
+            <label class="field full"><span>Institution</span><div class="select-wrap"><select><option>Lehigh University</option></select></div></label>
+            <label class="field"><span>Major</span><div class="select-wrap"><select><option>Computer Science, B.S.</option><option>Computer Engineering, B.S.</option></select></div></label>
+            <label class="field"><span>Minor <small>Optional</small></span><div class="select-wrap"><select><option>Data Science</option><option>None</option></select></div></label>
+            <label class="field"><span>Expected graduation</span><div class="select-wrap"><select><option>May 2028</option><option>December 2027</option></select></div></label>
+            <label class="field"><span>Catalog year</span><div class="select-wrap"><select><option>2024–2025</option><option>2025–2026</option></select></div></label>
+          </div>
+          <div class="degree-summary"><div class="degree-ring"><span>68%</span></div><div><strong>Degree progress found</strong><p>82 of 120 credits completed · 7 core requirements remaining</p></div><button class="text-button">Review details</button></div>
+          <div class="card-footer"><button class="text-button" data-action="previous-onboarding">← Back</button><button class="button primary" data-action="next-onboarding">Continue <span>→</span></button></div>
+        </div>
+
+        <div class="onboarding-card wide hidden" data-onboarding-step="3">
+          <div class="card-heading"><span class="step-label">STEP 3 OF 3</span><h2>What does your ideal week look like?</h2><p>Set the boundaries that matter. You can fine-tune them at any time.</p></div>
+          <div class="preferences-layout">
+            <div class="preference-controls">
+              <div class="field-group"><span class="group-label">Preferred class window</span><div class="time-row"><label class="compact-field"><small>START</small><select><option>9:00 AM</option><option>8:00 AM</option></select></label><span>to</span><label class="compact-field"><small>END</small><select><option>2:00 PM</option><option>4:00 PM</option></select></label></div></div>
+              <div class="field-group"><span class="group-label">Days on campus</span><div class="day-toggles"><button class="selected">M</button><button class="selected">T</button><button class="selected">W</button><button class="selected">T</button><button>F</button></div><label class="check-row"><input type="checkbox" checked><span><strong>Keep Fridays free</strong><small>Treat as a required constraint</small></span></label></div>
+              <div class="field-group"><span class="group-label">Tell us in your own words <small>Optional</small></span><textarea>I prefer morning classes and need a lunch break from 12 to 1 PM.</textarea><div class="interpreted"><span>✦</span><div><strong>We understood:</strong><p>Prefer mornings · Keep 12–1 PM open · No Friday classes</p></div></div></div>
+            </div>
+            <aside class="preference-preview"><span class="preview-label">YOUR IDEAL WEEK</span><div class="week-preview"><div class="week-head"><span></span><b>M</b><b>T</b><b>W</b><b>T</b><b>F</b></div><div class="week-body"><small>9 AM</small><i class="preferred-block"></i><i class="preferred-block second"></i><small>12 PM</small><i class="lunch-block"></i><small>2 PM</small><i class="friday-block"></i></div></div><div class="legend"><span><i class="green"></i>Preferred</span><span><i class="gray"></i>Unavailable</span></div></aside>
+          </div>
+          <div class="card-footer"><button class="text-button" data-action="previous-onboarding">← Back</button><button class="button primary" data-action="choose-mode">Choose planning mode <span>→</span></button></div>
+        </div>
+      </section>
+
+      <section class="screen mode-screen" data-screen="mode">
+        <div class="mode-header"><span class="eyebrow"><span></span> Setup complete</span><h2>How would you like to build your schedule?</h2><p>Your academic history and preferences are ready. You can switch modes later.</p></div>
+        <div class="mode-grid">
+          <button class="mode-card" data-mode="manual"><span class="mode-icon manual"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM8 3v6m8-6v6M4 11h16"/><path d="M8 15h3m2 0h3"/></svg></span><span class="mode-copy"><small>FULL CONTROL</small><strong>Build my own schedule</strong><p>Search courses, compare sections, and add classes to your week.</p><span class="mode-link">Start building <b>→</b></span></span><span class="mode-preview manual-preview"><i></i><i></i><i></i></span></button>
+          <button class="mode-card featured" data-mode="ai"><span class="recommended">RECOMMENDED</span><span class="mode-icon ai"><span>✦</span></span><span class="mode-copy"><small>AI-ASSISTED</small><strong>Generate schedules for me</strong><p>Get several smart options based on your goals and preferences.</p><span class="mode-link">Generate options <b>→</b></span></span><span class="mode-preview ai-preview"><i>96%</i><i>91%</i><i>87%</i></span></button>
+        </div>
+        <button class="text-button centered" data-action="previous-onboarding">← Edit my preferences</button>
+      </section>
+
+      <section class="screen workspace-screen" data-screen="workspace">
+        <div class="workspace-header">
+          <div><span class="eyebrow compact"><span></span> Spring 2027</span><h2>Choose your best week.</h2><p>Three schedules fit your required constraints. Compare and adjust any option.</p></div>
+          <div class="workspace-actions"><span class="sync-note">✓ Lehigh profile connected</span><button class="button quiet" id="preferences-button"><svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M6 14v6"/></svg> Preferences</button><button class="button primary" data-action="save-plan">Save plan</button></div>
+        </div>
+        <div class="workspace-tabs" role="tablist"><button class="active" data-schedule="balanced"><span>Option 1</span><strong>Balanced week</strong><small><b>96% match</b> · 15 credits</small></button><button data-schedule="focused"><span>Option 2</span><strong>Morning focus</strong><small><b>91% match</b> · 15 credits</small></button><button data-schedule="compact"><span>Option 3</span><strong>Fewer campus days</strong><small><b>87% match</b> · 14 credits</small></button><button class="compare-button">＋ Compare</button></div>
+
+        <div class="workspace-grid">
+          <aside class="schedule-summary">
+            <div class="summary-score"><div class="match-ring"><span>96</span><small>%</small></div><div><strong>Excellent match</strong><p>Meets all 3 required constraints</p></div></div>
+            <div class="summary-stats"><div><strong>15</strong><span>Credits</span></div><div><strong>4</strong><span>Campus days</span></div><div><strong>5</strong><span>Courses</span></div></div>
+            <div class="why-card"><span class="spark">✦</span><div><strong>Why this works</strong><p>Balances major progress with your preferred morning schedule and keeps Friday free.</p></div></div>
+            <div class="course-list-heading"><strong>Your courses</strong><button>5 added</button></div>
+            <div class="course-list" id="course-list"></div>
+            <button class="add-course-button" data-action="add-course">＋ Add another course</button>
+          </aside>
+
+          <section class="calendar-card" aria-label="Weekly schedule">
+            <div class="calendar-toolbar"><div><button aria-label="Previous week">‹</button><strong>Weekly schedule</strong><button aria-label="Next week">›</button></div><span class="data-chip">Simulated section data</span></div>
+            <div class="calendar" id="calendar">
+              <div class="calendar-days"><span></span><b>MON<em>25</em></b><b>TUE<em>26</em></b><b>WED<em>27</em></b><b>THU<em>28</em></b><b>FRI<em>29</em></b></div>
+              <div class="calendar-grid">
+                <div class="time-labels"><span style="--row:1">8 AM</span><span style="--row:2">9 AM</span><span style="--row:3">10 AM</span><span style="--row:4">11 AM</span><span style="--row:5">12 PM</span><span style="--row:6">1 PM</span><span style="--row:7">2 PM</span><span style="--row:8">3 PM</span><span style="--row:9">4 PM</span></div>
+                <div class="grid-lines"></div>
+                <div class="lunch-band"><span>Lunch · kept free</span></div>
+                <div class="friday-free"><span>FRIDAY FREE</span></div>
+                <div id="calendar-events"></div>
+              </div>
+            </div>
+            <div class="calendar-footer"><span><i class="success-dot"></i> No time conflicts</span><span>Last checked just now</span></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="screen progress-screen" data-screen="requirements">
+        <div class="degree-shell">
+          <div class="screen-topline"><span class="demo-badge">DEMO DEGREE DATA</span></div>
+          <div class="progress-page-header"><span class="eyebrow compact"><span></span> Degree Planner</span><h2>Computer Science, B.S.</h2><p>Catalog year 2024–2025 · Planned graduation <strong id="degree-grad-date">May 2028</strong></p></div>
+          <div class="progress-overview"><div class="big-ring"><span>68%</span><small>complete</small></div><div class="progress-copy"><strong>82 of 120 credits completed</strong><p><span id="degree-planned-credits">12</span> additional demo credits are currently planned.</p><div class="progress-bar"><i id="degree-progress-fill"></i></div><div class="progress-legend"><span>82 completed</span><span id="degree-planned-label">12 planned</span><span id="degree-remaining-label">26 remaining</span></div></div></div>
+
+          <div class="status-legend"><span><i class="completed"></i>Completed</span><span><i class="in-progress"></i>In progress</span><span><i class="planned"></i>Planned</span><span><i class="remaining"></i>Remaining</span></div>
+
+          <div class="degree-layout">
+            <div class="requirement-groups">
+              <h3>Requirements</h3>
+              <section><h4>General education</h4><button class="requirement-row status-completed active" data-requirement="general"><span>Core curriculum</span><b>12 of 12 complete</b></button></section>
+              <section><h4>Major requirements</h4><button class="requirement-row status-in-progress" data-requirement="major"><span>CS major core</span><b>8 of 12 complete</b></button></section>
+              <section><h4>Minor requirements</h4><button class="requirement-row status-planned" data-requirement="minor"><span>Data Science minor</span><b>3 of 6 complete</b></button></section>
+              <section><h4>Electives</h4><button class="requirement-row status-remaining" data-requirement="electives"><span>Free electives</span><b>2 courses remaining</b></button></section>
+            </div>
+            <aside class="requirement-detail" id="requirement-detail" aria-live="polite"></aside>
+          </div>
+
+          <section class="elective-explorer">
+            <div><span class="features-kicker">ELECTIVE EXPLORER</span><h3>Explore available demo electives</h3><p>Suggestions use the limited prototype catalog and do not indicate live availability.</p></div>
+            <label><span>Interest</span><select id="elective-interest"><option>Technology & society</option><option>Any available interest</option></select></label>
+            <div class="elective-results" id="elective-results"></div>
+          </section>
+
+          <section class="semester-plan">
+            <div class="semester-plan-heading"><div><span class="features-kicker">FUTURE SEMESTERS</span><h3>Plan toward graduation</h3></div><p>Move courses between terms. Credit totals and the demo graduation estimate update automatically.</p></div>
+            <div class="semester-columns" id="semester-columns"></div>
+            <div class="degree-data-note">Prerequisite sequencing cannot be fully evaluated because prerequisite data is unavailable for these demo records.</div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="saved-name-dialog" id="saved-name-dialog"><form id="saved-name-form"><h2>Rename schedule</h2><label>Schedule name<input id="saved-name-input" maxlength="80" required></label><div><button class="button quiet" type="button" data-action="cancel-rename">Cancel</button><button class="button primary" type="submit">Save name</button></div></form></dialog>
+  <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+  <aside class="detail-drawer" id="detail-drawer" aria-hidden="true">
+    <div class="drawer-top"><button class="icon-button" data-action="close-drawer" aria-label="Close course details">×</button><span class="course-pill" id="drawer-pill">CSE 241</span><button class="lock-button active" id="drawer-lock">● Locked</button></div>
+    <div class="drawer-content" id="drawer-content"></div>
+  </aside>
+
+  <div class="toast" id="toast"><span>✓</span><div><strong>Plan saved</strong><small>You can return and edit it anytime.</small></div></div>
+  <script src="data.js"></script>
+  <script src="degree-ai.js"></script>
+  <script src="planner-logic.js"></script>
+  <script src="semester.js"></script>
+  <script src="degree.js?v=degree-clean-3"></script>
+  <script src="ai-widget.js"></script>
+  <script src="app.js?v=degree-details-layout-4"></script>
+  <script src="polish.js?v=degree-relation-colors-6"></script>
+</body>
+</html>
