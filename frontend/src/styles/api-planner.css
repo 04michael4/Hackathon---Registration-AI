@@ -87,6 +87,15 @@
 .api-course-dialog::backdrop, .api-calendar-dialog::backdrop { background: #21181088; }
 .api-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }.api-actions .button { font-size: 12px; }
 .api-prototype-label { color: var(--theme-brown); }.api-saved { display: contents; }
+.api-degree-term .api-degree-status { display: block; margin: 0; padding: 5px 8px; font-size: 10px; line-height: 1.4; color: var(--theme-muted); }
+.api-degree-course .degree-course-info { width: 100%; cursor: pointer; }
+.api-degree-term .degree-term-empty { line-height: 1.5; }
+@media(max-width: 600px) {
+  .api-degree-term { position: relative; }
+  .api-degree-term > .degree-calendar-link { position: absolute; top: 4px; right: 22px; width: 22px; min-height: 22px; height: 22px; padding: 0; margin: 0; border: 0; background: transparent; color: var(--theme-white); font-size: 0; }
+  .api-degree-term > .degree-calendar-link::after { content: "↗"; font-size: 14px; }
+  .api-degree-term .degree-term-heading h3 { padding-right: 24px; }
+}
 @media(max-width: 1200px) { .api-planner-columns.is-assistant-open { grid-template-columns: minmax(0,1fr); }.api-plan-panel { grid-row: 1; }.api-planner-columns.is-assistant-open .api-plan-panel { max-height: 65vh; overflow: auto; } }
 @media(max-width: 900px) { .api-schedule-workspace.schedule-workspace { grid-template-columns: minmax(0,1fr); }.api-course-sidebar { max-height: 440px; }.api-sidebar-courses { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }.api-course-sidebar > .course-list-panel { padding: 12px; } }
 @media(max-width: 600px) { .api-semester-main.manual-planner { padding: 12px; }.api-search { grid-template-columns: minmax(0,1fr); gap: 7px; }.api-search .api-subject-label { flex-direction: row; align-items: center; justify-content: start; gap: 8px; }.api-subject-label input { height: 29px; width: 130px; font-size: 10px; }.api-course-results { grid-template-columns: 1fr; }.api-sidebar-courses { grid-template-columns: 1fr; }.api-week .schedule-tools { gap: 4px; }.api-week .schedule-tools .button { padding: 0 8px; height: 32px; font-size: 11px; }.api-calendar-days strong { font-size: 9px; }.api-term-label select { max-width: 205px; font-size: 12px; } }

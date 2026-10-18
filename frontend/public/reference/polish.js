@@ -168,6 +168,7 @@
   });
   document.addEventListener('click',e=>{
     const cardButton=e.target.closest('.degree-semester-calendar .degree-course-info');
+    if(cardButton?.dataset.degreeAction==='live-details'){clearDegreeFocus();return;}
     if(cardButton&&e.shiftKey)return; // Shift+click selects several courses (degree.js), it doesn't focus one.
     if(cardButton){
       const id=cardButton.dataset.course;

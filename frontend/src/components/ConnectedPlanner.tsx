@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { loadCourseDetail, searchCatalog } from "@/lib/api/catalogClient";
 import { ApiError, isRecord } from "@/lib/api/httpClient";
@@ -8,6 +8,7 @@ import type { CheckResponse, CourseDetail, CourseSearchResponse, CourseSummary, 
 import { CatalogCourseDetails, Prediction } from "./CatalogCourseDetails";
 import { ApiPreferences } from "./ApiPreferences";
 import { ApiWeekCalendar, ScheduleAlternatives, ScheduleFacts } from "./ApiScheduleResults";
+import { buildSemesterPlan } from "@/lib/semesterPlan";
 
 interface SavedPlan { id: string; name: string; request: GenerateRequest; crns: string[]; courseIds: string[] }
 const savedKey = "smartcourse-api-plans-v1";
@@ -80,12 +81,35 @@ export function ConnectedPlanner({ host, savedHost }: Readonly<{ host: Element; 
     setResult(null); setManual(null); setExplanation(null); setSuggestions(null); setHistory({ past: [], future: [] }); boardCourses.current = [];
     void run("Generating schedules", async signal => { const body = makeRequest(); const data = await generateSchedules(body, signal); if (data.term !== term) throw new Error("The backend returned a different catalog term."); setRequest(body); setResult(data); setAlternative(0); });
   }
-  async function openDetail(id: string) {
+  const openDetail = useCallback(async (id: string) => {
     detailOperation.current?.abort(); const controller = new AbortController(); detailOperation.current = controller;
     setDetailId(id); setDetail(null); setDetailError(null); setDetailLoading(true); dialog.current?.showModal();
     try { setDetail(await loadCourseDetail(id, term, controller.signal)); } catch (e) { if (!controller.signal.aborted) setDetailError(asError(e)); } finally { if (!controller.signal.aborted) setDetailLoading(false); }
-  }
+  }, [term]);
   const active: Schedule | undefined = manual ? { ...manual, rank: 0 } : result?.schedules[alternative];
+  useEffect(() => {
+    const plan = buildSemesterPlan(term, terms.find(item => item.term === term)?.name ?? term, selected, knownCourses, active?.sections);
+    document.dispatchEvent(new CustomEvent("syllo:semester-plan", { detail: plan }));
+  }, [term, terms, selected, knownCourses, active?.sections]);
+  useEffect(() => {
+    const open = (event: Event) => {
+      if (!(event instanceof CustomEvent) || typeof event.detail !== "string" || !/^[A-Z]+-\d+(?:-\d+)?$/.test(event.detail)) return;
+      void openDetail(event.detail);
+    };
+    document.addEventListener("syllo:open-semester-course", open);
+    return () => document.removeEventListener("syllo:open-semester-course", open);
+  }, [openDetail]);
+  function addToNextSemester(id: string) {
+    const next = { ...selected, [id]: "required" as const };
+    if (!active) { changeSelection(id, "required"); setNotice(`${id} added to next semester. Choose sections or generate schedules to place its meetings.`); return; }
+    setSelected(next);
+    void run("Updating next semester", async signal => {
+      const body = buildGenerateRequest(term, Object.keys(next).filter(key => next[key] === "required"), Object.keys(next).filter(key => next[key] === "optional"), form);
+      const data = await checkSchedule({ term, preferences: body.preferences, courseIds: [...new Set([...boardCourses.current, ...active.sections.map(section => section.courseId), id])], crns: active.sections.map(section => section.crn), includeClosedSections: body.includeClosedSections }, signal);
+      setRequest(body); setManual(data); setResult(null); setExplanation(null); setSuggestions(null); setHistory({ past: [], future: [] });
+      setNotice(`${id} added to next semester. Choose its sections or regenerate; your existing meetings are kept.`);
+    });
+  }
   function manualCheck(crns: string[], extraCourse?: string, direction?: "undo" | "redo") {
     const previous = active?.sections.map(s => s.crn) ?? [];
     void run("Checking sections", async signal => {
@@ -135,7 +159,7 @@ export function ConnectedPlanner({ host, savedHost }: Readonly<{ host: Element; 
             {catalogLoading && <p role="status">Loading courses…</p>}<ErrorNotice error={catalogError} retry={() => setReload(v => v + 1)} />
             {catalog && <>{!catalog.items.length && <p role="status">No courses match these filters. Try another code, subject or topic.</p>}<div className="api-course-results">{catalog.items.map(course => <article key={course.courseId} data-api-course={course.courseId}>
               <div className="api-row"><strong>{course.courseId}</strong><span>{course.credits} credits · {course.sectionCount} sections</span></div><h3>{course.title}</h3><Prediction rating={course.predictedRating} compact />
-              <div className="api-row"><button type="button" className="button" onClick={() => courseDetails(course.courseId)}>Details &amp; sections</button><label>Use in plan<select aria-label={`${course.courseId} selection`} value={selected[course.courseId] ?? ""} onChange={e => changeSelection(course.courseId, e.target.value as "required" | "optional" | "")}><option value="">Not selected</option><option value="required">Required</option><option value="optional">Optional</option></select></label></div>
+              <div className="api-row"><button type="button" className="button primary" data-add-next-semester={course.courseId} disabled={Boolean(busy) || selected[course.courseId] === "required" || active?.sections.some(section => section.courseId === course.courseId)} onClick={() => addToNextSemester(course.courseId)}>{selected[course.courseId] === "required" || active?.sections.some(section => section.courseId === course.courseId) ? "Added to next semester" : "Add to next semester"}</button><button type="button" className="button" onClick={() => courseDetails(course.courseId)}>Details &amp; sections</button><label>Use in plan<select aria-label={`${course.courseId} selection`} value={selected[course.courseId] ?? ""} onChange={e => changeSelection(course.courseId, e.target.value as "required" | "optional" | "")}><option value="">Not selected</option><option value="required">Required</option><option value="optional">Optional</option></select></label></div>
             </article>)}</div><div className="api-row api-search-pages"><button type="button" disabled={catalog.page === 0} onClick={() => setSearch(s => ({ ...s, page: s.page - 1 }))}>Previous</button><span>Page {catalog.totalPages ? catalog.page + 1 : 0} of {catalog.totalPages}</span><button type="button" disabled={catalog.page + 1 >= catalog.totalPages} onClick={() => setSearch(s => ({ ...s, page: s.page + 1 }))}>Next</button></div></>}
           </div>
         </div>
