@@ -139,6 +139,33 @@ The non-CSE inputs come from `data/degree-requirements` (SQLite staging, `export
 `verify_unified_database.py` rebuilds its expectations from the raw CSVs and exports and prints only counts and verdicts (the optional instructor
 file is used only to prove no name appears in the stored data).
 
+## Class Details for the non-CSE courses (V4)
+The 30 grid-staged non-CSE courses were `BLOCKED` (`GRID_ONLY_DETAILS_NOT_INSPECTED`): only Banner's results grid had been captured, so their prerequisites, corequisites, restrictions and lab/recitation links were unknown. V4 adds the path that fills them in from the same read-only Class Details captures used for the CSE courses (`data/banner-evidence/collector`).
+
+**What changed (additive; the existing 72 offerings keep their tier):**
+- `import_noncse_details` (owner-only) records, per course: the three requirement statuses, the eligibility rules, the lab/recitation links, and an inspection record (`detail_inspection`, with the capture hash). `section_detail_observation` keeps what Class Details said about each captured section, and the view `detail_mismatch` flags a credit or schedule-type difference from the grid.
+- `offering_tier`: an inspected grid-staged course is judged like the others (`CONDITIONAL`); it stays `BLOCKED` while Class Details disagrees with the grid (`DETAIL_MISMATCH`) or a lab/recitation is not linked to a lecture (`COMPONENT_LINKS_NOT_COLLECTED`). The grid's ordinary types `Class` and `Recitation` are no longer "unsupported" section types.
+- Fail-closed parsing (`noncse_details.py`): a restriction or prerequisite that is not recognized exactly is kept as words (`TEXT_ONLY`) and no rule is invented; a prerequisite that mixes And/Or at one level without parentheses is ambiguous and stays words (as CSE 303 did). Banner staying silent is recorded as `NONE_LISTED` (the project owner's rule of 2026-10-17: silent Banner means none; user-supplied evidence, not Registrar certification).
+- A course with several lecture sections takes its requirements from the first lecture; another lecture that differs is reported, never merged. Labs/recitations may legitimately say less and are not compared.
+
+**Collect (read-only, in your own Banner session, about 30 s per section):**
+1. Banner Browse Classes, select **2027 Spring Semester (View Only)**. Do not open Add, Register, Drop, Plan or any seat/instructor tab.
+2. Load `data/banner-evidence/collector/extract_popup.js` and then `collect_visible.js` in the page console (paste each file once per page load).
+3. For each course, search its subject and number, then paste its line from your local `collect_commands.txt` (one CRN per course; the lecture's Linked Sections tab already lists its labs and recitations). Each line downloads one `noncse-popups-<crn>.json`.
+4. Put all downloaded files in one directory outside the repository.
+
+**Import (dry-run first; prints course IDs and counts, never page text):**
+```
+export PGHOST=127.0.0.1 PGPORT=<port> PGUSER=<owner> PGDATABASE=<database>
+python3 -I data/catalog-research/import_noncse_details.py --captures <directory> --dry-run
+python3 -I data/catalog-research/import_noncse_details.py --captures <directory>            # add --allow-shared for the team database
+```
+Read the report: courses now `CONDITIONAL`, any `MISMATCH` (Class Details disagrees with the grid), courses kept as words only, subject names missing from `noncse_details.SUBJECTS` (add them and rerun; a rerun replaces that course's rows), and sections of a course that differ. An inspected, fully linked course whose credits are known then appears in `catalog_serving` on its own; nothing else needs installing.
+
+**Tests (2026-10-17):** `python3 -m unittest -v test_noncse_details` 24 tests (no database); `python3 -I run_details_validation.py` 25 scenarios, each rolled back, on an isolated copy of the team database. Mutation checks: 12 of 14 caught; the two misses are the `catalog_serving` gate rules that duplicate what `offering_tier` already enforces (kept as a second layer). No real Class Details have been imported yet: the scenarios use synthetic requirement text on the real staged sections.
+
+**Not covered:** courses whose credits vary by section (MATH 312, 334) are stored but not served, because the backend needs one credit value per course. The lab/recitation links of the 9 courses with components come from the lecture's Linked Sections tab; `LISTED_BY_LECTURE_ONLY` means only the lecture side was read.
+
 ## What this does not do
 - It does not approve, promote or serve anything, and it does not change `catalog_api`, `catalog_promoted`, `catalog_live`,
   `banner_evidence` or `cse007_snapshot`.
