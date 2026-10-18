@@ -5,5 +5,9 @@ import nextTypeScript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
-  globalIgnores([".next/**", "out/**", "dist/**"]),
+  {
+    files: ["src/app/layout.tsx"],
+    rules: { "@next/next/no-page-custom-font": "off" },
+  },
+  globalIgnores([".next/**", "out/**", "dist/**", "public/reference/**"]),
 ]);

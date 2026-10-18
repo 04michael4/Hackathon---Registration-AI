@@ -145,6 +145,28 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 **Owner:** David · **Status:** 🟡 Active CSE 007 database fixture and browser-local
 Next.js frontend prototype implemented; backend persistence/integration is not started.
 
+**2026-10-17 19:55 EDT — Codex, authoritative frontend parity: completed.**
+Replaced the divergent React-rendered interface with the exact markup, stylesheet
+cascade, crest asset and ordered browser-local runtime from
+`Syllo-updated-frontend.zip`, hosted directly by the existing Next.js route without
+an iframe. The reference HTML, six runtime scripts, five stylesheets and crest all
+match the archive by SHA-256. Added a no-dependency headless Chrome parity verifier
+covering login, the four-card start page, semester AI, conflict and expanded-calendar
+dialogs, saved schedules, degree selection/details, electives, advisor feedback,
+multi-status filters and approval across desktop, laptop, tablet and mobile sizes.
+
+Verification on Node.js 24.22.0 and Chrome:
+`npm run lint` completed with no findings;
+`npm test` reported `Test Files 1 passed (1)` and `Tests 4 passed (4)`;
+`npm run build` reported `Compiled successfully`, completed TypeScript and generated
+the static `/` route; the parity verifier against the production `next start` output
+reported 11 of 11 screenshot pairs byte-identical, all workflow probes identical and
+valid, and `failures: []`. Both the reference and implementation made the same missing
+favicon request (`404`); no browser JavaScript exception occurred. The project-wide
+`backend/.\mvnw.cmd test` check was attempted but failed before Maven started with
+`Cannot index into a null array` / `Cannot start maven from wrapper`; no backend test
+success is claimed. The supplied ZIP remains an untracked reference attachment.
+
 **2026-10-17 16:52 EDT — Codex, frontend framework migration: completed.**
 Migrated the standalone `dist/` HTML/CSS/JavaScript prototype to Next.js 16.4.2,
 React 19, strict TypeScript and Tailwind CSS 4. The App Router project now uses
@@ -270,6 +292,7 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-17 19:55 EDT | Codex for David | Frontend | Matched the authoritative ZIP inside Next.js without an iframe; 11/11 production screenshot pairs were byte-identical and all workflow probes matched. Lint, 4/4 Vitest tests and production build passed; Maven wrapper still fails before backend tests. |
 | 2026-10-17 17:59 EDT | Codex for David | Frontend | Prepared the Next.js migration for commit; `npm ci` completed, lint passed, Vitest passed 4/4 tests, and the production build compiled. Maven wrapper still fails before backend tests; npm reported 5 high-severity advisories. |
 | 2026-10-16 10:45 EDT | Codex for David | Data | Created `feature/data-cse007-snapshot`; regenerated the active seed with 8 verified source hashes and reran all three PostgreSQL verification suites successfully. Maven wrapper still fails before tests. |
 | 2026-10-15 22:07 EDT | Codex | Data | Rebuilt active CSE 007 data from all 7 supplied screenshots: 3 sections, 5 meetings, 1 confirmed link and explicit unresolved fields. Imported cse007_snapshot; hashes, reimport, full SQL bundle and 6 rejection checks passed. Backend Maven wrapper still fails before tests. |

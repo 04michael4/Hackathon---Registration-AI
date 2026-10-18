@@ -1,6 +1,6 @@
 # Syllo frontend
 
-The Syllo frontend is a Next.js App Router application written in strict TypeScript and React, with Tailwind CSS available through PostCSS. It is intentionally independent from the backend during this phase: catalog records, transcript history, planning rules, AI-style responses, saved schedules and advisor feedback are browser-local demo data.
+The Syllo frontend is a Next.js App Router application written in strict TypeScript and React. Its root route hosts the authoritative Syllo reference markup, stylesheet cascade, assets and browser runtime directly—without an iframe—so the rendered interface and local interactions stay byte-for-byte aligned with the supplied reference. Catalog records, transcript history, planning rules, AI-style responses, saved schedules and advisor feedback remain browser-local demo data.
 
 ## Requirements
 
@@ -33,19 +33,27 @@ npm run lint
 npm test
 ```
 
+Reference parity can be checked when the extracted reference is served at `http://127.0.0.1:4173` and this app is running at `http://127.0.0.1:3000`:
+
+```bash
+npm run verify:parity
+```
+
+The verifier uses an installed Chrome executable and Node.js built-ins only. Override `CHROME_PATH`, `SYLLO_REFERENCE_URL`, `SYLLO_IMPLEMENTATION_URL`, or `SYLLO_PARITY_OUTPUT` when needed.
+
 ## Project structure
 
 ```text
 frontend/
 ├── public/assets/             Static images
+├── public/reference/          Authoritative browser-local behavior scripts
 ├── src/app/                   Next.js layout, page and global CSS entrypoint
-├── src/components/            Reusable React screens and UI components
-├── src/context/               Persistent app state, navigation and undo
-├── src/lib/mock-data.ts       Simulated catalog, transcript and initial state
-├── src/lib/planner.ts         Pure scheduling, eligibility and audit rules
+├── src/components/            React components, including ordered reference runtime loading
+├── src/reference/index.html   Unmodified authoritative reference document
+├── src/styles/                Unmodified reference stylesheets in source order
+├── scripts/                   Headless Chrome parity verification
+├── src/lib/planner.ts         Pure typed planner rules retained for unit coverage
 ├── src/lib/planner.test.ts    Deterministic rule tests
-├── src/lib/types.ts           Shared strict TypeScript types
-├── src/styles/                Preserved Syllo design system and responsive CSS
 ├── package.json               Development, build, lint and test scripts
 └── package-lock.json          Pinned npm dependency graph
 ```
@@ -61,8 +69,8 @@ frontend/
 
 ## Data and persistence boundary
 
-The frontend does not call the Spring backend or an AI provider yet. `src/lib/mock-data.ts` owns the replaceable catalog/transcript fixture, while `src/lib/planner.ts` contains deterministic browser-side demo rules. These rules demonstrate interactions only and are not authoritative academic decisions.
+The frontend does not call the Spring backend or an AI provider yet. `public/reference/data.js` owns the executable catalog/transcript fixture and local store; the remaining reference scripts implement the semester planner, degree planner, advisor review and shared navigation. The retained typed planner modules provide unit coverage but are not the active browser data boundary. These rules demonstrate interactions only and are not authoritative academic decisions.
 
-Plans, chat messages, saved schedules and advisor feedback are stored under `syllo-planning-v4` in browser `localStorage`. They remain in one browser profile and do not sync. The mock SSO collects no credentials, and the role switch is not an access-control boundary.
+Plans, chat messages, saved schedules and advisor feedback are stored under `syllo-planning-v3` in browser `localStorage`, matching the reference. They remain in one browser profile and do not sync. The mock SSO collects no credentials, and the role switch is not an access-control boundary.
 
 When backend integration begins, keep API types in `src/lib/api/` and mirror `docs/api-contract.md`. Only the backend may call the AI provider or hold secrets.
