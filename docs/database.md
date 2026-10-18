@@ -13,6 +13,7 @@ catalog, and no Banner records are published in this repository.
 | `cse007_snapshot` | `data/cse007-snapshot/` | The verified CSE 007 schema and seed (3 sections, 5 meetings, one confirmed lecture/lab rule). Loaded unchanged and never modified in place |
 | `catalog_api` | `data/catalog-api/` | Five read-only views over the snapshot with six fail-closed readiness rules. The only thing the backend reads |
 | `banner_evidence` | `data/banner-evidence/` | An append-only evidence layer (what Banner or a user report showed, claims, human reviews) plus a read-only Banner collector. Not read by the backend; promotes nothing |
+| `professor_ratings` | `data/professor-ratings/` | Instructors, Rate My Professors ratings, ratings/comments from our app per semester, and predicted Spring 2027 quality/difficulty per course ([ADR-0006](decisions/0006-store-professor-ratings-separately-from-the-catalog.md)). Holds real names: local/team database only. Not read by the backend or the catalog |
 | JDBC adapter | `backend/.../course/persistence/` | `JdbcCourseCatalog` and `JdbcSectionCatalog`, selected by `CATALOG_SOURCE` (`database` is the default on `pre-main`) |
 
 ## 1. Create the database (one command)
