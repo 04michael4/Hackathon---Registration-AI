@@ -6,6 +6,7 @@ BEGIN;
 \ir V1__catalog_serving.sql
 \ir V2__instructors_and_predicted_ratings.sql
 \ir V3__inspected_noncse.sql
+\ir V4__common_exams.sql
 \ir regrant.sql
 \ir verify_structure.sql
 COMMIT;

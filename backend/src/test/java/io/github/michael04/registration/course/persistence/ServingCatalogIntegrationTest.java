@@ -54,7 +54,8 @@ class ServingCatalogIntegrationTest {
 	void theResearchedCourseSetIsServedAndNothingBlockedIs() throws Exception {
 		List<String> ids = courses.listCourses(TERM).stream().map(CourseSummary::courseId).toList();
 		assertThat(ids).hasSizeGreaterThanOrEqualTo(40).contains("CSE-007", "CSE-017", "CSE-216", "CSE-217");
-		assertThat(ids).noneMatch(id -> id.startsWith("CSE-398-"));           // topics undecided at install time
+		// the two CSE 398 topics are separate offerings once the owner's decision is applied (data/catalog-research/apply_owner_decisions.sql)
+		org.junit.jupiter.api.Assumptions.assumeTrue(ids.contains("CSE-398-042") == ids.contains("CSE-398-052"), "only one CSE 398 topic is served");
 		// never served, whatever else was imported: shared or unlinkable components, and credits that vary by section
 		for (String blocked : new String[] { "CHM-030", "PHY-012", "MATH-312", "MATH-334" }) {
 			assertThat(ids).doesNotContain(blocked);
@@ -89,6 +90,18 @@ class ServingCatalogIntegrationTest {
 			List<String> mathSections = JsonPath.read(result, "$.schedules[" + i + "].sections[?(@.courseId=='MATH-021')].crn");
 			assertThat(mathSections).as("a lecture and its recitation").hasSize(2);
 		}
+	}
+
+	@Test
+	void theTwoCse398TopicsAreServedAsSeparateCoursesWhenDecided() throws Exception {
+		List<String> ids = courses.listCourses(TERM).stream().map(CourseSummary::courseId).toList();
+		org.junit.jupiter.api.Assumptions.assumeTrue(ids.contains("CSE-398-042"), "the CSE 398 topic decision is not applied in this database");
+		assertThat(ids).contains("CSE-398-052");
+		String detail = body("/api/courses/CSE-398-042?term=" + TERM);
+		assertThat((String) JsonPath.read(detail, "$.courseId")).isEqualTo("CSE-398-042");
+		assertThat((String) JsonPath.read(detail, "$.number")).isEqualTo("398");
+		assertThat((String) JsonPath.read(detail, "$.title")).isEqualTo("Advanced Operating Systems");
+		assertThat((String) JsonPath.read(body("/api/courses/CSE-398-052?term=" + TERM), "$.title")).isEqualTo("Accelerated Computing for Machine Learning");
 	}
 
 	@Test

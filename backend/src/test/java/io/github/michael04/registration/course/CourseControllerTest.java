@@ -64,7 +64,8 @@ class CourseControllerTest {
 	@ParameterizedTest
 	@ValueSource(strings = {"/api/courses", "/api/courses?term=", "/api/courses?term=2027-SPRING&size=101",
 			"/api/courses?term=2027-SPRING&size=0", "/api/courses?term=2027-SPRING&page=-1",
-			"/api/courses/CSE-017", "/api/courses/CSE-017?term="})
+			"/api/courses/CSE-017", "/api/courses/CSE-017?term=", "/api/courses/CSE-398-?term=2027-SPRING",
+			"/api/courses/CSE-398-042-001?term=2027-SPRING", "/api/courses/cse-398-042?term=2027-SPRING"})
 	void invalidRequestsReturn400(String url) throws Exception {
 		mvc.perform(get(url)).andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
@@ -72,7 +73,7 @@ class CourseControllerTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"/api/courses?term=2030-FALL", "/api/courses/CSE-017?term=2030-FALL",
-			"/api/courses/NOPE-999?term=2027-SPRING"})
+			"/api/courses/NOPE-999?term=2027-SPRING", "/api/courses/CSE-398-042?term=2027-SPRING"})
 	void unknownTermOrCourseReturns404(String url) throws Exception {
 		mvc.perform(get(url)).andExpect(status().isNotFound());
 	}

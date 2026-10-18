@@ -152,7 +152,7 @@ def normalize(export, term_code, grid_rows, extra_rows, no_sections, equivalence
         "exclusions": [{"course": x["course_code"], "excluded": x["excluded_text"], "status": x["status"]} for x in export["course_credit_exclusions"]],
         "equivalences": [{"course": a, "equivalent": b, "status": "CROSS_LISTED_USER_ASSERTED_UNVERIFIED"} for a, b in equivalences],
         "unresolved": [{"subject": u["subject"], "detail": u["detail"]} for u in export["unresolved"]]
-                      + [{"subject": "INSTRUCTORS", "detail": "NOT_IMPORTED: instructor names are withheld from this database by design; redistribution of names from an authenticated Banner session is not verified."}],
+                      + [{"subject": "INSTRUCTORS", "detail": "Instructor names are not stored in catalog_research; they live in professor_ratings (ADR-0006), which is for the team's own app only. Whether Banner names may be redistributed is still unverified."}],
     }
     return grid_payload, program_payload
 

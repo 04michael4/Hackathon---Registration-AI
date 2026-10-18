@@ -20,6 +20,17 @@ class CourseServiceTest {
 	}
 
 	@Test
+	void aSpecialTopicIdKeepsTheCourseNumberAndMatchesACodeSearch() {
+		var topic = new CourseSummary("CSE-398-042", "Advanced Operating Systems", 3);
+		assertThat(CourseQuery.subject("CSE-398-042")).isEqualTo("CSE");
+		assertThat(CourseQuery.number("CSE-398-042")).isEqualTo("398");
+		assertThat(CourseQuery.number("CSE-017")).isEqualTo("017");
+		assertThat(CourseQuery.matches(topic, "CSE 398")).isTrue();
+		assertThat(CourseQuery.matches(topic, "cse398")).isTrue();
+		assertThat(CourseQuery.matches(topic, "CSE 399")).isFalse();
+	}
+
+	@Test
 	void wordQueriesNeedEveryWordInIdOrTitle() {
 		assertThat(CourseQuery.matches(CSE_017, "data structures")).isTrue();
 		assertThat(CourseQuery.matches(CSE_017, "cse data")).isTrue();

@@ -43,6 +43,9 @@ curl "http://localhost:8080/api/courses/CSE-216?term=2027-SPRING"     # sections
 ## Inspected non-CSE courses (V3)
 `served_offering` also admits a grid-staged (non-CSE) course once its Class Details were imported (`catalog_research` V4, [README](../catalog-research/README.md#class-details-for-the-non-cse-courses-v4)), and only when every lab or recitation is linked to a lecture (the backend refuses a component without its lecture) and its credits are known. `course_condition` now also renders corequisites, shows an enrollment restriction Banner states only in words, and flags any requirement still `UNKNOWN`, so nothing is dropped silently. The first real import (2026-10-18) serves 26 non-CSE courses; CHM 030 and PHY 012 (components that cannot be linked to one lecture) and MATH 312 and 334 (credits vary by section) are not served.
 
+## Common exams and the CSE 398 topics (V4, owner decisions)
+`course_condition` adds `COMMON_EXAMS`: the dates of a course's common evening exams as a warning (not a meeting and not a conflict). The two CSE 398 topics are served as `CSE-398-042` and `CSE-398-052` once their identity is decided ([ADR-0008](../../docs/decisions/0008-spring-2027-planning-decisions-of-the-project-owner.md)).
+
 ## Predicted ratings and instructors (V2)
 `course_rating` and `section_instructor` read `professor_ratings` (predictions for Spring 2027, [ADR-0006](../../docs/decisions/0006-store-professor-ratings-separately-from-the-catalog.md)). The backend returns them as `predictedRating` on course search and detail and `instructorRatings` on each section. If the views cannot be read the backend returns no ratings and the course endpoints still work. Instructor names are real people's names, so they are for the team's own app only.
 
