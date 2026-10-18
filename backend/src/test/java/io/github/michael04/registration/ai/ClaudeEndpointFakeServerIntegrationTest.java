@@ -38,7 +38,7 @@ class ClaudeEndpointFakeServerIntegrationTest {
 			 "minCredits":null,"maxCredits":null,
 			 "blockedTimes":[{"days":["TUESDAY","THURSDAY"],"start":"15:00","end":"18:00"}],
 			 "earliestStart":"10:00","earliestStartWeight":3,"latestEnd":null,"latestEndWeight":null,
-			 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+			 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 			""";
 
 	@DynamicPropertySource
@@ -84,7 +84,7 @@ class ClaudeEndpointFakeServerIntegrationTest {
 				{"requiredCourses":["Underwater Basket Weaving"],"optionalCourses":[],"optionalCoursesWeight":null,
 				 "minCredits":null,"maxCredits":null,"blockedTimes":[],
 				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
-				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				"""));
 
 		perform().andExpect(status().isOk())
@@ -101,7 +101,7 @@ class ClaudeEndpointFakeServerIntegrationTest {
 				 "minCredits":12,"maxCredits":15,
 				 "blockedTimes":[{"days":["THURSDAY","TUESDAY","TUESDAY"],"start":"15:00","end":"18:00"}],
 				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
-				 "daysOff":["FRIDAY","MONDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"assumptions":[]}
+				 "daysOff":["FRIDAY","MONDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				"""));
 
 		perform().andExpect(status().isOk())
@@ -210,7 +210,7 @@ class ClaudeEndpointFakeServerIntegrationTest {
 				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,
 				 "minCredits":null,"maxCredits":null,"blockedTimes":[],
 				 "earliestStart":null,"earliestStartWeight":null,"latestEnd":null,"latestEndWeight":null,
-				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"assumptions":[]}
+				 "daysOff":[],"daysOffWeight":null,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				"""));
 
 		perform().andExpect(status().isOk())

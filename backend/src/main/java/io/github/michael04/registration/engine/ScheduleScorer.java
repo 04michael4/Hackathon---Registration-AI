@@ -27,7 +27,7 @@ final class ScheduleScorer {
 	static final int GAP_CAP_MINUTES = 600;
 
 	private static final int POINTS_PER_WEIGHT = 4;
-	/** Larger than the biggest possible exact value, 5 preferences × weight 5 × SCALE. */
+	/** Larger than the biggest possible exact value, 6 preferences × weight 5 × SCALE. */
 	private static final long EXACT_RANGE = 1_000_000;
 
 	private final SoftWeights soft;
@@ -66,7 +66,16 @@ final class ScheduleScorer {
 
 	/** Lower is better. See the class comment. */
 	long rankKey(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes, int skippedOptional) {
-		int[] units = units(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional);
+		return rankKey(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional, 0);
+	}
+
+	/**
+	 * As above, with the weekly minutes by which breaks fall short of the student's minimum break. Like gaps,
+	 * a partial schedule passes 0: adding a class can lengthen or remove a short break, so it is no lower bound.
+	 */
+	long rankKey(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes, int skippedOptional,
+			int breakShortfallMinutes) {
+		int[] units = units(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional, breakShortfallMinutes);
 		int[] weights = weights();
 		long points = 0;
 		long exact = 0;
@@ -80,7 +89,12 @@ final class ScheduleScorer {
 	/** Points (0–20) per active preference, keyed by {@code SoftWeights.*_KEY}. */
 	SortedMap<String, Integer> breakdown(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes,
 			int skippedOptional) {
-		int[] units = units(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional);
+		return breakdown(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional, 0);
+	}
+
+	SortedMap<String, Integer> breakdown(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes,
+			int skippedOptional, int breakShortfallMinutes) {
+		int[] units = units(earlyMinutes, lateMinutes, dayMask, gapMinutes, skippedOptional, breakShortfallMinutes);
 		int[] weights = weights();
 		SortedMap<String, Integer> breakdown = new TreeMap<>();
 		for (int i = 0; i < units.length; i++) {
@@ -106,8 +120,30 @@ final class ScheduleScorer {
 		return total;
 	}
 
+	/**
+	 * Weekly minutes by which same-day breaks between consecutive classes fall short of {@code minBreakMinutes}.
+	 * Back-to-back classes count their whole shortfall; breaks at least that long count nothing.
+	 */
+	static int breakShortfallMinutes(List<Meeting> meetings, int minBreakMinutes) {
+		if (minBreakMinutes <= 0) {
+			return 0;
+		}
+		int total = 0;
+		for (DayOfWeek day : DayOfWeek.values()) {
+			List<Meeting> onDay = meetings.stream()
+				.filter(m -> m.days().contains(day))
+				.sorted((a, b) -> a.start().compareTo(b.start()))
+				.toList();
+			for (int i = 1; i < onDay.size(); i++) {
+				int gap = Math.max(0, minutesBetween(onDay.get(i - 1).end(), onDay.get(i).start()));
+				total += Math.max(0, minBreakMinutes - gap);
+			}
+		}
+		return total;
+	}
+
 	private static final String[] KEYS = { SoftWeights.EARLIEST_START_KEY, SoftWeights.LATEST_END_KEY,
-			SoftWeights.DAYS_OFF_KEY, SoftWeights.GAPS_KEY, SoftWeights.OPTIONAL_COURSES_KEY };
+			SoftWeights.DAYS_OFF_KEY, SoftWeights.GAPS_KEY, SoftWeights.OPTIONAL_COURSES_KEY, SoftWeights.MIN_BREAK_KEY };
 
 	/** Weights in {@link #KEYS} order; a preference without a value counts as weight 0. */
 	private int[] weights() {
@@ -116,18 +152,21 @@ final class ScheduleScorer {
 				soft.latestEnd() == null ? 0 : soft.latestEndWeight(),
 				soft.daysOff().isEmpty() ? 0 : soft.daysOffWeight(),
 				soft.gapsWeight(),
-				optionalCount == 0 ? 0 : soft.optionalCoursesWeight() };
+				optionalCount == 0 ? 0 : soft.optionalCoursesWeight(),
+				soft.minBreakMinutes() == 0 ? 0 : soft.minBreakWeight() };
 	}
 
 	/** Normalized penalties {@code r × SCALE} in {@link #KEYS} order. */
-	private int[] units(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes, int skippedOptional) {
+	private int[] units(int earlyMinutes, int lateMinutes, int dayMask, int gapMinutes, int skippedOptional,
+			int breakShortfallMinutes) {
 		int daysOff = soft.daysOff().size();
 		return new int[] {
 				Math.min(SCALE, earlyMinutes * (SCALE / TIME_CAP_MINUTES)),
 				Math.min(SCALE, lateMinutes * (SCALE / TIME_CAP_MINUTES)),
 				daysOff == 0 ? 0 : Integer.bitCount(dayMask & daysOffMask) * (SCALE / daysOff),
 				Math.min(SCALE, gapMinutes * (SCALE / GAP_CAP_MINUTES)),
-				optionalCount == 0 ? 0 : skippedOptional * (SCALE / optionalCount) };
+				optionalCount == 0 ? 0 : skippedOptional * (SCALE / optionalCount),
+				Math.min(SCALE, breakShortfallMinutes * (SCALE / GAP_CAP_MINUTES)) };
 	}
 
 	/** {@code round(4 × weight × units / SCALE)}, rounding half up. */

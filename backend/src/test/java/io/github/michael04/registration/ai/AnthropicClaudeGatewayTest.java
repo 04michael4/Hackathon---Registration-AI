@@ -30,7 +30,7 @@ class AnthropicClaudeGatewayTest {
 			 "minCredits":null,"maxCredits":null,
 			 "blockedTimes":[{"days":["TUESDAY","THURSDAY"],"start":"15:00","end":"18:00"}],
 			 "earliestStart":"10:00","earliestStartWeight":4,"latestEnd":null,"latestEndWeight":null,
-			 "daysOff":["FRIDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"assumptions":[]}
+			 "daysOff":["FRIDAY"],"daysOffWeight":2,"minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 			""";
 
 	private final FakeAnthropicServer server = new FakeAnthropicServer();
@@ -230,7 +230,7 @@ class AnthropicClaudeGatewayTest {
 	/** Every top-level property in the structured-output contract; the SDK marks all of them required. */
 	private static final String[] TOP_LEVEL = { "requiredCourses", "optionalCourses", "optionalCoursesWeight", "minCredits",
 			"maxCredits", "blockedTimes", "earliestStart", "earliestStartWeight", "latestEnd", "latestEndWeight", "daysOff",
-			"daysOffWeight", "minimizeGapsWeight", "assumptions" };
+			"daysOffWeight", "minimizeGapsWeight", "minBreakMinutes", "minBreakWeight", "interestTopics", "latestStart", "assumptions" };
 
 	private static ObjectNode validObject() {
 		return (ObjectNode) JSON.readTree(VALID_JSON);
@@ -253,7 +253,7 @@ class AnthropicClaudeGatewayTest {
 	@ParameterizedTest(name = "missing {0}")
 	@ValueSource(strings = { "requiredCourses", "optionalCourses", "optionalCoursesWeight", "minCredits", "maxCredits",
 			"blockedTimes", "earliestStart", "earliestStartWeight", "latestEnd", "latestEndWeight", "daysOff",
-			"daysOffWeight", "minimizeGapsWeight", "assumptions" })
+			"daysOffWeight", "minimizeGapsWeight", "minBreakMinutes", "minBreakWeight", "interestTopics", "latestStart", "assumptions" })
 	void aReplyMissingAnyOneTopLevelPropertyIsMalformed(String property) {
 		ObjectNode node = validObject();
 		node.remove(property);
@@ -291,7 +291,7 @@ class AnthropicClaudeGatewayTest {
 				{"requiredCourses":[],"optionalCourses":[],"optionalCoursesWeight":null,"minCredits":null,
 				 "maxCredits":null,"blockedTimes":[],"earliestStart":null,"earliestStartWeight":null,
 				 "latestEnd":null,"latestEndWeight":null,"daysOff":[],"daysOffWeight":null,
-				 "minimizeGapsWeight":null,"assumptions":[]}
+				 "minimizeGapsWeight":null,"minBreakMinutes":null,"minBreakWeight":null,"interestTopics":[],"latestStart":null,"assumptions":[]}
 				""");
 
 		assertThat(reply.outcome()).isEqualTo(Outcome.COMPLETE);

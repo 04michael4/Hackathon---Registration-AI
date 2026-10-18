@@ -71,7 +71,8 @@ public class EngineMapper {
 		var hard = preferences.hardConstraints();
 		var constraints = new SchedulingEngine.Constraints(hard.minCredits(), hard.maxCredits(),
 			hard.blockedTimes().stream().map(block -> new SchedulingEngine.Meeting(
-				block.days().stream().distinct().sorted().toList(), block.start(), block.end())).toList());
+				block.days().stream().distinct().sorted().toList(), block.start(), block.end())).toList(),
+			hard.latestStart());
 		var soft = preferences.softPreferences() == null ? SoftPreferences.none() : preferences.softPreferences();
 		var weights = new SchedulingEngine.SoftWeights(
 			soft.optionalCourseIds() == null ? 0 : soft.optionalCourseIds().weight(),
@@ -81,7 +82,9 @@ public class EngineMapper {
 			soft.latestEnd() == null ? 0 : soft.latestEnd().weight(),
 			soft.daysOff() == null ? List.of() : soft.daysOff().value().stream().distinct().sorted().toList(),
 			soft.daysOff() == null ? 0 : soft.daysOff().weight(),
-			soft.minimizeGaps() == null ? 0 : soft.minimizeGaps().weight());
+			soft.minimizeGaps() == null ? 0 : soft.minimizeGaps().weight(),
+			soft.minBreakMinutes() == null ? 0 : soft.minBreakMinutes().value(),
+			soft.minBreakMinutes() == null ? 0 : soft.minBreakMinutes().weight());
 		return new PreparedInput(new SchedulingEngine.Problem(inputs, constraints, weights, maxResults), courses, eligible);
 	}
 
