@@ -18,6 +18,20 @@ export interface InstructorRating {
   courseSpecific: boolean;
 }
 
+/** An instructor's stored average rating in one calendar year (1.00 to 5.00; 5 is best quality / hardest). */
+export interface YearRating {
+  year: number;
+  quality: number;
+  difficulty: number;
+  ratings: number;
+  lowSample: boolean;
+}
+
+export interface InstructorRatingHistory {
+  name: string;
+  years: YearRating[];
+}
+
 export interface CourseCondition {
   code: string;
   message: string;
@@ -57,6 +71,8 @@ export interface CourseDetail extends Omit<CourseSummary, "sectionCount"> {
     instructorRatings: InstructorRating[];
     meetings: { days: string[]; start: string; end: string; location: string | null }[];
   }[];
+  /** Yearly history of this term's instructors; empty when the backend has no ratings data. */
+  ratingHistory: InstructorRatingHistory[];
 }
 
 export const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;

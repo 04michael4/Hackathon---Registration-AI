@@ -229,6 +229,12 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
   "conditions": [
     { "code": "PREREQUISITE", "message": "Prerequisite: CSE 004 or CSE 007", "evidenceLevel": "BANNER", "outcome": "UNVERIFIED" },
     { "code": "LINKED_COMPONENTS", "message": "The lab requirement was reported by the team and is not confirmed by Banner.", "evidenceLevel": "USER_CLARIFICATION", "outcome": "UNVERIFIED" }
+  ],
+  "ratingHistory": [
+    { "name": "Testwick, Alder", "years": [
+      { "year": 2024, "quality": 3.20, "difficulty": 3.40, "ratings": 2, "lowSample": true },
+      { "year": 2025, "quality": 3.90, "difficulty": 2.80, "ratings": 9, "lowSample": false }
+    ] }
   ]
 }
 ```
@@ -242,6 +248,8 @@ Only an explicit stored `OPEN`, `CLOSED` or `UNKNOWN` availability label is used
 **`predictedRating`** and each section's **`instructorRatings`** (added 2026-10-17, additive; only with `DB_CATALOG_SCHEMA=catalog_serving` and ratings installed, otherwise `null` and `[]`): what is predicted for the term from earlier terms' opinions (Rate My Professors, later also this app). A prediction is an estimate, not the course's rating: label it as predicted and show `confidence`. `instructors` is filled from the same data when the catalog stores none; an instructor with no earlier rating appears with `null` predictions (never a made-up number), and `courseSpecific` means students rated that instructor for this very course. Instructor names are real people's names: use them only inside the team's own app (ADR-0006).
 
 **`conditions`** (added 2026-10-17, additive): what the application has **not verified** about taking this course. Each item has `code` (`PREREQUISITE`, `COREQUISITE`, `CLASS_STANDING`, `LEVEL`, `COLLEGE`, `MAJOR`, `DEPARTMENT_APPROVAL`, `ENROLLMENT_RESTRICTION`, `CREDIT_EXCLUSION`, `ARRANGED_MEETING`, `COMMON_EXAMS`, `LINKED_COMPONENTS`, `CROSS_LISTING`, `SECTION_TYPE`, `NOT_CHECKED`), a `message` for the student, `evidenceLevel` (`BANNER`, `CATALOG`, `USER_CLARIFICATION` or `TEAM_POLICY`; user-supplied evidence is never labelled Registrar-verified) and `outcome` (always `UNVERIFIED` today: the student is not checked against it). The list is ordered by `code` kind, then message, and is **empty when the catalog has none** (the verified snapshot `catalog_api` has no conditions). An empty list is not a promise that the student may register, and a condition list never means "eligible". The frontend should show the conditions with the course and must not describe a schedule as ready to register. Schedule endpoints do not return conditions yet.
+
+**`ratingHistory`** (added 2026-10-18, additive; 🟡 implemented): the **stored** yearly ratings of the instructors who teach a section of this course this term, one item per instructor who has any, ordered by name; `[]` without ratings data or outside `DB_CATALOG_SCHEMA=catalog_serving`. Each year has `year` (calendar year the ratings were given), `quality` and `difficulty` (averages, 1.00 to 5.00; 5 is best quality / hardest), `ratings` (how many ratings the averages rest on) and `lowSample` (`true` when the source marks the year as a low sample). Oldest first; years without ratings are absent. Nothing is predicted or smoothed here; the term's prediction stays in `instructorRatings`. Source: `professor_ratings.instructor_year_rating`, joined on the Banner instructor name; this is the backend's one read outside `catalog_serving` (the read-only role already has `SELECT` on it), and a `catalog_serving` view over it would restore the single-schema rule. Unavailable data gives `[]`, never an error.
 
 **Status codes:** `200`; `400` if `term` is missing; `404` if the course or term is unknown.
 
@@ -568,6 +576,7 @@ demo catalog), and are not a commitment: they may change or disappear after the 
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-18 | Course detail (endpoint 4) gains an additive `ratingHistory` list: per instructor teaching this term, the stored yearly `quality`, `difficulty`, `ratings` and `lowSample`. Empty unless `catalog_serving` and `professor_ratings` are available. Read from `professor_ratings.instructor_year_rating`. No existing field changed. | Claude Code for Sungwon |
 | 2026-10-18 | Course IDs of special-topics courses carry a topic suffix (`CSE-398-042`, `CSE-398-052`), accepted by `GET /api/courses/{courseId}`; their `number` stays `398`, and a search for "CSE 398" matches both. Served once the owner's decision is applied to the database ([ADR-0008](decisions/0008-spring-2027-planning-decisions-of-the-project-owner.md)). The AI course resolver is not updated. **Contract change**: the frontend owners should not assume a course ID has exactly one hyphen. | Claude Code for Michael, Database |
 | 2026-10-17 | Course search items and course detail gain an additive nullable `predictedRating`; course sections gain an additive `instructorRatings` list and a filled `instructors`. Populated only with `DB_CATALOG_SCHEMA=catalog_serving` and the ratings installed; `null` / `[]` otherwise. No existing field changed. **Contract change**: the frontend owners should show it as predicted, with its confidence. | Claude Code for Michael, Database |
 | 2026-10-17 | Course detail (endpoint 4) gains an additive `conditions` list (`code`, `message`, `evidenceLevel`, `outcome`); empty unless the backend runs with `DB_CATALOG_SCHEMA=catalog_serving`. No existing field changed. **Contract change**: the frontend owner should show the conditions with the course. | Claude Code for Michael, Database |

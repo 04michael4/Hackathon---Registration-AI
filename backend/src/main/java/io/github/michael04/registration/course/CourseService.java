@@ -107,7 +107,17 @@ public class CourseService {
 		List<CourseCondition> conditions = conditionCatalog == null ? List.of() : conditionCatalog.conditionsFor(term, courseId);
 		return new CourseDetailResponse(course.courseId(), CourseQuery.subject(course.courseId()),
 				CourseQuery.number(course.courseId()), course.title(), course.credits(), detail.description(), sections, conditions,
-				ratings == null ? null : ratings.courseRatings(term, List.of(courseId)).get(courseId));
+				ratings == null ? null : ratings.courseRatings(term, List.of(courseId)).get(courseId), ratingHistory(ratings, sections));
+	}
+
+	/** The yearly history of every instructor teaching a section, ordered by name; instructors without history are left out. */
+	private static List<InstructorRatingHistory> ratingHistory(RatingCatalog ratings, List<CourseDetailResponse.Section> sections) {
+		List<String> names = sections.stream().flatMap(s -> s.instructors().stream()).distinct().sorted().toList();
+		if (ratings == null || names.isEmpty()) {
+			return List.of();
+		}
+		Map<String, List<YearRating>> history = ratings.yearlyHistory(names);
+		return names.stream().filter(history::containsKey).map(name -> new InstructorRatingHistory(name, history.get(name))).toList();
 	}
 
 	/** Instructors stored with the course metadata win; otherwise the names of the rating catalog (ordered by name). */

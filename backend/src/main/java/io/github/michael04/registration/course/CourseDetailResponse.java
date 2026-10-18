@@ -10,17 +10,20 @@ import java.util.List;
  * @param description {@code null} when the catalog has none
  * @param predictedRating the rating predicted for the term from earlier terms' opinions, or {@code null} when none exists
  * @param conditions what the application has not verified about taking this course; empty when the catalog has none (never means "eligible")
+ * @param ratingHistory the stored yearly ratings of this term's instructors, by name; empty without ratings data
  */
 public record CourseDetailResponse(String courseId, String subject, String number, String title, int credits,
-		String description, List<Section> sections, List<CourseCondition> conditions, PredictedRating predictedRating) {
+		String description, List<Section> sections, List<CourseCondition> conditions, PredictedRating predictedRating,
+		List<InstructorRatingHistory> ratingHistory) {
 
 	public CourseDetailResponse {
 		conditions = conditions == null ? List.of() : List.copyOf(conditions);
+		ratingHistory = ratingHistory == null ? List.of() : List.copyOf(ratingHistory);
 	}
 
 	public CourseDetailResponse(String courseId, String subject, String number, String title, int credits, String description,
 			List<Section> sections) {
-		this(courseId, subject, number, title, credits, description, sections, List.of(), null);
+		this(courseId, subject, number, title, credits, description, sections, List.of(), null, List.of());
 	}
 
 	/**

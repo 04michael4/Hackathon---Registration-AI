@@ -24,12 +24,29 @@ class JdbcRatingCatalogTest {
 	}
 
 	@Test
+	void theHistoryQueryReadsOnlyTheYearlyTrendViewAndIsParameterized() {
+		String sql = JdbcRatingCatalog.YEARLY_HISTORY;
+		assertThat(sql).startsWith("SELECT").contains("FROM professor_ratings.instructor_year_rating").contains("banner_name = ANY(?)");
+		assertThat(sql).doesNotContain("catalog_research", "catalog_live", "catalog_api", "'");
+		assertThat(sql.toUpperCase()).doesNotContain("INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER ", "TRUNCATE ", "CREATE ", ";");
+	}
+
+	@Test
 	void otherSchemasHaveNoRatingsAndNeverQuery() {
 		for (String schema : List.of("catalog_api", "catalog_live")) {
 			var catalog = new JdbcRatingCatalog(null, TERMS, schema);   // a null JdbcClient would throw if it queried
 			assertThat(catalog.courseRatings("2027-SPRING", List.of("CSE-017"))).isEmpty();
 			assertThat(catalog.instructorsByCrn("2027-SPRING", "CSE-017")).isEmpty();
+			assertThat(catalog.yearlyHistory(List.of("Testwick, Alder"))).isEmpty();
 		}
+	}
+
+	@Test
+	void noNamesMeansNoHistoryQuery() {
+		var catalog = new JdbcRatingCatalog(null, TERMS, "catalog_serving");
+		assertThat(catalog.yearlyHistory(List.of())).isEmpty();
+		assertThat(catalog.yearlyHistory(null)).isEmpty();
+		assertThat(catalog.yearlyHistory(java.util.Arrays.asList(" ", null))).isEmpty();
 	}
 
 	@Test
