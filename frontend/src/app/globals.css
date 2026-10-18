@@ -5,6 +5,7 @@
 @import "../styles/legacy-polish.css";
 @import "../styles/planner-ux.css";
 @import "../styles/degree-ux.css";
+@import "../styles/brand.css";
 
 #syllo-reference-root {
   display: contents;

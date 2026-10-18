@@ -1,0 +1,60 @@
+/* Syllo logo lockup (mark + Sora wordmark), from the "Syllo Symbol" design canvas. Loaded last so it wins over the legacy brand rules. */
+:root {
+  --syllo-brown: #5A3420;
+}
+
+.syllo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--syllo-brown);
+}
+
+.syllo-lockup-mark {
+  display: block;
+  width: 1.15em;
+  height: 1.15em;
+}
+
+.syllo-wordmark {
+  font-family: Sora, "DM Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--syllo-brown);
+}
+
+.product-brand.product-brand {
+  display: inline-flex;
+  align-items: center;
+  font: 700 24px/1 Sora, "DM Sans", sans-serif;
+}
+
+.login-brand .syllo-lockup {
+  margin: 0 0 14px;
+  font-size: 48px;
+  line-height: 1;
+}
+
+/* .login-brand span styles the small "LEHIGH UNIVERSITY" caption; keep it off the wordmark. */
+.login-brand .syllo-wordmark {
+  margin: 0;
+  font-size: inherit;
+  letter-spacing: -0.03em;
+}
+
+.login-card .login-crest {
+  width: 104px;
+  height: 104px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 540px) {
+  .login-brand .syllo-lockup {
+    font-size: 40px;
+  }
+
+  .login-card .login-crest {
+    width: 88px;
+    height: 88px;
+  }
+}
