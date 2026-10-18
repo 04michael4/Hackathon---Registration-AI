@@ -1,0 +1,22 @@
+.catalog-prediction, .catalog-instructor { display: grid; gap: 6px; }
+.catalog-prediction { padding: 12px; border: 1px dashed var(--theme-brown, #653819); border-radius: 10px; background: var(--theme-tint, #faf5ee); }
+.catalog-prediction.is-compact { padding: 6px 8px; font-size: 11px; max-width: 180px; }
+.catalog-prediction small, .catalog-instructor small, .catalog-conditions small { display: block; color: #62666c; }
+.catalog-conditions li { margin-bottom: 12px; }
+.catalog-section { border-top: 1px solid #e3e5e8; padding: 16px 0; }
+.catalog-section h4 { margin: 0 0 8px; }
+.catalog-instructor { border-left: 3px solid #b4863d; padding: 8px 12px; margin-top: 12px; overflow-wrap: anywhere; }
+.catalog-no-prediction, .catalog-unavailable { color: #62666c; font-size: 12px; }
+.catalog-unavailable { display: grid; gap: 4px; }
+.catalog-course-details { overflow-wrap: anywhere; }
+.live-catalog-browser { padding: 16px; margin: 14px 0; border: 1px solid #d4d7dc; border-radius: 12px; background: #fff; }
+.live-catalog-browser h3 { margin-top: 0; }
+.live-catalog-browser p { font-size: 13px; color: #62666c; }
+.live-catalog-search { display: flex; gap: 8px; margin-top: 6px; }
+.live-catalog-search input { flex: 1; min-width: 0; border: 1px solid #b8bec7; border-radius: 8px; padding: 8px; }
+.live-catalog-results { list-style: none; padding: 0; display: grid; gap: 12px; max-height: 460px; overflow: auto; }
+.live-catalog-results li { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid #e3e5e8; }
+.live-catalog-results li > div:first-child { display: grid; gap: 4px; }
+.live-catalog-results .catalog-prediction { max-width: none; }
+.live-catalog-pages { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 500px) { .live-catalog-search { flex-direction: column; } }

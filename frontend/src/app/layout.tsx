@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/catalog-metadata.css";
 
 export const metadata: Metadata = {
   title: "Syllo — Course Planning",

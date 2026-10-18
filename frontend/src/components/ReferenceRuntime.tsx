@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { CatalogMetadata } from "./CatalogMetadata";
 
 const runtimeFiles = [
   "data.js",
@@ -27,9 +28,10 @@ function loadScript(file: (typeof runtimeFiles)[number]) {
   });
 }
 
-export function ReferenceRuntime() {
+export function ReferenceRuntime({ catalogEnabled = false }: Readonly<{ catalogEnabled?: boolean }>) {
   useEffect(() => {
     const marker = document.documentElement.dataset;
+    marker.sylloCatalog = catalogEnabled ? "enabled" : "disabled";
     if (marker.sylloRuntime === "loading" || marker.sylloRuntime === "loaded") return;
 
     marker.sylloRuntime = "loading";
@@ -42,7 +44,7 @@ export function ReferenceRuntime() {
         marker.sylloRuntime = "error";
         console.error(error);
       });
-  }, []);
+  }, [catalogEnabled]);
 
-  return null;
+  return <CatalogMetadata enabled={catalogEnabled} />;
 }

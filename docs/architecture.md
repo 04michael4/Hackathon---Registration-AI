@@ -71,7 +71,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 Main user flow (status per package in [§4](#4-backend-package-structure)):
 
-The frontend currently implements these screens against browser-local mock data (see [frontend/README.md](../frontend/README.md)); it does not call the backend or Claude yet.
+The planning screens use browser-local mock data (see [frontend/README.md](../frontend/README.md)). When the Next.js server has `BACKEND_URL` configured for the team's private app, a separate live catalog browser calls course search/detail through the read-only same-origin `/api/catalog/courses` proxy. It shows predicted quality/difficulty with confidence, course conditions and each section's instructor ratings without changing demo course identities or persisting real names. API responses are private and uncached, and names are fetched only at runtime. Keep the connection disabled on public deployments until Banner redistribution is settled. Schedule generation and Claude remain unconnected in the frontend.
 
 ```mermaid
 sequenceDiagram

@@ -1,4 +1,4 @@
-/* Plan My Semester UX pass: collapsible navigation, header, schedule tools, merged course list,
+/* Plan My Semester UX pass: persistent navigation, header, schedule tools, merged course list,
  * professor-rating colors and section previews. Loaded last so it refines the legacy cascade. */
 
 :root {
@@ -13,7 +13,7 @@
   --rating-low-soft: #f9e5e3;
   --rating-none: #776d66;
   --rating-none-soft: #f1eeeb;
-  --nav-bar-height: 44px;
+  --nav-bar-height: 52px;
 }
 
 /* !important: legacy sidebar rules force overflow/white-space on every span in a course link. */
@@ -29,118 +29,89 @@
   border: 0 !important;
 }
 
-/* ---------- 1. Collapsible top navigation ---------- */
+.search-result-main > .sem-search-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+@media (max-width: 650px) {
+  .search-result-main { flex-wrap: wrap; }
+  .search-result-main > .sem-search-actions { flex: 1 0 100%; }
+}
 
-#product-nav.is-collapsible {
+/* ---------- 1. Persistent top navigation ---------- */
+#product-nav.is-persistent {
   position: sticky;
   top: 0;
   z-index: 40;
-  flex: 0 0 var(--nav-bar-height);
-  height: var(--nav-bar-height);
-  min-height: 0;
-  display: flex;
-  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  min-height: var(--nav-bar-height);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 0 max(3vw, 16px);
-  transition: box-shadow 0.18s ease;
+  gap: 8px 18px;
+  padding: 8px max(2vw, 16px);
 }
-#product-nav.is-collapsible.is-open {
-  box-shadow: 0 6px 18px var(--theme-shadow);
-}
-#product-nav.is-collapsible .product-brand {
+#product-nav.is-persistent .product-brand {
+  grid-column: 1;
+  grid-row: 1;
   order: 0;
   margin: 0;
-  font-size: 23px;
+  font-size: 24px;
+  justify-self: start;
 }
-.product-nav-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 9px;
-  border: 1px solid var(--theme-line);
-  border-radius: 999px;
-  background: var(--theme-white);
-  color: var(--theme-muted);
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
+#product-nav.is-persistent .product-nav-panel {
+  display: contents;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
 }
-.product-nav-toggle svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  transition: transform 0.18s ease;
-}
-.product-nav-toggle[aria-expanded="true"] svg {
-  transform: rotate(180deg);
-}
-.product-nav-toggle:hover,
-.product-nav-toggle:focus-visible {
-  color: var(--theme-brown);
-  border-color: var(--theme-muted);
-}
-.product-nav-panel {
-  flex: 1;
+#product-nav.is-persistent .product-nav-tabs {
+  grid-column: 2;
+  grid-row: 1;
+  order: 0;
+  width: auto;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  opacity: 0;
-  transform: translateY(-3px);
-  pointer-events: none;
-  transition: opacity 0.16s ease, transform 0.16s ease;
-}
-/* Tabs stay in the tab order while collapsed; focusing one opens the bar. */
-#product-nav.is-open .product-nav-panel {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-#product-nav.is-collapsible .product-nav-tabs {
-  order: 0;
-  flex: 1;
-  width: auto;
+  flex-wrap: wrap;
   justify-content: flex-start;
+  gap: 4px;
   overflow: visible;
 }
-#product-nav.is-collapsible .product-nav-tabs > button {
-  padding: 6px 12px;
+#product-nav.is-persistent .product-nav-tabs > button {
+  padding: 7px 12px;
   font-size: 13px;
 }
-#product-nav.is-collapsible .product-role {
-  margin-left: auto;
-  padding: 6px 11px;
+#product-nav.is-persistent .product-role {
+  grid-column: 3;
+  grid-row: 1;
+  order: 0;
+  margin: 0;
+  padding: 7px 10px;
 }
-@media (max-width: 1000px) {
-  /* Narrow screens: the tabs drop down over the page instead of pushing it. */
-  #product-nav.is-collapsible .product-nav-panel {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    flex-wrap: wrap;
-    padding: 8px max(3vw, 16px) 12px;
-    background: var(--theme-white);
-    border-bottom: 1px solid var(--theme-line);
-    box-shadow: 0 10px 18px var(--theme-shadow);
+@media (max-width: 760px) {
+  #product-nav.is-persistent {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 6px 12px;
   }
-  #product-nav.is-collapsible:not(.is-open) .product-nav-panel {
-    visibility: hidden;
+  #product-nav.is-persistent .product-brand { grid-row: 1; }
+  #product-nav.is-persistent .product-role { grid-column: 2; grid-row: 1; }
+  #product-nav.is-persistent .product-nav-tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  #product-nav.is-collapsible .product-nav-tabs {
-    flex: 1 0 100%;
-    flex-wrap: wrap;
-  }
-}
-@media (min-width: 1100px) and (min-height: 650px) {
-  #product-nav.is-collapsible {
-    position: relative;
-    flex: 0 0 var(--nav-bar-height);
-    height: var(--nav-bar-height);
+  #product-nav.is-persistent .product-nav-tabs > button {
+    padding: 6px 3px;
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.25;
   }
 }
 
@@ -731,8 +702,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .product-nav-panel,
-  .product-nav-toggle svg,
-  #product-nav.is-collapsible {
+  #product-nav.is-persistent {
     transition: none;
   }
 }
