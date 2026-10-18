@@ -214,7 +214,7 @@ SELECT * FROM professor_ratings.course_prediction  WHERE term_code = '202710' OR
 SELECT * FROM professor_ratings.section_prediction WHERE term_code = '202710' AND offering_id = 'CSE-017';
 SELECT * FROM professor_ratings.professor_prediction;                                                  -- professor tab
 ```
-A section with several instructors gets their average. A course averages its lecture sections (all sections when it has no lecture), so a staff-run lab does not hide the lecturer's value; `sections_predicted` / `sections` and `status` say how complete it is.
+**Show every prediction, whatever its confidence** (project owner, 2026-10-17): new professors naturally have few reviews, so a LOW prediction is still shown; `confidence` stays available if the UI wants to mark it. A section with several instructors gets their average. A course averages its lecture sections (all sections when it has no lecture), so a staff-run lab does not hide the lecturer's value; `sections_predicted` / `sections` and `status` say how complete it is.
 
 ## Trend chart preview
 ```
@@ -236,4 +236,3 @@ On 2026-10-17 all passed. The scenarios were also checked against deliberately b
 - Backend endpoint(s) and frontend Professors tab (after the frontend is finished).
 - Whether Banner instructor names may be shown to users (ADR-0006, point 2) and whether RMP comments are wanted at all.
 - 60 non-CSE sections list only "Staff" and stay unrated and unpredicted; 23 named Spring 2027 instructors have no ratings yet, so their courses show no prediction until app ratings arrive.
-- Whether the course list should show predictions with LOW confidence (17 of 43 professors), or only MEDIUM and HIGH.
