@@ -43,9 +43,14 @@ public final class CourseQuery {
 		return dash < 0 ? courseId : courseId.substring(0, dash);
 	}
 
+	/** The course number: "017" for CSE-017 and "398" for the special topic CSE-398-042 (the topic is part of the ID only). */
 	public static String number(String courseId) {
 		int dash = courseId.indexOf('-');
-		return dash < 0 ? "" : courseId.substring(dash + 1);
+		if (dash < 0) {
+			return "";
+		}
+		int topic = courseId.indexOf('-', dash + 1);
+		return topic < 0 ? courseId.substring(dash + 1) : courseId.substring(dash + 1, topic);
 	}
 
 }

@@ -18,8 +18,12 @@ CHECKS = [
     ("no BLOCKED offering is served, and no grid-staged course whose components are unlinked or credits unknown",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering_tier t ON t.term_code = c.term_code AND t.offering_id = c.course_id "
      "WHERE t.tier = 'BLOCKED') AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c WHERE c.course_id IN ('CHM-030', 'PHY-012', 'MATH-312', 'MATH-334'))"),
-    ("the undecided special topics (CSE-398-*) are not served",
-     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering WHERE course_id LIKE 'CSE-398-%')"),
+    ("a special topic is served only when its identity was decided (never while TOPIC_IDENTITY_UNDECIDED)",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering o ON o.term_code = c.term_code AND o.offering_id = c.course_id "
+     "WHERE o.identity_status = 'TOPIC_IDENTITY_UNDECIDED')"),
+    ("common evening exams are shown as a warning for the five courses that have them",
+     "SELECT (SELECT count(DISTINCT course_id) FROM catalog_serving.course_condition WHERE code = 'COMMON_EXAMS') = (SELECT count(DISTINCT e.offering_id) FROM catalog_research.exam_meeting e "
+     "JOIN catalog_serving.course_offering c ON c.term_code = e.term_code AND c.course_id = e.offering_id)"),
     ("every served course has a lecture and every lab links to a served lecture of the same course",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c WHERE NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering s WHERE s.term_code = c.term_code "
      "AND s.course_id = c.course_id AND s.component_type = 'LECTURE')) AND NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering l WHERE l.component_type <> 'LECTURE' "

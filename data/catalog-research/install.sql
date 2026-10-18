@@ -9,5 +9,6 @@ BEGIN;
 \ir V3__noncse_grid_staging_and_programs.sql
 \ir V4__noncse_details.sql
 \ir V5__detail_type_normalized.sql
+\ir V6__owner_decisions.sql
 \ir verify_structure.sql
 COMMIT;

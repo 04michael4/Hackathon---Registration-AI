@@ -36,7 +36,7 @@ public class CourseController {
 	}
 
 	@GetMapping("/api/courses/{courseId}")
-	public CourseDetailResponse detail(@PathVariable @NotBlank @Size(max = 20) @Pattern(regexp = "[A-Z]+-[0-9]+") String courseId,
+	public CourseDetailResponse detail(@PathVariable @NotBlank @Size(max = 20) @Pattern(regexp = "[A-Z]+-[0-9]+(-[0-9]+)?") String courseId,
 			@RequestParam @NotBlank String term) {
 		return service.detail(term, courseId);
 	}

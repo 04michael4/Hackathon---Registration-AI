@@ -177,6 +177,15 @@ Result in the team database (backup first): **28 courses are now `CONDITIONAL`; 
 - Banner's popup says "Lecture" where the grid says "Class": V5 treats them as the same type, so the check no longer blocks every course (a regression test and a mutation check cover it).
 - Tests: 25 parser/loader tests, 26 rolled-back scenarios (on an isolated copy of the team database before the import), `ServingCatalogIntegrationTest` 9/9 on the team database including the real engine scheduling MATH 021 with its recitation, `verify_serving.py` 21/21.
 
+## Owner decisions applied (V6 and `apply_owner_decisions.sql`, 2026-10-18)
+The project owner's eleven decisions of 2026-10-17 are recorded as data (`owner_decision`, append-only) and applied; the table is in [ADR-0008](../../docs/decisions/0008-spring-2027-planning-decisions-of-the-project-owner.md). V6 is the schema part (the table, the new identity status `TOPIC_SEPARATE_OFFERING`, and `offering_tier` blocking only an *undecided* topic). The data part is a separate, idempotent script because it needs the imported rows to exist:
+```
+psql -X -v ON_ERROR_STOP=1 -f data/catalog-research/V6__owner_decisions.sql     # or install.sql (V1-V6)
+psql -X -v ON_ERROR_STOP=1 -f data/catalog-research/apply_owner_decisions.sql   # after the import; safe to rerun
+psql -X -v ON_ERROR_STOP=1 -f data/catalog-research/verify_owner_decisions.sql  # read-only
+```
+Effects: CSE 303's prerequisite is a structured rule; CSE 398-042 and -052 are separate, `CONDITIONAL` and served; ECO 325 and MKT 325 are a no-double-credit pair; the instructor note points to `professor_ratings`; CSE 127/327 stays a `SOURCES_CONFLICT`. `build_local_database.py` does not run the script, so a fresh local build still shows the pre-decision state its own verifiers expect.
+
 ## What this does not do
 - It does not approve, promote or serve anything, and it does not change `catalog_api`, `catalog_promoted`, `catalog_live`,
   `banner_evidence` or `cse007_snapshot`.
