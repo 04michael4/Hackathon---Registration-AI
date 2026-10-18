@@ -10,7 +10,8 @@ Everything below was rehearsed on 2026-10-18 on a **fresh copy of the live team 
 - **Branch:** `feature/data-csb-course-research` must be based on the then-current `origin/pre-main`, with `HANDOFF.md` and `docs/decisions/README.md` conflicts resolved by keeping both sides. It was rebased onto `3589fbd` (PR #18) on 2026-10-18; rebase again if `pre-main` has moved. The code in `data/csb-research` does not depend on anything that changed in `pre-main` since `3257607` (PR #17 and #18 changed the frontend, `.env.example`, `CLAUDE.md`, `PLANS.md`, `README.md`, `HANDOFF.md`, `docs/` and the Windows launcher `backend/start-local.ps1`; nothing in `data/` and no backend source).
 - **Local-only inputs** on the machine that runs the import: `~/.registration-csb/csb_import_202710.json` (sha256 below; regenerate it with `build_csb_dataset.py` from `~/.registration-csb/{grids,packs,catalog}`; the result is byte-identical). Back that directory up: it is the only copy of the Banner capture and is not in git.
 - **Role:** `catalog_owner` (owns the database, has CREATE on it). The schema must not be created by a superuser.
-- **Tests pass on the rebased branch:** `python3 -I data/csb-research/test_csb_dataset.py`, `test_check_no_restricted_data.py`, and (scratch databases on a local cluster, never the shared one) `run_csb_validation.py` and `run_rollback_validation.py`.
+- **Tests pass on the rebased branch:** `python3 -I data/csb-research/test_csb_dataset.py`, `test_check_no_restricted_data.py`, `test_shared_db_guard.py`, and (scratch databases on a separate local cluster, never the shared server: both scripts refuse it) `run_csb_validation.py` and `run_rollback_validation.py`.
+- **The approval is deliberate and stays explicit:** `import_csb.py` refuses this database without `--allow-shared`. It judges the connection it actually has, inside the import transaction (the database name, the server's own port 55437, or a server that holds a shared database), so it also refuses when `PGDATABASE` or `PGPORT` is unset and a service file or libpq's defaults lead there. It refuses a non-loopback server even with the flag: run the steps on the database host, over `127.0.0.1`.
 - **Restricted-data check** of what will be committed: `python3 -I data/csb-research/check_no_restricted_data.py --payload ~/.registration-csb/csb_import_202710.json --grids ~/.registration-csb/grids --packs ~/.registration-csb/packs --catalog-cache ~/.registration-csb/catalog --ignore-copied-in data/csb-research/synthetic_fixture.py --ignore-copied-in data/csb-research/test_csb_dataset.py` (expected: no hit in any file this branch adds; two `LOCAL_PATH` lines in `HANDOFF.md` are older, other people's text).
 
 ## Steps (127.0.0.1:55437; adjust the port if the cluster moved)
@@ -36,7 +37,8 @@ psql -X -U catalog_owner -At -c "SELECT count(*) FROM catalog_research.section" 
 # 4. install (ONE transaction; commits only if the structure checks pass). Default: V1 + V2, no dependency on catalog_research
 PGUSER=catalog_owner psql -X -v ON_ERROR_STOP=1 -f data/csb-research/install.sql
 
-# 5. dry-run (rolls back), then import (one transaction; refuses on any disagreement with the verbatim grid rows or on a CRN already in catalog_research)
+# 5. dry-run (rolls back), then import (one transaction; refuses on any disagreement with the verbatim grid rows or on a CRN already in catalog_research;
+#    without --allow-shared both stop with "refusing: ... shared database server ..." and store nothing)
 PGUSER=catalog_owner python3 -I data/csb-research/import_csb.py --payload ~/.registration-csb/csb_import_202710.json --dry-run --allow-shared
 PGUSER=catalog_owner python3 -I data/csb-research/import_csb.py --payload ~/.registration-csb/csb_import_202710.json --allow-shared
 #    expected counts: 132 catalog courses, 43 offerings, 213 sections, 348 weekly + 33 dated meetings, 2 arranged, 251 instructor entries,

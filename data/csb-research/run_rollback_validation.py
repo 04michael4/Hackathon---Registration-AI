@@ -5,7 +5,8 @@
 
 Everything outside catalog_csb is compared before and after each step at three levels: the full schema DDL (pg_dump -s, which includes owners and GRANTs),
 the row content of every table (fingerprint_other_schemas.sql) and the cluster-level facts a schema drop could touch (default ACLs, extensions, role
-memberships). Only the SYNTHETIC fixture is ever imported. Refuses the shared database's port and name and any non-loopback host. Prints verdicts only.
+memberships). Only the SYNTHETIC fixture is ever imported. Refuses the shared database server and any non-loopback host, judged on the actual
+connection (shared_db_guard.py). Prints verdicts only.
 """
 import argparse
 import os
@@ -89,6 +90,7 @@ def main():
     ap.add_argument("--owner")
     args = ap.parse_args()
     v.env()
+    v.require_isolated_server()
     if bool(args.dump) != bool(args.owner):
         sys.exit("--dump and --owner go together")
     tag = uuid.uuid4().hex[:8]

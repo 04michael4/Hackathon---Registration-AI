@@ -7,18 +7,18 @@
 Writes only catalog_csb, in ONE transaction that --dry-run rolls back: catalog_csb.import_csb replaces the schema's own data from the payload and
 refuses to finish if it disagrees with the verbatim grid rows or the Linked Sections panels. Rerunning with the same payload gives identical
 content (compare `fingerprint` before and after). It prints counts and verdicts, never page text or names.
-Refused unless --allow-shared: the shared database names and port, and any non-loopback host.
+Refused unless --allow-shared: the shared database server (shared_db_guard.py), judged on the ACTUAL connection inside the writing transaction,
+however libpq reached it (environment, service file or defaults). A non-loopback server is refused even with --allow-shared.
 """
 import argparse
 import hashlib
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
-SHARED_DATABASES = {"registration_cse007_local", "registration_unified_spring2027"}
-SHARED_PORTS = {"55433"}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import shared_db_guard  # noqa: E402
 
 
 class ImportRefused(Exception):
@@ -40,10 +40,10 @@ def run_psql(sql):
 
 
 def guard(allow_shared):
-    if not allow_shared and (os.environ.get("PGDATABASE", "") in SHARED_DATABASES or os.environ.get("PGPORT", "") in SHARED_PORTS):
-        raise ImportRefused("refusing: this is the shared database; use an isolated copy, or pass --allow-shared once the team has approved the install")
-    if os.environ.get("PGHOST", "127.0.0.1") not in ("127.0.0.1", "localhost", "::1", ""):
-        raise ImportRefused("refusing: PGHOST is not loopback")
+    # only the quick environment look; the decisive check is shared_db_guard.server_guard_sql inside the import's own transaction (main)
+    reason = shared_db_guard.env_refusal(allow_shared)
+    if reason:
+        raise ImportRefused(reason)
 
 
 FINGERPRINT_SQL = """
@@ -85,6 +85,7 @@ def main(argv=None):
         label = f"CSB research term {payload['termCode']} ({len(payload['sections'])} sections, {len(payload['offerings'])} offerings)"
         out = run_psql("\n".join([
             "BEGIN;",
+            shared_db_guard.server_guard_sql(args.allow_shared),
             f"SELECT 'run=' || catalog_csb.import_csb({sql_literal(json.dumps(payload, sort_keys=True))}::jsonb, {sql_literal(label)}, '{sha}');",
             COUNT_SQL, FINGERPRINT_SQL,
             "ROLLBACK;" if args.dry_run else "COMMIT;"]))

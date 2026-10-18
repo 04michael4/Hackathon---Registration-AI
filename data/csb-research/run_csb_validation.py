@@ -6,33 +6,47 @@ Everything runs on SYNTHETIC data (synthetic_fixture.py: fake CRNs 99xxx, invent
   install and reinstall; import; idempotent rerun; isolation (a stub catalog_research is byte-for-byte unchanged and a CRN collision is refused);
   tampering probes (every normalized row that disagrees with the verbatim grid, every wrong link status, every impossible row is refused or reported);
   read-only reader role; the coverage views over the stub; then MUTATION CHECKS: one rule is weakened at a time (a CHECK dropped, a cross-check view
-  emptied) and the probe that depends on it must stop failing, so a rule that silently stopped working would be noticed.
-It refuses the shared database names and port and any non-loopback host. Prints verdicts only.
+  emptied) and the probe that depends on it must stop failing, so a rule that silently stopped working would be noticed; finally the shared-database
+  guard of import_csb.py, judged on the actual connection (a service file with PGDATABASE/PGPORT unset, libpq defaults, the server's own port).
+It refuses the shared database server (shared_db_guard.py: names, ports, a cluster that holds a shared database) and any non-loopback host,
+judged on the actual connection before anything is created. Prints verdicts only.
 """
+import contextlib
 import copy
 import hashlib
+import io
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import shared_db_guard  # noqa: E402
 import synthetic_fixture as fx  # noqa: E402
 
-SHARED_DATABASES = {"registration_cse007_local", "registration_unified_spring2027"}
-SHARED_PORTS = {"55433"}
 PROGRAM = json.loads((HERE / "csb_program_2026_27.json").read_text(encoding="utf-8"))
 RESULTS = []
+ISOLATED_ONLY = "validation runs only on a separate local cluster (it creates and drops databases)"
 
 
 def env():
-    if os.environ.get("PGPORT", "") in SHARED_PORTS or os.environ.get("PGHOST", "127.0.0.1") not in ("127.0.0.1", "localhost", "::1", ""):
-        sys.exit("refused: shared port or non-loopback host")
+    reason = shared_db_guard.env_refusal(allow_shared=False, hint=ISOLATED_ONLY)
+    if reason:
+        sys.exit("refused: " + reason)
     return dict(os.environ)
+
+
+def require_isolated_server():
+    """Asks the server the environment actually reaches (also through a service file or libpq defaults) before anything is created on it."""
+    rc, out = psql("postgres", shared_db_guard.server_guard_sql(allow_shared=False, hint=ISOLATED_ONLY), check=False)
+    if rc != 0:
+        m = re.search(r"refusing: [^\n]*", out)
+        sys.exit("refused: " + (m.group(0) if m else out[-300:]))
 
 
 def psql(database, sql=None, file=None, check=True):
@@ -75,9 +89,8 @@ INSERT INTO catalog_research.grid_search_result VALUES ('202710', 'PHY 010', '0 
 
 def main():
     env()
+    require_isolated_server()
     name = "csb_validation_" + uuid.uuid4().hex[:8]
-    if name in SHARED_DATABASES:
-        sys.exit("refused")
     psql("postgres", f"CREATE DATABASE {name}")
     created = [name]
     try:
@@ -289,6 +302,105 @@ def run(db, created):
     assert "catalog_research.section" not in guard_removed, "the guard block was not found in the function definition"
     collide = tamper(base, lambda p: sec(p, "99011").update(crn="98002") or [k.update(memberCrn="98002") for s in p["sections"] for k in s["links"] if k["memberCrn"] == "99011"])
     mutation("CRN collision guard removed", guard_removed, collide, "")
+
+    # ---- the shared-database guard of import_csb.py, judged on the actual connection ----------------------------------------------
+    guard_scenarios(db, created, base)
+
+
+@contextlib.contextmanager
+def libpq_env(**values):
+    """Replaces the libpq connection variables for the duration (all others unset), so import_csb.py's psql sees only these."""
+    keys = ("PGHOST", "PGHOSTADDR", "PGPORT", "PGDATABASE", "PGSERVICE", "PGSERVICEFILE")
+    saved = {k: os.environ.get(k) for k in keys}
+    try:
+        for k in keys:
+            os.environ.pop(k, None)
+        os.environ.update(values)
+        yield
+    finally:
+        for k, val in saved.items():
+            if val is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = val
+
+
+def run_importer(argv):
+    """import_csb.py in-process (so that the port test can extend the shared-port list): (refused, message)."""
+    import import_csb
+    out = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out):
+            import_csb.main(argv)
+    except SystemExit as exc:
+        return True, str(exc.code)
+    return False, out.getvalue()
+
+
+def guard_scenarios(db, created, base):
+    """import_csb.py must refuse the shared database however libpq reaches it. THIS isolated cluster plays the shared server: a scratch database
+    with the real shared name (created here, dropped below; main() drops it too if a check crashes), and for the port test this cluster's own
+    port added to the shared list for the duration."""
+    shared = "registration_unified_spring2027"
+    port = psql("postgres", "SHOW port")[1]
+    socket_dir = psql("postgres", "SHOW unix_socket_directories")[1].split(",")[0].strip()
+    host = os.environ.get("PGHOST", "") or socket_dir
+    runs = lambda database: psql(database, "SELECT count(*) FROM catalog_csb.import_run")[1]
+    with tempfile.TemporaryDirectory() as tmp:
+        payload = str(Path(tmp) / "payload.json")
+        Path(payload).write_text(json.dumps(base), encoding="utf-8")
+        services = Path(tmp) / "pg_service.conf"
+        services.write_text(f"[csb_shared]\nhost={host}\nport={port}\ndbname={shared}\n\n[csb_isolated_socket]\nhost={socket_dir}\nport={port}\ndbname={db}\n", encoding="utf-8")
+
+        with libpq_env(PGHOST=host, PGPORT=port, PGDATABASE=db):
+            refused, msg = run_importer(["--payload", payload, "--dry-run"])
+        check("import_csb.py itself imports into an isolated scratch database (the guard does not block isolated work)", not refused and msg.startswith("DRY RUN"), msg[-200:])
+
+        psql("postgres", f"CREATE DATABASE {shared}")
+        created.append(shared)
+        psql(shared, STUB)
+        psql(shared, file=HERE / "install.sql")
+        rc, out = psql(shared, f"BEGIN; {import_sql(base)}; ROLLBACK;", check=False)
+        check("control: an unguarded import into that database would succeed (so each refusal below is the guard's doing)", rc == 0, out[-200:])
+        before_db = runs(db)
+
+        with libpq_env(PGSERVICEFILE=str(services), PGSERVICE="csb_shared"):
+            refused, msg = run_importer(["--payload", payload])
+        check("PGDATABASE, PGPORT and PGHOST unset, a service file points at registration_unified_spring2027: refused without --allow-shared, nothing written",
+              refused and f"this is the shared database server (the database is {shared})" in msg and runs(shared) == "0", msg[-250:])
+        with libpq_env(PGHOST=host, PGPORT=port, PGDATABASE=shared):
+            refused, msg = run_importer(["--payload", payload])
+        check("PGDATABASE=registration_unified_spring2027 is refused before anything connects", refused and "the environment names the shared database server" in msg, msg[-250:])
+        with libpq_env(PGHOST=host, PGPORT=port):
+            refused, msg = run_importer(["--payload", payload])
+        check("PGDATABASE unset (libpq's default database) on a server that holds the shared database: refused",
+              refused and f"this server also holds {shared}" in msg, msg[-250:])
+        with libpq_env(PGHOST=host, PGPORT=port, PGDATABASE=db):
+            refused, msg = run_importer(["--payload", payload])
+        check("another database on a server that holds the shared database is refused, nothing written", refused and f"this server also holds {shared}" in msg and runs(db) == before_db, msg[-250:])
+        with libpq_env(PGSERVICEFILE=str(services), PGSERVICE="csb_shared"):
+            refused, msg = run_importer(["--payload", payload, "--allow-shared"])
+        check("the same connection WITH --allow-shared imports: the deliberate approval stays the only way in", not refused and msg.startswith("stored:") and runs(shared) == "1", msg[-250:])
+        psql("postgres", f"DROP DATABASE {shared} WITH (FORCE)")
+        created.remove(shared)
+
+        # the port is the SERVER's: a socket connection from a service file, with PGPORT, PGHOST and PGDATABASE all unset
+        saved_ports = shared_db_guard.SHARED_PORTS
+        shared_db_guard.SHARED_PORTS = saved_ports + (port,)
+        try:
+            with libpq_env(PGSERVICEFILE=str(services), PGSERVICE="csb_isolated_socket"):
+                refused, msg = run_importer(["--payload", payload])
+            in_session_guard = shared_db_guard.server_guard_sql(allow_shared=False)
+        finally:
+            shared_db_guard.SHARED_PORTS = saved_ports
+        check("PGPORT, PGHOST and PGDATABASE unset, a socket connection named by a service file: refused by the server's own port, nothing written",
+              refused and f"(the server port is {port})" in msg and runs(db) == before_db, msg[-250:])
+        rc, out = psql(db, f"BEGIN;\n{in_session_guard}\n{import_sql(base)};\nCOMMIT;", check=False)
+        check("the guard runs inside the writing transaction: without the Python pre-check it alone stops the import", rc != 0 and "refusing: this is the shared database server" in out and runs(db) == before_db, out[-250:])
+
+    addresses = ["127.0.0.1", "127.8.9.10", "::1", "::ffff:127.0.0.1", "10.0.0.5", "100.64.0.7", "192.168.1.20", "fe80::1"]
+    verdicts = psql("postgres", "SELECT " + ", ".join(shared_db_guard.loopback_sql(f"inet '{a}'") for a in addresses))[1]
+    check("loopback: 127.x, ::1 and ::ffff:127.x pass; private, Tailscale-range (100.64/10), LAN and link-local addresses are refused", verdicts == "t|t|t|t|f|f|f|f", verdicts)
 
 
 if __name__ == "__main__":
