@@ -57,13 +57,13 @@
     }).join(''):'<div class="saved-empty"><span>↗</span><h2>A good week is worth saving.</h2><p>Build your schedule, choose Save schedule, and find it here.</p><button class="button primary" data-action="open-schedules">Build your first plan →</button></div>';
   }
   function syncDegreeToCalendar(){
-    if(document.documentElement.dataset.sylloMode==='api'){showToast('Sample degree workspace','Select the matching live catalog courses in Plan My Semester. Degree and transcript APIs are not connected.');navigate('planner');return;}
+    if(document.documentElement.dataset.sylloMode==='api'){navigate('planner');return;}
     const ids=(S.state.degree[S.nextTerm]||[]).filter(id=>S.eligible(id).ok),blocked=(S.state.degree[S.nextTerm]||[]).filter(id=>!S.eligible(id).ok);
     S.change('Use degree plan in semester calendar',state=>{state.planner=ids});navigate('planner');
     showToast('Degree courses added to your calendar',blocked.length?`Preview only: ${blocked.map(id=>S.catalog[id].code).join(', ')}. Check their prerequisites or section details.`:'Review the meeting times and save your schedule.');
   }
   function syncCalendarToDegree(){
-    if(document.documentElement.dataset.sylloMode==='api'){showToast('Sample degree workspace','Live semester plans are separate from the sample degree plan.');return;}
+    if(document.documentElement.dataset.sylloMode==='api'){navigate('requirements');showToast('Next semester is up to date','Your live semester courses appear automatically in the degree calendar.');return;}
     const next=S.nextTerm,later=S.terms.find(t=>!t.past&&t.id!==next).id,candidate=JSON.parse(JSON.stringify(S.state.degree)),ids=S.state.planner;
     const deferred=candidate[next].filter(id=>!ids.includes(id));
     S.terms.filter(t=>!t.past).forEach(t=>{candidate[t.id]=candidate[t.id].filter(id=>!ids.includes(id))});
