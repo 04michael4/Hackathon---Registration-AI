@@ -42,3 +42,15 @@ Thumbs.db
 
 # Temporary PDF reader installed for local document inspection.
 tmp/pdf-tools/
+
+# CSB research: Banner captures, packs, import payloads and parsed catalog prose are LOCAL-ONLY (they live in ~/.registration-csb/, outside the repo).
+# These patterns only stop an accidental copy into the working tree.
+data/csb-research/local/
+csb-grid-*.json
+csb-popups-*.json
+csb_import_*.json
+data/csb-research/pack-*.json
+
+# Python bytecode
+__pycache__/
+*.pyc
