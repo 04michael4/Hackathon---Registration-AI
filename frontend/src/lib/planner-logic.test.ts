@@ -14,6 +14,7 @@ type Preview = { courseId: string } | null;
 interface PlannerLogic {
   codeKey(value: string): string | null;
   searchScore(course: Course, query: string): number;
+  semesterSearch(catalog: Record<string, Course>, query: string, options?: { electivesOnly?: boolean; isEligible?: (id: string) => boolean }): string[];
   CLASS_TYPES: Record<ClassType, { letter: string; label: string }>;
   courseList(planner: string[], recommended: string[]): { id: string; type: ClassType; alsoRecommended: boolean }[];
   ratingTier(rating: unknown): { tier: string; label: string };
@@ -83,6 +84,49 @@ describe("forgiving course-code search", () => {
     expect(hits("minor")).toEqual(expect.arrayContaining(["math231", "ds210"]));
     expect(hits("zzz-not-a-course")).toEqual([]);
     expect(hits("").length).toBe(Object.keys(S.catalog).length);
+  });
+});
+
+describe("unified semester course and interest search", () => {
+  const { S } = loadDemoStore();
+
+  it("keeps forgiving course-code and title matches in the same search", () => {
+    expect(logic.semesterSearch(S.catalog, "cse17")[0]).toBe("cse017");
+    expect(logic.semesterSearch(S.catalog, "data structures")).toEqual(expect.arrayContaining(["cse017", "cse241"]));
+  });
+
+  it("retains interest aliases and partial related-interest matches", () => {
+    expect(logic.semesterSearch(S.catalog, "finance")).toEqual(["eco001", "eco105", "eco146"]);
+    expect(logic.semesterSearch(S.catalog, "machine learning")).toEqual(expect.arrayContaining(["ds210", "math231"]));
+    expect(logic.semesterSearch(S.catalog, "security")).toEqual(expect.arrayContaining(["cse109", "cse252"]));
+    expect(logic.semesterSearch(S.catalog, "finance astronomy")).toContain("eco001");
+  });
+
+  it("ranks direct titles before related interests and related electives before requirements", () => {
+    const catalog = {
+      required: { code: "ZZ 100", name: "Economic policy", required: true },
+      elective: { code: "ZZ 200", name: "Economic models", required: false },
+      title: { code: "ZZ 300", name: "Finance", required: true },
+    };
+    expect(logic.semesterSearch(catalog, "finance")).toEqual(["title", "elective", "required"]);
+  });
+
+  it("retains elective filtering without excluding courses with unmet prerequisites", () => {
+    expect(logic.semesterSearch(S.catalog, "", { electivesOnly: true, isEligible: () => false })).toContain("ds310");
+    expect(logic.semesterSearch(S.catalog, "", { electivesOnly: true }).every(id => !S.catalog[id].required)).toBe(true);
+    expect(logic.semesterSearch(S.catalog, "cse17", { electivesOnly: true })).toEqual([]);
+  });
+
+  it("keeps eligible courses first when match quality is the same", () => {
+    const catalog = { a: { code: "TEST 001", name: "Sample" }, b: { code: "TEST 002", name: "Sample" } };
+    expect(logic.semesterSearch(catalog, "Sample", { isEligible: id => id === "b" })).toEqual(["b", "a"]);
+  });
+
+  it("handles empty and unknown queries without changing the catalog", () => {
+    const before = JSON.stringify(S.catalog);
+    expect(logic.semesterSearch(S.catalog, "").length).toBe(Object.keys(S.catalog).length);
+    expect(logic.semesterSearch(S.catalog, "zzzznotacourse")).toEqual([]);
+    expect(JSON.stringify(S.catalog)).toBe(before);
   });
 });
 

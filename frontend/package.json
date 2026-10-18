@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:parity": "node scripts/verify-reference-parity.mjs"
+    "verify:parity": "node scripts/verify-reference-parity.mjs",
+    "verify:catalog": "node scripts/verify-catalog-metadata.mjs",
+    "verify:degree": "node scripts/verify-degree-layout.mjs"
   },
   "dependencies": {
     "next": "^16.0.0",

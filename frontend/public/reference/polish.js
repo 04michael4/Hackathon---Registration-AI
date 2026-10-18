@@ -131,10 +131,7 @@
   }
   function enhance(){
     enhanceDegree();enhanceAdvisor();
-    const area=document.getElementById('course-search-area');
-    if(area&&!area.querySelector('.interest-search'))area.insertAdjacentHTML('beforeend',interestMarkup('planner'));
-    const interest=area?.querySelector('.interest-search');
-    if(interest&&!interest.querySelector('.interest-results').hidden)renderInterest(interest);
+    // Plan My Semester handles course and interest matching in its single course-search field.
     document.querySelectorAll('.planner-sidebar-course:not(.planned)').forEach(card=>{
       const link=card.querySelector('[data-sem-action="details"]'),c=S.catalog[link?.dataset.id];
       if(c){card.title=`${c.name} · ${c.credits} credits · ${c.requirement} · ${c.days} ${c.time}. Open details for prerequisites.`;card.querySelector('small')?.setAttribute('aria-hidden','true')}

@@ -17,6 +17,16 @@
     document.body.classList.toggle('degree-details-open',activeScreen==='requirements');
     $('detail-drawer').classList.add('open');$('detail-drawer').setAttribute('aria-hidden','false');$('drawer-backdrop').classList.remove('hidden');$('detail-drawer').querySelector('[data-action="close-drawer"]').focus();
   }
+  // Real API courses never enter the browser-local demo catalog or saved plans.
+  document.addEventListener('syllo:catalog-open',event=>{
+    const {code,term}=event.detail||{};
+    if(document.documentElement.dataset.sylloCatalog!=='enabled'||typeof code!=='string'||!(/^[A-Z]+-[0-9]+(?:-[0-9]+)?$/).test(code)||typeof term!=='string'||!(/^[0-9]{4}-[A-Z]+$/).test(term))return;
+    $('drawer-pill').textContent=code;$('drawer-lock').hidden=true;
+    $('drawer-content').innerHTML=`<div data-catalog-detail="${safe(code)}" data-catalog-term="${safe(term)}"></div>`;
+    document.body.classList.remove('degree-details-open');
+    $('detail-drawer').classList.add('open');$('detail-drawer').setAttribute('aria-hidden','false');$('drawer-backdrop').classList.remove('hidden');
+    $('detail-drawer').querySelector('[data-action="close-drawer"]').focus();
+  });
   function renderNotifications(){
     const notices=S.state.review.notifications.filter(item=>!item.read),badge=$('advisor-alert'),banner=$('feedback-notification');
     badge.textContent=notices.length;badge.classList.toggle('hidden',!notices.length||S.state.role==='advisor');
@@ -28,7 +38,7 @@
     // The old "What would you like to do?" hub is gone: anything that pointed to it opens Plan My Semester.
     if(!['login','planner','requirements','advisor','saved'].includes(screen))screen='planner';
     if(screen!=='planner')window.SylloPlanner?.clearSectionPreview?.();
-    activeScreen=screen;closeDrawer();setNavOpen(false);
+    activeScreen=screen;closeDrawer();
     document.querySelectorAll('[data-screen]').forEach(element=>element.classList.toggle('active',element.dataset.screen===screen));
     document.body.classList.toggle('welcome-only',screen==='login');$('product-nav').classList.toggle('hidden',screen==='login');
     document.body.dataset.activeScreen=screen;
@@ -60,23 +70,11 @@
     S.change('Use semester calendar in degree plan',state=>{state.degree=candidate;S.slots.forEach(slot=>{if(ids.includes(state.electives[slot.id]))state.electives[slot.id]=null})});
     navigate('requirements');showToast('Semester schedule added to degree plan','Other required courses remain planned in future semesters. Review the graduation checks.');
   }
-  /* Collapsible navigation: a slim bar with the logo; the tabs appear on intentional hover,
-   * keyboard focus or the Menu button. Short open/close delays stop flicker between tabs. */
-  const nav=$('product-nav'),navToggle=$('product-nav-toggle');let navOpenTimer,navCloseTimer;
-  function setNavOpen(open){
-    clearTimeout(navOpenTimer);clearTimeout(navCloseTimer);
-    nav.classList.toggle('is-open',open);navToggle.setAttribute('aria-expanded',String(open));
-    navToggle.querySelector('.product-nav-toggle-label').textContent=open?'Close':'Menu';
-  }
-  nav.classList.add('is-collapsible');
-  nav.addEventListener('pointerenter',event=>{if(event.pointerType!=='mouse')return;clearTimeout(navCloseTimer);if(!nav.classList.contains('is-open'))navOpenTimer=setTimeout(()=>setNavOpen(true),140)});
-  nav.addEventListener('pointerleave',event=>{if(event.pointerType!=='mouse')return;clearTimeout(navOpenTimer);if(!nav.contains(document.activeElement))navCloseTimer=setTimeout(()=>setNavOpen(false),380)});
-  // Keyboard focus opens the bar; a mouse click on Menu focuses it too, and must only toggle once.
-  nav.addEventListener('focusin',event=>{if(event.target.matches(':focus-visible'))setNavOpen(true)});
-  nav.addEventListener('focusout',event=>{if(!nav.contains(event.relatedTarget))navCloseTimer=setTimeout(()=>{if(!nav.matches(':hover'))setNavOpen(false)},120)});
-  navToggle.addEventListener('click',()=>setNavOpen(!nav.classList.contains('is-open')));
-  nav.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav.classList.contains('is-open')){event.stopPropagation();navToggle.focus();setNavOpen(false)}});
-  document.addEventListener('pointerdown',event=>{if(nav.classList.contains('is-open')&&!nav.contains(event.target))setNavOpen(false)});
+  // The navigation ribbon is always visible; no hover state, menu or collapse timers.
+  const nav=$('product-nav');
+  nav.classList.remove('is-collapsible','is-open');
+  nav.classList.add('is-persistent');
+  $('product-nav-toggle')?.remove();
   S.showToast=showToast;S.openCourse=openCourse;S.navigate=navigate;
   document.addEventListener('click',event=>{
     const button=event.target.closest('[data-action]');if(!button||button.disabled)return;

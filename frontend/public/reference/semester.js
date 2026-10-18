@@ -45,7 +45,7 @@
   }
   function offering(c) { return (c.terms || []).map(season => season[0].toUpperCase() + season.slice(1)).join(' / ') || 'Not provided'; }
   function detailMarkup(c) {
-    return `<details><summary>Course details & prerequisites</summary><div class="search-detail-grid">
+    return `<details><summary>Demo course details & prerequisites</summary><div class="search-detail-grid">
       <div class="sem-detail-wide"><span>Description</span><strong>${esc(c.description || 'Description unavailable')}</strong></div>
       <div><span>Prerequisites</span><strong>${esc(prerequisites(c))}</strong></div><div><span>Usually offered · demo</span><strong>${esc(offering(c))}</strong></div>
       <div><span>Requirement</span><strong>${esc(c.requirement)}</strong></div><div><span>Credits</span><strong>${c.credits}</strong></div>
@@ -55,21 +55,20 @@
   }
   function renderSearch() {
     const query = $('course-search').value;
-    // Course codes match without case, spaces or leading zeros (cse17 → CSE 017); titles and keywords as before.
-    const matches = Object.entries(S().catalog)
-      .map(([id, c]) => [id, c, L().searchScore(c, query)])
-      .filter(([, c, score]) => score > 0 && !(searchMode === 'electives' && c.required))
-      .sort((a, b) => b[2] - a[2] || Number(eligible(b[0]).ok) - Number(eligible(a[0]).ok));
+    const matches = L().semesterSearch(S().catalog, query, {
+      electivesOnly: searchMode === 'electives', isEligible: id => eligible(id).ok,
+    }).map(id => [id, course(id)]);
     $('course-search-results').innerHTML = `<div class="sem-search-summary">${matches.length} ${searchMode === 'electives' ? 'elective' : 'course'} result${matches.length === 1 ? '' : 's'} · ${esc(termName())}<button type="button" data-sem-action="close-search" aria-label="Close course results">×</button></div>` +
       (matches.length ? matches.map(([id, c]) => {
         const access = eligible(id), added = planned(id), conflicts = clashes(id);
         return `<article class="search-result ${access.ok ? '' : 'sem-blocked'}" draggable="${access.ok && !added}" ${access.ok && !added ? `data-sem-drag="${id}"` : ''}>
-          <div class="search-result-main"><div><span>${classTypeBadge(id)}${esc(c.code)}</span><strong>${esc(c.name)}</strong><small>${c.credits} credits · ${esc(c.days)} · ${esc(c.time)}</small></div>
-          <button class="button ${added || !access.ok ? 'quiet' : 'primary'}" type="button" data-sem-action="add" data-id="${id}" ${added || !access.ok ? 'disabled' : ''}>${added ? 'Added' : access.ok ? 'Add to Schedule' : 'Preview only'}</button></div>
+          <div class="search-result-main"><div><span>${classTypeBadge(id)}${esc(c.code)}</span><strong>${esc(c.name)}</strong><small>${c.credits} credits · ${esc(c.interest || c.requirement)} · ${esc(c.days)} · ${esc(c.time)}</small></div>
+          <div class="sem-search-actions"><button class="button quiet" type="button" data-sem-action="details" data-id="${id}" aria-label="Details for ${esc(c.code)}">Details</button>
+          <button class="button ${added || !access.ok ? 'quiet' : 'primary'}" type="button" data-sem-action="add" data-id="${id}" ${added || !access.ok ? 'disabled' : ''}>${added ? 'Added' : access.ok ? 'Add to Schedule' : 'Preview only'}</button></div></div>
           ${!access.ok ? `<p class="course-warning sem-prerequisite">${access.reasons.map(esc).join(' ')}${c.prereqs?.length ? ` Take ${esc(prerequisites(c))} first, then revisit this course in a later ${esc(offering(c).toLowerCase())} term.` : ''}</p>` : ''}
           ${access.ok && !added && conflicts.length ? `<p class="course-warning conflict">Overlaps ${conflicts.map(other => esc(course(other).code)).join(', ')}. You can choose which to keep.</p>` : ''}
           ${detailMarkup(c)}</article>`;
-      }).join('') : '<div class="empty-state">No matches. Try a course code, department, or a different keyword.</div>');
+      }).join('') : '<div class="empty-state">No matches. Try a course code, title, or interest such as finance, security, or art.</div>');
     setSearch(searchOpen);
   }
   /** P or R for a course that's on the schedule or recommended; nothing otherwise. */
@@ -162,7 +161,7 @@
       const [start, end] = range;
       const top = Math.max(0, (start - 480) / 540 * 100), height = Math.min(100 - top, (end - start) / 540 * 100);
       const r = L().professorRating(c), source = sectionPreview?.courseId === id;
-      const ratingText = r.quality === null ? 'professor rating not available' : `professor rating ${r.quality.toFixed(1)} of 5, ${r.label.toLowerCase()}`;
+      const ratingText = r.quality === null ? 'demo professor rating not available' : `demo professor rating ${r.quality.toFixed(1)} of 5, ${r.label.toLowerCase()}`;
       return S().days(id).filter(day => weekdays.includes(day)).map(day => {
         let lane, lanesCount;
         if (lanes) ({ lane, lanes: lanesCount } = lanes[`${id}|${day}`]);
@@ -171,7 +170,7 @@
           const overlapGroup = [id, ...sameDayOverlap].sort(); lane = overlapGroup.indexOf(id); lanesCount = overlapGroup.length;
         }
         return `<article class="planner-calendar-event rating-${r.tier} ${conflictIds.has(id) ? 'has-conflict' : ''} ${source ? 'is-preview-source' : ''}" draggable="false" style="--day:${weekdays.indexOf(day) + 1};--top:${top}%;--height:${height}%;--event-color:${c.color};--event-bg:${c.bg};--sem-lane:${lane};--sem-lanes:${lanesCount}" data-sem-course="${id}" tabindex="0" role="button" aria-label="${esc(c.code)}, ${day}, ${formatTime(start)} to ${formatTime(end)}, ${ratingText}${source ? ', current section' : ''}. Open course details; right-click or press Shift+F10 for options." title="${esc(c.name)} · ${esc(c.time)}${conflictIds.has(id) ? ' · Time conflict' : ''}">
-        <button type="button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}">×</button><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span><small>${formatTime(start)}–${formatTime(end)}</small>${source ? '<b class="event-current">Current</b>' : ''}<i class="event-rating" aria-hidden="true">${r.quality === null ? 'n/a' : r.quality.toFixed(1)}</i>${conflictIds.has(id) ? '<b class="sem-event-warning">Overlap</b>' : ''}</article>`;
+        <button type="button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}">×</button><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span><small>${formatTime(start)}–${formatTime(end)}</small>${source ? '<b class="event-current">Current</b>' : ''}<i class="event-rating" aria-hidden="true" title="Simulated demo professor rating">${r.quality === null ? 'n/a' : r.quality.toFixed(1)}</i>${conflictIds.has(id) ? '<b class="sem-event-warning">Overlap</b>' : ''}</article>`;
       });
     }).join('') + (alt ? alt.blocks.map(block => previewBlockMarkup(block, alt.c, lanes)).join('') : '') : '<p class="planner-calendar-empty">Add a course or drop one here</p>';
     renderSectionPreviewNotice(alt);
@@ -436,7 +435,7 @@
       case 'toggle-ai': setAi(!preferences().aiOpen); break;
       case 'expand-calendar': openFullCalendar(); break;
       case 'search': renderSearch(); setSearch(true); $('course-search').focus(); break;
-      case 'close-search': setSearch(false); $('course-search').focus(); break;
+      case 'close-search': $('course-search').focus(); setSearch(false); break;
       case 'add': add(id); break;
       case 'remove': remove(id); break;
       case 'details': closeContext(); S().openCourse(id); break;
@@ -475,9 +474,14 @@
     if (ready) return;
     const root = document.querySelector('[data-screen="planner"]'); if (!root) return;
     ready = true;
+    root.querySelector('.course-search > span').textContent = 'Search courses & interests';
+    $('course-search').placeholder = 'Course code, title, or interest (e.g. finance)';
     document.body.insertAdjacentHTML('beforeend', '<div class="planner-tip" id="planner-tip" role="tooltip" hidden></div>');
     $('rating-legend-list').innerHTML = [...L().RATING_TIERS, L().NO_RATING].map(t => `<li><span class="rating-chip rating-${t.tier}" aria-hidden="true"><i></i>${t.tier === 'none' ? 'n/a' : t.min.toFixed(1)}</span>${esc(t.label)} <small>${esc(t.range)}</small></li>`).join('') + '<li class="rating-legend-note">Demo Rate My Professor data. Hover or focus a rating for the professor and scores.</li>';
     root.querySelector('.catalog-note').textContent = 'Demo catalog · sections, prerequisites, ratings, and offerings are simulated.';
+    if (document.documentElement.dataset.sylloCatalog === 'enabled') {
+      root.querySelector('.catalog-note').insertAdjacentHTML('beforebegin', `<div data-catalog-browser data-catalog-term="${esc(S().nextTerm)}"></div>`);
+    }
     $('course-search').insertAdjacentHTML('afterend', '<button class="sem-search-button" type="button" data-sem-action="search">Search</button>');
     root.querySelector('.catalog-note').insertAdjacentHTML('afterend', '<div class="sem-search-controls"><label><span>Explore</span><select id="sem-search-mode"><option value="all">All courses</option><option value="electives">Electives & prerequisites</option></select></label><span>Unavailable courses can be previewed.</span></div>');
     root.querySelector('.manual-schedule-heading').insertAdjacentHTML('afterend', '<div class="sem-conflict-notice" id="sem-conflict-notice" role="status" hidden></div>');
@@ -511,7 +515,7 @@
     $('sem-dialog').addEventListener('click', event => { if (event.target === $('sem-dialog')) { const rect = $('sem-dialog').getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeDialog(); } });
     $('course-search').addEventListener('focus', () => { renderSearch(); setSearch(true); });
     $('course-search').addEventListener('input', () => { renderSearch(); setSearch(true); });
-    $('course-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); renderSearch(); setSearch(true); $('course-search-results').querySelector('button:not([disabled])')?.focus(); } });
+    $('course-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); renderSearch(); setSearch(true); ($('course-search-results').querySelector('[data-sem-action="add"]:not([disabled])') || $('course-search-results').querySelector('[data-sem-action="details"]'))?.focus(); } });
     $('sem-search-mode').addEventListener('change', event => { searchMode = event.target.value; renderSearch(); setSearch(true); });
     $('course-list-query').addEventListener('input', event => { listQuery = event.target.value; renderCourseList(); });
     root.addEventListener('pointerover', event => { const el = event.target.closest('[data-tip]'); if (el && el !== tipTarget) showTip(el); });

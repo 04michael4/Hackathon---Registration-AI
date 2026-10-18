@@ -9,7 +9,7 @@
   let reviewDraft = '';
   let reviewCourse = '';
   let courseSearchQuery='',courseSearchOpen=false,courseSearchTerm='spring-2027';
-  let searchTags=new Set(),profileOpen=false;
+  let searchTags=new Set(),profileOpen=false,inspectorOpen=false;
   // Multi-select: course ids picked with Shift+click or a marquee box. Never stored in the plan.
   const selected=new Set();
   let marquee=null;
@@ -81,23 +81,30 @@
           <div class="dp-search-tags" role="group" aria-labelledby="dp-search-tags-label"><span id="dp-search-tags-label" class="dp-search-tags-label">Filter</span>${SEARCH_TAGS.map(([id,label])=>`<button type="button" class="dp-tag tag-${id}" data-degree-tag="${id}" aria-pressed="${searchTags.has(id)}">${label}</button>`).join('')}</div>
           <label class="dp-search-term"><span>Add to</span><select id="degree-course-term">${S.terms.filter(term=>!term.past).map(term=>`<option value="${term.id}" ${term.id===courseSearchTerm?'selected':''}>${safe(term.label)}</option>`).join('')}</select></label>
         </div>
-        <div id="degree-course-results" class="degree-course-results" ${courseSearchOpen?'':'hidden'}></div>
       </section>
-      <section class="degree-four-year-plan" aria-labelledby="dp-calendar-title">
         <div class="dp-calendar-head">
           <h2 id="dp-calendar-title">Degree calendar</h2>
+          <button type="button" class="button quiet dp-inspector-toggle" data-degree-action="toggle-inspector" aria-expanded="false" aria-controls="dp-inspector">Requirements & staged (${S.state.bucket.length})</button>
           <p class="dp-hint"><kbd>Shift</kbd>+click or drag a box to select several</p>
           <div class="dp-legend" aria-label="Course color key">${Object.entries(L().CATEGORIES).map(([id,c])=>`<span class="cat-${id}"><i aria-hidden="true"></i>${safe(c.label)}</span>`).join('')}</div>
           <div class="dp-history" role="group" aria-label="Undo and redo">
             <button type="button" class="dp-icon-button" data-degree-action="undo" ${S.canUndo?'':'disabled'} aria-label="${S.canUndo?`Undo: ${safe(S.undoLabel)}`:'Undo, nothing to undo'}" title="Undo (Ctrl or ⌘ + Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
             <button type="button" class="dp-icon-button" data-degree-action="redo" ${S.canRedo?'':'disabled'} aria-label="${S.canRedo?`Redo: ${safe(S.redoLabel)}`:'Redo, nothing to redo'}" title="Redo (Ctrl or ⌘ + Shift + Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
           </div>
+          <button class="dp-icon-button" type="button" data-degree-action="open-degree-ai" aria-label="Open Syllo AI" aria-controls="ai-widget-window" title="Syllo AI">&#10022;</button>
           ${renderViewControls()}
         </div>
+      <div class="dp-workspace">
+      <section class="degree-four-year-plan" aria-labelledby="dp-calendar-title">
         <div class="degree-calendar-scroll" tabindex="0" role="region" aria-label="Degree calendar, all semesters"><div class="degree-year-grid degree-semester-calendar" style="--visible-terms:${Math.max(1,api().terms.filter(term=>!hiddenTerms().includes(term.id)).length)}">${hiddenTerms().length===api().terms.length?'<div class="degree-view-empty"><p>No semesters shown. Add a year above or restore a semester.</p><button type="button" data-degree-action="show-all">Show all semesters</button></div>':[0,1,2,3].map(year=>renderYear(year)).join('')}</div></div>
         <div class="dp-selection-bar" id="dp-selection-bar" role="region" aria-label="Selected courses" hidden></div>
       </section>
-      ${renderBucket()}
+      <aside class="dp-inspector" id="dp-inspector" aria-label="Requirements and course search" hidden>
+        <div class="dp-inspector-head"><h2>Plan tools</h2><button type="button" class="dp-icon-button" data-degree-action="close-inspector" aria-label="Close plan tools">&times;</button></div>
+        <div id="degree-course-results" class="degree-course-results" hidden></div>
+        ${renderBucket()}
+      </aside>
+      </div>
       <section class="degree-review-callout dp-review ${audit.valid?'ready':''}" aria-label="Plan review">
         <div class="dp-review-status"><strong>${audit.valid?'Your plan is ready for review.':'Finish your graduation plan.'}</strong><span class="degree-review-status">${safe(reviewLabel())}</span></div>
         <div class="degree-credit-summary" aria-label="Degree progress"><strong>${historical}/120 credits completed</strong><span>${audit.plannedCredits} planned</span><span>${Math.max(0,120-audit.totalCredits)} to plan</span>${audit.valid?`<span>Graduation · ${safe(audit.graduation)}</span>`:''}</div>
@@ -170,11 +177,24 @@
     if(total>S.maxTermCredits)reasons.push(`${term.label} would have ${total} credits; a semester can have at most ${S.maxTermCredits}.`);
     return reasons;
   }
+  function syncInspector(){
+    const panel=document.getElementById('dp-inspector'),holder=document.getElementById('degree-course-results');
+    if(!panel)return;
+    const open=inspectorOpen||!!(holder&&!holder.hidden);
+    panel.hidden=!open;
+    document.querySelector('.dp-workspace')?.classList.toggle('has-inspector',open);
+    const toggle=document.querySelector('[data-degree-action="toggle-inspector"]');
+    if(toggle){toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'Hide plan tools':`Requirements & staged (${api().state.bucket.length})`;}
+  }
+  function closeInspector(){
+    inspectorOpen=false;courseSearchOpen=false;renderCourseResults();
+  }
   function renderCourseResults(){
     const holder=document.getElementById('degree-course-results');if(!holder)return;
     const S=api(),result=L().degreeSearch(S.catalog,S.programs,courseSearchQuery,[...searchTags],programCourseIds());
     const open=courseSearchOpen&&(courseSearchQuery.trim()||searchTags.size);
     holder.hidden=!open;
+    syncInspector();
     document.getElementById('degree-course-query').setAttribute('aria-expanded',String(!!open));
     if(!open){holder.innerHTML='';return}
     const total=result.programs.length+result.courses.length;
@@ -332,13 +352,19 @@
       if(action==='details'){
         const id=button.dataset.course,inCard=button.closest('[data-degree-course]');
         if(event.shiftKey&&inCard){event.preventDefault();toggleSelected(id);return}
-        clearSelection();S.openCourse(id);
+        clearSelection();closeInspector();S.openCourse(id);
       }
       else if(action==='toggle-profile'){profileOpen=!profileOpen;render();if(profileOpen)document.querySelector('#dp-profile-menu [role=menuitem]')?.focus();else document.getElementById('dp-profile-button')?.focus();}
+      else if(action==='toggle-inspector'){
+        const open=!document.getElementById('dp-inspector').hidden;
+        if(open)closeInspector();else{inspectorOpen=true;syncInspector();}
+      }
+      else if(action==='close-inspector'){closeInspector();document.querySelector('[data-degree-action="toggle-inspector"]')?.focus({preventScroll:true});}
       else if(action==='undo')S.undo();
+      else if(action==='open-degree-ai')document.getElementById('ai-widget-launcher')?.click();
       else if(action==='redo')S.redo();
-      else if(action==='stage-course'){const c=S.catalog[button.dataset.course];if(S.stageCourses([button.dataset.course]).length)S.showToast(`${c.code} staged`,'Drag it from the staging area into a semester.');}
-      else if(action==='add-program'){const p=S.programs[button.dataset.program],r=S.addProgram(button.dataset.program);courseSearchOpen=false;renderCourseResults();S.showToast(`${p.name} ${r.added?'added':'updated'}`,r.staged.length?`${r.staged.length} ${r.staged.length===1?'course':'courses'} staged: ${r.staged.map(id=>S.catalog[id].code).join(', ')}.`:'Every course is already in your plan.');}
+      else if(action==='stage-course'){inspectorOpen=true;const c=S.catalog[button.dataset.course];if(S.stageCourses([button.dataset.course]).length)S.showToast(`${c.code} staged`,'Drag it from the staging area into a semester.');}
+      else if(action==='add-program'){inspectorOpen=true;courseSearchOpen=false;const p=S.programs[button.dataset.program],r=S.addProgram(button.dataset.program);courseSearchOpen=false;renderCourseResults();S.showToast(`${p.name} ${r.added?'added':'updated'}`,r.staged.length?`${r.staged.length} ${r.staged.length===1?'course':'courses'} staged: ${r.staged.map(id=>S.catalog[id].code).join(', ')}.`:'Every course is already in your plan.');}
       else if(action==='unstage'){S.change(`Remove ${S.catalog[button.dataset.course].code} from staging`,state=>{state.bucket=state.bucket.filter(id=>id!==button.dataset.course)});}
       else if(action==='move-selected')moveSelection(document.getElementById('dp-move-target').value);
       else if(action==='remove-selected')removeSelection();
@@ -382,7 +408,7 @@
     });
     document.addEventListener('submit',event=>{if(event.target.id==='advisor-feedback-form')postFeedback(event);});
     document.addEventListener('focusin',event=>{if(event.target.id==='degree-course-query'){courseSearchOpen=true;renderCourseResults();}});
-    document.addEventListener('pointerdown',event=>{if(courseSearchOpen&&!event.target.closest('.degree-course-search')){courseSearchOpen=false;renderCourseResults();}});
+    document.addEventListener('pointerdown',event=>{if(courseSearchOpen&&!event.target.closest('.degree-course-search,#dp-inspector')){courseSearchOpen=false;renderCourseResults();}});
     // Marquee selection: drag a box over empty calendar or staging space.
     document.addEventListener('pointerdown',event=>{
       if(event.button!==0||!document.querySelector('[data-screen="requirements"].active'))return;

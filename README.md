@@ -160,6 +160,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
 | `NEXT_PUBLIC_API_BASE_URL` | Frontend backend integration *(planned; unused today)* | No | `http://localhost:8080` |
+| `BACKEND_URL` | Next.js server, optional private live catalog browser | No | Unset (offline demo). Set to `http://127.0.0.1:8080` in `frontend/.env.local` to show API predictions with confidence, conditions and per-section instructor ratings; keep unset for public deployments while Banner redistribution is unresolved |
 
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
 

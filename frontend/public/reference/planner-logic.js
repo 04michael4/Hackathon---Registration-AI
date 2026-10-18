@@ -209,6 +209,19 @@
     return words.reduce((n, w) => n + (text.includes(w) ? 3 : (INTEREST_ALIASES[w] || []).some(a => text.includes(a)) ? 1 : 0), 0);
   }
 
+  /** One semester search: direct course matches first, then related interests with electives first. */
+  function semesterSearch(catalog, query, { electivesOnly = false, isEligible = () => true } = {}) {
+    return Object.entries(catalog)
+      .map(([id, course]) => ({ id, course, direct: searchScore(course, query), interest: interestScore(course, query) }))
+      .filter(match => (match.direct > 0 || match.interest > 0) && !(electivesOnly && match.course.required))
+      .sort((a, b) => b.direct - a.direct
+        || (!a.direct && !b.direct ? Number(a.course.required) - Number(b.course.required) : 0)
+        || b.interest - a.interest
+        || Number(isEligible(b.id)) - Number(isEligible(a.id))
+        || a.course.code.localeCompare(b.course.code))
+      .map(match => match.id);
+  }
+
   /**
    * One search for the degree planner. Tags narrow it: 'code' matches course codes only, 'interest' matches
    * interests and descriptions; 'major', 'minor', 'gened' restrict to those categories (several = any of them).
@@ -252,7 +265,7 @@
 
   return {
     CATEGORIES, courseCategory, creditProgress, interestScore, degreeSearch, rectsIntersect, rectFromPoints,
-    codeKey, searchScore,
+    codeKey, searchScore, semesterSearch,
     CLASS_TYPES, courseList,
     RATING_TIERS, NO_RATING, ratingTier, scoreOf, professorRating,
     parseDays, parseTimeRange, sectionNumber, alternativeSections, previewBlocks, assignLanes, nextSectionPreview,

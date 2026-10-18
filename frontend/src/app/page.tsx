@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { ReferenceRuntime } from "@/components/ReferenceRuntime";
 
+export const dynamic = "force-dynamic";
+
 const referenceDocument = fs.readFileSync(
   path.join(process.cwd(), "src", "reference", "index.html"),
   "utf8",
@@ -22,7 +24,7 @@ export default function Home() {
   return (
     <>
       <div id="syllo-reference-root" dangerouslySetInnerHTML={{ __html: referenceBody }} />
-      <ReferenceRuntime />
+      <ReferenceRuntime catalogEnabled={Boolean(process.env.BACKEND_URL)} />
     </>
   );
 }
