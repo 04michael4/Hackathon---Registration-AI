@@ -17,7 +17,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * A blank password is allowed so the PostgreSQL driver can fall back to a {@code PGPASSFILE}.
  *
  * <p>{@code database.schema} chooses the views to read: {@code catalog_api} (default, David's verified snapshot only) or
- * {@code catalog_live} (the same plus approved, currently-servable promoted courses). No other value is accepted.
+ * {@code catalog_live} (the same plus approved, currently-servable promoted courses) or {@code catalog_serving} (the researched READY and
+ * CONDITIONAL courses, served with their conditions). No other value is accepted.
  */
 @ConfigurationProperties("app.catalog")
 public record CatalogProperties(@DefaultValue Map<String, String> terms, @DefaultValue Database database) {

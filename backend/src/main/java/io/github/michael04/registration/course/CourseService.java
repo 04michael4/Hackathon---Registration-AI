@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,12 +20,21 @@ public class CourseService {
 	private final ObjectProvider<CourseCatalog> catalogs;
 	private final ObjectProvider<SectionCatalog> sectionCatalogs;
 	private final ObjectProvider<CourseMetadataCatalog> metadataCatalogs;
+	private final ObjectProvider<ConditionCatalog> conditionCatalogs;
 
+	@Autowired
 	public CourseService(ObjectProvider<CourseCatalog> catalogs, ObjectProvider<SectionCatalog> sectionCatalogs,
-			ObjectProvider<CourseMetadataCatalog> metadataCatalogs) {
+			ObjectProvider<CourseMetadataCatalog> metadataCatalogs, ObjectProvider<ConditionCatalog> conditionCatalogs) {
 		this.catalogs = catalogs;
 		this.sectionCatalogs = sectionCatalogs;
 		this.metadataCatalogs = metadataCatalogs;
+		this.conditionCatalogs = conditionCatalogs;
+	}
+
+	/** For callers and tests that have no condition catalog: details then carry an empty conditions list. */
+	public CourseService(ObjectProvider<CourseCatalog> catalogs, ObjectProvider<SectionCatalog> sectionCatalogs,
+			ObjectProvider<CourseMetadataCatalog> metadataCatalogs) {
+		this(catalogs, sectionCatalogs, metadataCatalogs, null);
 	}
 
 	public CourseResponses.TermsResponse terms() {
@@ -77,8 +87,10 @@ public class CourseService {
 								m.start(), m.end(), m.location()))
 						.toList()))
 			.toList();
+		ConditionCatalog conditionCatalog = conditionCatalogs == null ? null : conditionCatalogs.getIfAvailable();
+		List<CourseCondition> conditions = conditionCatalog == null ? List.of() : conditionCatalog.conditionsFor(term, courseId);
 		return new CourseDetailResponse(course.courseId(), CourseQuery.subject(course.courseId()),
-				CourseQuery.number(course.courseId()), course.title(), course.credits(), detail.description(), sections);
+				CourseQuery.number(course.courseId()), course.title(), course.credits(), detail.description(), sections, conditions);
 	}
 
 	private static <T> T available(ObjectProvider<T> provider) {

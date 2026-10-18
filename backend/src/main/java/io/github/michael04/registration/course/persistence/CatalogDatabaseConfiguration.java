@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import io.github.michael04.registration.course.ConditionCatalog;
 import io.github.michael04.registration.course.CourseCatalog;
 import io.github.michael04.registration.course.CourseMetadataCatalog;
 import io.github.michael04.registration.course.SectionCatalog;
@@ -101,6 +102,11 @@ public class CatalogDatabaseConfiguration {
 	@Bean
 	CourseMetadataCatalog jdbcCourseMetadataCatalog(DataSource catalogDataSource, TermMapping mapping) {
 		return new JdbcCourseMetadataCatalog(JdbcClient.create(catalogDataSource), mapping);
+	}
+
+	@Bean
+	ConditionCatalog jdbcConditionCatalog(DataSource catalogDataSource, TermMapping mapping, CatalogProperties properties) {
+		return new JdbcConditionCatalog(JdbcClient.create(catalogDataSource), mapping, properties.database().schema());
 	}
 
 	@Bean

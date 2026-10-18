@@ -39,8 +39,11 @@ final class JdbcCatalogDao implements CatalogDao {
 			+ "start_time, end_time, location FROM catalog_api.section_meeting WHERE term_code = ? AND crn = ANY(?) "
 			+ "GROUP BY crn, start_time, end_time, location ORDER BY crn, start_time, end_time, location";
 
-	/** The only schemas the adapter may read. Both expose the same views; catalog_live adds promoted courses. */
-	static final List<String> ALLOWED_SCHEMAS = List.of("catalog_api", "catalog_live");
+	/**
+	 * The only schemas the adapter may read. All expose the same three views: catalog_api (the verified snapshot), catalog_live (the same plus
+	 * approved promoted courses) and catalog_serving (the researched READY and CONDITIONAL courses, with their conditions; data/catalog-serving).
+	 */
+	static final List<String> ALLOWED_SCHEMAS = List.of("catalog_api", "catalog_live", "catalog_serving");
 
 	private final JdbcClient jdbc;
 
@@ -59,8 +62,8 @@ final class JdbcCatalogDao implements CatalogDao {
 	}
 
 	/**
-	 * @param schema {@code catalog_api} (the verified snapshot, the default) or {@code catalog_live} (the same plus
-	 * approved, currently-servable promoted courses). Anything else is refused, so a setting can never point the
+	 * @param schema {@code catalog_api} (the verified snapshot, the default), {@code catalog_live} (the same plus
+	 * approved, currently-servable promoted courses) or {@code catalog_serving} (researched courses with conditions). Anything else is refused, so a setting can never point the
 	 * adapter at another schema.
 	 */
 	JdbcCatalogDao(JdbcClient jdbc, String schema) {
