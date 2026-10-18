@@ -8,7 +8,7 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Local merge resolution on `feature/backend-course-schedule-completion-integrated`: pulls `pre-main` `5aa3e82` into the saved draft `4969f25`. One authoritative PostgreSQL catalog and native solver are used; local terms, metadata and explanation features are retained. |
+| **Current phase** | Local merge resolution on `feature/backend-course-schedule-completion-integrated`: pulls `pre-main` `5aa3e82` into the saved draft `4969f25`. One authoritative PostgreSQL catalog and native solver are used; local terms, metadata and explanation features are retained. Frontend: Next.js browser-local prototype (Plan My Semester, Degree Planner, Advisor portal, Saved schedules) on `feature/data-cse007-snapshot`; not yet connected to these endpoints. |
 | **What works today** | Course search/detail, terms, generation, manual checks and elective suggestions use the authoritative persistence layer and native solver. Description/instructor metadata and grounded AI explanation from the local draft are retained. Demo catalogs and the superseded draft datasource are test-only. See [merge verification](docs/merge-resolution.md) and the [earlier integration evidence](docs/schedule-final-integration.md). |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
@@ -41,12 +41,12 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
-| Course search by code/title for a term | ✔ | ✅ Existing endpoints use the authoritative PostgreSQL catalogs; production has no hardcoded catalog |
+| Course search by code/title for a term | ✔ | ✅ Existing endpoints use the authoritative PostgreSQL catalogs; production has no hardcoded catalog. Frontend search (forgiving codes) is 🟡 browser-local, not wired to the API |
 | AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
-| Editable preference form (works without AI too) | ✔ | ⬜ Planned |
+| Editable preference form (works without AI too) | ✔ | 🟡 Browser-local form in the frontend prototype; not wired to the API |
 | Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Authoritative PostgreSQL catalog, real native engine and actual HTTP verified |
-| Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); UI not built |
-| Weekly calendar view of generated schedules | ✔ | ⬜ Planned |
+| Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); the frontend prototype has a browser-local manual planner not yet wired to them |
+| Weekly calendar view of generated schedules | ✔ | 🟡 Browser-local calendar in the frontend prototype; not wired to the API |
 | AI explanation of a schedule | Stretch | ✅ Implemented; offline full-pipeline provider tests pass; paid-provider quality not evaluated |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
@@ -58,7 +58,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
 | Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views (see [docs/database.md](docs/database.md)); no competing persistence architecture |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
-| Frontend | Next.js + TypeScript + Tailwind CSS *(planned)* | Typed UI, fast iteration, common team skill set |
+| Frontend | **Next.js 16 + React 19 + strict TypeScript + Tailwind CSS 4** | Typed UI and reusable components; browser-local mock implemented, backend integration planned |
 
 ## Architecture
 
@@ -87,7 +87,7 @@ Only the backend talks to Claude and holds secrets. The frontend is a thin clien
 │       │   └── common/      Problem Details, validation errors, CORS
 │       ├── main/resources/application.properties
 │       └── test/java/...    Automated tests
-├── frontend/                Next.js app (placeholder)
+├── frontend/                Next.js App Router mock frontend
 ├── data/                    Catalog snapshots / seed data (placeholder)
 ├── docs/
 │   ├── architecture.md      Technical architecture and design rationale
@@ -102,6 +102,10 @@ Only the backend talks to Claude and holds secrets. The frontend is a thin clien
 
 ## Getting started
 
+**CSE 007 database:** A standalone PostgreSQL snapshot using the course screenshots and SuY corrections is available;
+see [course data and connection details](data/cse007-snapshot/README.md).
+The backend is not wired to it yet. Earlier Phase 1 status tables describe backend integration.
+
 These steps are for macOS. Linux works the same way; on Windows use `mvnw.cmd`.
 
 ### 1. Prerequisites
@@ -111,7 +115,7 @@ These steps are for macOS. Linux works the same way; on Windows use `mvnw.cmd`.
 | JDK | **21** | Backend (required) |
 | Git | any recent | Cloning |
 | Maven | **not needed** | `./mvnw` downloads the pinned Maven 3.10.0 on first run |
-| Node.js | _TBD_ | Frontend (later) |
+| Node.js | **24 LTS** | Frontend development and production builds |
 | PostgreSQL | 17.6 tested | Production catalog mode and opt-in real database tests |
 
 Install JDK 21 with [Homebrew](https://brew.sh):
@@ -155,7 +159,7 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
-| `NEXT_PUBLIC_API_BASE_URL` | Frontend *(planned)* | No | `http://localhost:8080` |
+| `NEXT_PUBLIC_API_BASE_URL` | Frontend backend integration *(planned; unused today)* | No | `http://localhost:8080` |
 
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
 
@@ -267,15 +271,15 @@ curl -i http://localhost:8080/api/health
 
 Stop the server with `Ctrl+C`. PostgreSQL configuration is required for the production catalog; no AI key is required for generation.
 
-### 6. Run the frontend *(not yet implemented)*
-
-Once `frontend/` is scaffolded, the expected flow is below. Confirm against [frontend/README.md](frontend/README.md) once it exists.
+### 6. Run the frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev        # http://localhost:3000, talks to the backend at NEXT_PUBLIC_API_BASE_URL
+npm ci
+npm run dev        # http://localhost:3000; browser-local mock, no backend required
 ```
+
+Run `npm run lint`, `npm test`, and `npm run build` before review. See [frontend/README.md](frontend/README.md) for the project structure and production commands.
 
 ### Troubleshooting
 
@@ -320,7 +324,7 @@ Database setup, running the backend in database mode, and what data is (and is n
 | Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures See [docs/database.md](docs/database.md) |
 | Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
-| Frontend | ⬜ Planned |
+| Frontend | ✅ Next.js/React/TypeScript/Tailwind prototype implemented and verified (browser-local data; Plan My Semester, Degree Planner, Advisor portal, Saved schedules). Backend integration ⬜ planned |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
 Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
@@ -341,6 +345,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 **Current limitations**
 - Production scheduling is verified through PostgreSQL and the native solver. Only the certified CSE 007 source dataset is shipped; full-university/current-seat coverage and deployment remain separate work.
 - The catalog views deliberately expose only certified schedulable courses. Fractional/unknown credits and unconfirmed relationships remain excluded by the authoritative readiness rules; historical availability remains UNKNOWN.
+- The frontend is a browser-local mock and is not connected to the backend catalog, scheduling or AI endpoints yet.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.
 - `.env` files aren't loaded automatically by Spring.

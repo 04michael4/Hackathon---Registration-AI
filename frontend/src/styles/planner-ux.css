@@ -1,0 +1,738 @@
+/* Plan My Semester UX pass: collapsible navigation, header, schedule tools, merged course list,
+ * professor-rating colors and section previews. Loaded last so it refines the legacy cascade. */
+
+:root {
+  /* Professor-rating scale (demo Rate My Professor data). Separate from the brown R/P class-type marks. */
+  --rating-excellent: #1e6b45;
+  --rating-excellent-soft: #e4f1e9;
+  --rating-good: #4f7419;
+  --rating-good-soft: #edf3df;
+  --rating-mixed: #9a5d0c;
+  --rating-mixed-soft: #fbefd9;
+  --rating-low: #a3261d;
+  --rating-low-soft: #f9e5e3;
+  --rating-none: #776d66;
+  --rating-none-soft: #f1eeeb;
+  --nav-bar-height: 44px;
+}
+
+/* !important: legacy sidebar rules force overflow/white-space on every span in a course link. */
+.syllo-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ---------- 1. Collapsible top navigation ---------- */
+
+#product-nav.is-collapsible {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  flex: 0 0 var(--nav-bar-height);
+  height: var(--nav-bar-height);
+  min-height: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  padding: 0 max(3vw, 16px);
+  transition: box-shadow 0.18s ease;
+}
+#product-nav.is-collapsible.is-open {
+  box-shadow: 0 6px 18px var(--theme-shadow);
+}
+#product-nav.is-collapsible .product-brand {
+  order: 0;
+  margin: 0;
+  font-size: 23px;
+}
+.product-nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--theme-line);
+  border-radius: 999px;
+  background: var(--theme-white);
+  color: var(--theme-muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.product-nav-toggle svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform 0.18s ease;
+}
+.product-nav-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.product-nav-toggle:hover,
+.product-nav-toggle:focus-visible {
+  color: var(--theme-brown);
+  border-color: var(--theme-muted);
+}
+.product-nav-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+/* Tabs stay in the tab order while collapsed; focusing one opens the bar. */
+#product-nav.is-open .product-nav-panel {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+#product-nav.is-collapsible .product-nav-tabs {
+  order: 0;
+  flex: 1;
+  width: auto;
+  justify-content: flex-start;
+  overflow: visible;
+}
+#product-nav.is-collapsible .product-nav-tabs > button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+#product-nav.is-collapsible .product-role {
+  margin-left: auto;
+  padding: 6px 11px;
+}
+@media (max-width: 1000px) {
+  /* Narrow screens: the tabs drop down over the page instead of pushing it. */
+  #product-nav.is-collapsible .product-nav-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-wrap: wrap;
+    padding: 8px max(3vw, 16px) 12px;
+    background: var(--theme-white);
+    border-bottom: 1px solid var(--theme-line);
+    box-shadow: 0 10px 18px var(--theme-shadow);
+  }
+  #product-nav.is-collapsible:not(.is-open) .product-nav-panel {
+    visibility: hidden;
+  }
+  #product-nav.is-collapsible .product-nav-tabs {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+  }
+}
+@media (min-width: 1100px) and (min-height: 650px) {
+  #product-nav.is-collapsible {
+    position: relative;
+    flex: 0 0 var(--nav-bar-height);
+    height: var(--nav-bar-height);
+  }
+}
+
+/* ---------- 2 + 4 + 5. Header: title, Syllo AI, registration countdown ---------- */
+
+.planner-screen .planner-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.planner-screen .planner-header h1 {
+  margin: 0;
+}
+.planner-header-aside {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.planner-screen .sem-registration {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--theme-brown);
+  color: var(--theme-white);
+}
+.planner-screen .sem-registration > strong {
+  color: var(--theme-white);
+  font-size: 28px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.planner-screen .sem-registration > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.planner-screen .sem-registration b {
+  color: var(--theme-white);
+  font-size: 14px;
+  font-weight: 650;
+}
+.planner-screen .sem-registration #sem-countdown-detail {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+}
+.planner-screen .syllo-ai-toggle {
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-height: 48px;
+  margin: 0;
+  padding: 6px 16px 6px 8px;
+  gap: 10px;
+  justify-content: flex-start;
+  border: 1px solid var(--theme-line);
+  border-radius: 12px;
+  background: var(--theme-white);
+  color: var(--theme-ink);
+  text-align: left;
+}
+.planner-screen .syllo-ai-toggle:hover {
+  transform: none;
+  border-color: var(--theme-brown);
+}
+.planner-screen .syllo-ai-toggle[aria-expanded="true"] {
+  width: auto;
+  background: var(--theme-tint);
+  border-color: var(--theme-brown);
+  color: var(--theme-ink);
+}
+.syllo-ai-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--theme-accent-tint);
+  color: var(--theme-accent);
+}
+.syllo-ai-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+.syllo-ai-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.syllo-ai-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--theme-brown);
+}
+.syllo-ai-hint {
+  font-size: 11px;
+  color: var(--theme-muted);
+  font-weight: 500;
+}
+/* The toggle lives in the header now, so a closed assistant takes no column. */
+.planner-layout.ai-closed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.planner-layout.ai-closed .ai-assistant-shell {
+  display: none;
+}
+
+/* ---------- 3. Schedule tools next to the calendar ---------- */
+
+.schedule-workspace .manual-schedule-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.schedule-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.schedule-title h2 {
+  margin: 0;
+}
+.sem-credit-meter {
+  margin: 0;
+  font-size: 13px;
+  color: var(--theme-muted);
+}
+.sem-credit-meter strong {
+  font: 700 18px Manrope, sans-serif;
+  color: var(--theme-brown);
+}
+.schedule-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.schedule-tools .button {
+  height: 36px;
+  padding: 0 13px;
+  font-size: 13px;
+}
+.schedule-tools .sem-undo {
+  border-color: var(--theme-brown);
+  color: var(--theme-brown);
+  font-weight: 700;
+  gap: 6px;
+}
+.schedule-tools .sem-undo svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.schedule-tools .sem-undo:not(:disabled):hover {
+  background: var(--theme-tint);
+}
+.schedule-tools .sem-undo:disabled {
+  border-color: var(--theme-line);
+  color: var(--theme-muted);
+}
+
+/* ---------- 7. Merged course list ---------- */
+
+.planner-course-sidebar,
+.planner-layout:not(.ai-closed) .planner-course-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+.course-list-panel .planner-sidebar-heading {
+  align-items: center;
+}
+.course-list-panel .planner-sidebar-heading h3 {
+  margin: 0;
+}
+.planner-course-sidebar > section.course-list-panel > p.course-list-key {
+  display: flex;
+  gap: 14px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--theme-muted);
+}
+.course-list-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.class-type {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font: 800 11px/1 Manrope, sans-serif;
+  border: 1.5px solid var(--theme-brown);
+}
+.class-type--planned {
+  background: var(--theme-brown);
+  color: var(--theme-white);
+}
+.class-type--recommended {
+  background: var(--theme-white);
+  color: var(--theme-brown);
+}
+.search-result-main .class-type {
+  width: 17px;
+  height: 17px;
+  margin-right: 6px;
+  font-size: 10px;
+  vertical-align: middle;
+}
+.course-list-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.course-list-filter {
+  display: flex;
+  gap: 4px;
+}
+.course-list-filter {
+  flex-wrap: wrap;
+}
+.course-list-filter button {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid var(--theme-line);
+  border-radius: 7px;
+  background: var(--theme-white);
+  color: var(--theme-muted);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.course-list-filter button span {
+  font-weight: 500;
+  opacity: 0.8;
+}
+.course-list-filter button[aria-pressed="true"] {
+  background: var(--theme-tint);
+  border-color: var(--theme-brown);
+  color: var(--theme-brown);
+}
+.course-list-tools input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 7px;
+  background: var(--theme-white);
+  font: inherit;
+  font-size: 12px;
+}
+.rating-legend {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.rating-legend summary {
+  cursor: pointer;
+  color: var(--theme-brown);
+  font-weight: 650;
+}
+.rating-legend ul {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 2px;
+  padding: 0;
+  list-style: none;
+}
+.rating-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.rating-legend li small {
+  color: var(--theme-muted);
+}
+.rating-legend .rating-legend-note {
+  display: block;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--theme-muted);
+}
+.course-list-panel .planner-sidebar-list {
+  gap: 6px;
+  margin-top: 10px;
+}
+/* Two rows: code and title on the left; the rating sits top-right, actions bottom-right. */
+.course-list-card {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-areas: "type link rating" "type link actions";
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 8px 8px 9px;
+  border: 1px solid var(--theme-line);
+  border-radius: 8px;
+  background: var(--theme-white);
+}
+.course-list-card.is-recommended {
+  border-style: solid;
+  background: var(--theme-surface);
+}
+.course-list-card[draggable="true"] {
+  cursor: grab;
+}
+.course-list-card.is-previewing {
+  border-color: var(--theme-brown);
+  box-shadow: inset 0 0 0 1px var(--theme-brown);
+}
+.course-list-card > .class-type { grid-area: type; align-self: start; margin-top: 1px; }
+.course-list-card > .rating-chip { grid-area: rating; justify-self: end; }
+.course-list-card > .sem-card-actions { grid-area: actions; justify-self: end; }
+.course-list-card .sem-course-link {
+  grid-area: link;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.course-list-card .sem-course-link strong {
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--theme-brown);
+}
+.planner-course-sidebar .course-list-card .sem-course-link span:not(.syllo-sr-only) {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--theme-ink);
+  white-space: normal;
+}
+.course-list-card .sem-card-actions {
+  display: flex;
+  gap: 4px;
+}
+.course-list-card .card-icon-button,
+.course-list-card .course-add-button {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--theme-line);
+  border-radius: 6px;
+  background: var(--theme-white);
+  color: var(--theme-brown);
+  font-size: 15px;
+  cursor: pointer;
+}
+.course-list-card .course-add-button {
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.course-list-card .card-icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.course-list-card .card-icon-button[aria-pressed="true"] {
+  background: var(--theme-brown);
+  border-color: var(--theme-brown);
+  color: var(--theme-white);
+}
+.course-list-card .card-icon-button:hover,
+.course-list-card .course-add-button:hover {
+  border-color: var(--theme-brown);
+}
+
+/* ---------- 8 + 9. Professor-rating chips and tooltip ---------- */
+
+.rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px 0 5px;
+  border: 1px solid var(--rating-color);
+  border-radius: 999px;
+  background: var(--rating-soft);
+  color: var(--theme-ink);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+.rating-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rating-color);
+}
+.rating-chip.rating-none {
+  border-style: dashed;
+  font-weight: 600;
+  color: var(--theme-muted);
+}
+.rating-chip.rating-none i {
+  background: transparent;
+  border: 1.5px solid var(--rating-color);
+}
+.rating-chip:focus-visible {
+  outline: 2px solid var(--theme-brown);
+  outline-offset: 2px;
+}
+.rating-excellent { --rating-color: var(--rating-excellent); --rating-soft: var(--rating-excellent-soft); }
+.rating-good { --rating-color: var(--rating-good); --rating-soft: var(--rating-good-soft); }
+.rating-mixed { --rating-color: var(--rating-mixed); --rating-soft: var(--rating-mixed-soft); }
+.rating-low { --rating-color: var(--rating-low); --rating-soft: var(--rating-low-soft); }
+.rating-none { --rating-color: var(--rating-none); --rating-soft: var(--rating-none-soft); }
+
+.planner-tip {
+  position: fixed;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 9px 12px;
+  border: 1px solid var(--theme-line);
+  border-left: 4px solid var(--rating-color, var(--theme-brown));
+  border-radius: 8px;
+  background: var(--theme-white);
+  box-shadow: 0 10px 24px rgba(33, 27, 23, 0.16);
+  color: var(--theme-ink);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.planner-tip[hidden] {
+  display: none;
+}
+.planner-tip strong {
+  font-size: 13px;
+}
+.planner-tip small {
+  color: var(--theme-muted);
+  font-size: 11px;
+}
+.planner-tip.tip-excellent { --rating-color: var(--rating-excellent); }
+.planner-tip.tip-good { --rating-color: var(--rating-good); }
+.planner-tip.tip-mixed { --rating-color: var(--rating-mixed); }
+.planner-tip.tip-low { --rating-color: var(--rating-low); }
+.planner-tip.tip-none { --rating-color: var(--rating-none); border-left-style: dashed; }
+.planner-tip.tip-preview { border-left: 2px dashed var(--theme-brown); }
+
+/* Calendar blocks keep their brown text; the left edge carries the rating color, with the number beside it. */
+.planner-calendar-event[class*="rating-"] {
+  border-left-color: var(--rating-color);
+}
+.planner-calendar-event .event-rating {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--rating-soft);
+  border: 1px solid var(--rating-color);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  color: var(--theme-ink);
+}
+.planner-calendar-event.rating-none .event-rating {
+  border-style: dashed;
+  color: var(--theme-muted);
+}
+
+/* ---------- 10. Other-section previews ---------- */
+
+.sem-section-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border: 1.5px dashed var(--theme-brown);
+  border-radius: 8px;
+  background: var(--theme-white);
+  font-size: 12px;
+}
+.sem-section-preview[hidden] {
+  display: none;
+}
+.sem-section-preview p {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0;
+  gap: 1px;
+}
+.sem-section-preview p span {
+  color: var(--theme-muted);
+}
+.sem-section-preview .button {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.preview-swatch {
+  flex-shrink: 0;
+  width: 22px;
+  height: 16px;
+  border: 2px dashed var(--theme-brown);
+  border-radius: 4px;
+}
+.planner-calendar-event.is-section-preview {
+  z-index: 2;
+  min-height: 38px;
+  padding: 5px 6px 4px 8px;
+  border: 2px dashed var(--theme-brown);
+  border-left-width: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+  cursor: help;
+}
+.planner-calendar-event.is-section-preview strong {
+  font-size: 11px;
+  color: var(--theme-brown);
+}
+.planner-calendar-event.is-section-preview > span {
+  font-size: 10px;
+  font-weight: 650;
+  -webkit-line-clamp: 1;
+}
+.planner-calendar-event.is-section-preview .preview-status {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  font-style: normal;
+  color: var(--theme-muted);
+}
+.planner-calendar-event.is-section-preview:hover,
+.planner-calendar-event.is-section-preview:focus-visible {
+  z-index: 3;
+  background: var(--theme-white);
+  outline: 2px solid var(--theme-brown);
+  outline-offset: 1px;
+}
+.planner-calendar-event.is-preview-source {
+  outline: 2px solid var(--theme-brown);
+  outline-offset: 1px;
+}
+.planner-calendar-event .event-current {
+  position: absolute;
+  left: 8px;
+  bottom: 5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--theme-brown);
+  color: var(--theme-white);
+  font-size: 9px;
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-nav-panel,
+  .product-nav-toggle svg,
+  #product-nav.is-collapsible {
+    transition: none;
+  }
+}

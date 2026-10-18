@@ -29,7 +29,7 @@ AI-assisted course registration and schedule optimization for Lehigh University 
 |---|---|---|
 | Backend | Java 21, **Spring Boot 4.1.1**, Maven via `./mvnw` | Pinned in `backend/pom.xml`; upgrade only deliberately |
 | Database | PostgreSQL | **Not added yet.** The backend must start without a DB until the persistence phase. |
-| Frontend | Next.js + TypeScript + Tailwind CSS | Not scaffolded yet |
+| Frontend | Next.js 16 + React 19 + strict TypeScript + Tailwind CSS 4 | ✅ Browser-local mock prototype; backend integration is not started |
 | AI | Anthropic Claude via the official Java SDK `com.anthropic:anthropic-java` **2.71.0** (pinned) | Added; used only in `ai/`. It brings its own Jackson 2.x (`com.fasterxml.jackson.*`), next to Boot's Jackson 3. Don't mix their mappers. |
 | Tests | JUnit 5, Spring Boot test slices, MockMvc | |
 
@@ -39,7 +39,7 @@ Adding any other dependency or framework needs a reason tied to code in the same
 
 ```
 backend/   Spring Boot API  (base package io.github.michael04.registration)
-frontend/  Next.js app (placeholder)
+frontend/  Next.js App Router mock frontend (backend integration pending)
 docs/      architecture.md, api-contract.md, development-guide.md, decisions/
 data/      catalog snapshots and seed data (public or synthetic only)
 HANDOFF.md live progress log

@@ -1,0 +1,11 @@
+@import "../styles/legacy-base.css";
+@import "../styles/legacy-product.css";
+@import "../styles/legacy-semester.css";
+@import "../styles/legacy-degree.css";
+@import "../styles/legacy-polish.css";
+@import "../styles/planner-ux.css";
+@import "../styles/degree-ux.css";
+
+#syllo-reference-root {
+  display: contents;
+}

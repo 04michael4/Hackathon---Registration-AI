@@ -1,0 +1,408 @@
+{
+  "fixture_metadata": {
+    "name": "Lehigh CSE-007 single-course demo",
+    "schema_version": 1,
+    "source_document": "Course Scheduling App — Proposed Database Structure.pdf",
+    "source_document_sections": [
+      "6.4.1",
+      "6.4.2",
+      "6.4.4",
+      "6.5"
+    ],
+    "catalog_source_url": "https://catalog.lehigh.edu/courselisting/cse/",
+    "catalog_verified_at": "2026-10-16T01:02:12Z",
+    "catalog_credit_text": "0,4 Credits",
+    "credit_assumption": "Demo uses a 4-credit lecture plus a 0-credit lab. This allocation and every section/link/meeting are simulated; the catalog alone does not verify section credits.",
+    "time_zone": "America/New_York",
+    "day_mapping": "ISO: 1=Monday, 7=Sunday",
+    "prerequisite_status": "UNKNOWN",
+    "warnings": [
+      {
+        "code": "DEMO_SIMULATED",
+        "message": "All section offerings, times, locations, links and the term are invented; no live availability."
+      },
+      {
+        "code": "PREREQUISITES_UNKNOWN",
+        "message": "No prerequisite_rule is seeded. Missing rules are unknown, not proof of eligibility."
+      }
+    ],
+    "scope": "One course only. The synthetic profile covers this 4-credit demo, not a complete semester or degree audit. Scores and generated schedules are intentionally unseeded until the team agrees scoring."
+  },
+  "course": [
+    {
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "code": "CSE-007",
+      "title": "Introduction to Programming",
+      "description": "Java programming fundamentals, problem solving, methods, arrays and object-oriented concepts. Paraphrased catalog summary.",
+      "credits": 4,
+      "source_url": "https://catalog.lehigh.edu/courselisting/cse/"
+    }
+  ],
+  "term": [
+    {
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "name": "Spring 2027 (DEMO ONLY)",
+      "academic_year": "2026-2027",
+      "term_code": "DEMO-2027-SPRING"
+    }
+  ],
+  "section": [
+    {
+      "section_id": "00000007-0002-4000-8000-000000000001",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-L01",
+      "instructor": null,
+      "delivery_type": "IN_PERSON",
+      "component_type": "LECTURE",
+      "credits": 4,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "SCHEDULED"
+    },
+    {
+      "section_id": "00000007-0002-4000-8000-000000000002",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-L02",
+      "instructor": null,
+      "delivery_type": "IN_PERSON",
+      "component_type": "LECTURE",
+      "credits": 4,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "SCHEDULED"
+    },
+    {
+      "section_id": "00000007-0002-4000-8000-000000000003",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-B01",
+      "instructor": null,
+      "delivery_type": "IN_PERSON",
+      "component_type": "LAB",
+      "credits": 0,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "SCHEDULED"
+    },
+    {
+      "section_id": "00000007-0002-4000-8000-000000000004",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-B02",
+      "instructor": null,
+      "delivery_type": "IN_PERSON",
+      "component_type": "LAB",
+      "credits": 0,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "SCHEDULED"
+    },
+    {
+      "section_id": "00000007-0002-4000-8000-000000000005",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-B03",
+      "instructor": null,
+      "delivery_type": "IN_PERSON",
+      "component_type": "LAB",
+      "credits": 0,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "SCHEDULED"
+    },
+    {
+      "section_id": "00000007-0002-4000-8000-000000000006",
+      "course_id": "00000007-0000-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "section_code": "DEMO-L03-TBA",
+      "instructor": null,
+      "delivery_type": "UNKNOWN",
+      "component_type": "LECTURE",
+      "credits": 4,
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null,
+      "meeting_status": "TBA"
+    }
+  ],
+  "meeting": [
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000001",
+      "section_id": "00000007-0002-4000-8000-000000000001",
+      "day_of_week": 1,
+      "start_time": "09:00",
+      "end_time": "09:50",
+      "location": "DEMO Lecture Room A",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000002",
+      "section_id": "00000007-0002-4000-8000-000000000001",
+      "day_of_week": 3,
+      "start_time": "09:00",
+      "end_time": "09:50",
+      "location": "DEMO Lecture Room A",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000003",
+      "section_id": "00000007-0002-4000-8000-000000000001",
+      "day_of_week": 5,
+      "start_time": "09:00",
+      "end_time": "09:50",
+      "location": "DEMO Lecture Room A",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000004",
+      "section_id": "00000007-0002-4000-8000-000000000002",
+      "day_of_week": 1,
+      "start_time": "11:00",
+      "end_time": "11:50",
+      "location": "DEMO Lecture Room B",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000005",
+      "section_id": "00000007-0002-4000-8000-000000000002",
+      "day_of_week": 3,
+      "start_time": "11:00",
+      "end_time": "11:50",
+      "location": "DEMO Lecture Room B",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000006",
+      "section_id": "00000007-0002-4000-8000-000000000002",
+      "day_of_week": 5,
+      "start_time": "11:00",
+      "end_time": "11:50",
+      "location": "DEMO Lecture Room B",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000007",
+      "section_id": "00000007-0002-4000-8000-000000000003",
+      "day_of_week": 2,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "location": "DEMO Lab A",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000008",
+      "section_id": "00000007-0002-4000-8000-000000000004",
+      "day_of_week": 4,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "location": "DEMO Lab B",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    },
+    {
+      "meeting_id": "00000007-0003-4000-8000-000000000009",
+      "section_id": "00000007-0002-4000-8000-000000000005",
+      "day_of_week": 3,
+      "start_time": "11:30",
+      "end_time": "12:30",
+      "location": "DEMO Lab C",
+      "source_status": "DEMO_SIMULATED",
+      "source_url": null,
+      "verified_at": null
+    }
+  ],
+  "section_link": [
+    {
+      "link_id": "00000007-0004-4000-8000-000000000001",
+      "primary_section_id": "00000007-0002-4000-8000-000000000001",
+      "required_component_group": "LAB",
+      "compatible_section_id": "00000007-0002-4000-8000-000000000003"
+    },
+    {
+      "link_id": "00000007-0004-4000-8000-000000000002",
+      "primary_section_id": "00000007-0002-4000-8000-000000000001",
+      "required_component_group": "LAB",
+      "compatible_section_id": "00000007-0002-4000-8000-000000000004"
+    },
+    {
+      "link_id": "00000007-0004-4000-8000-000000000003",
+      "primary_section_id": "00000007-0002-4000-8000-000000000002",
+      "required_component_group": "LAB",
+      "compatible_section_id": "00000007-0002-4000-8000-000000000004"
+    },
+    {
+      "link_id": "00000007-0004-4000-8000-000000000004",
+      "primary_section_id": "00000007-0002-4000-8000-000000000002",
+      "required_component_group": "LAB",
+      "compatible_section_id": "00000007-0002-4000-8000-000000000005"
+    }
+  ],
+  "prerequisite_rule": [],
+  "student_profile": [
+    {
+      "profile_id": "00000007-0005-4000-8000-000000000001",
+      "major": "Computer Science and Business (synthetic demo)",
+      "graduation_target": "DEMO-2030-SPRING",
+      "completed_course_codes": [],
+      "credit_preferences": {
+        "minCredits": 4,
+        "maxCredits": 4
+      },
+      "is_demo": true
+    }
+  ],
+  "schedule_preference": [
+    {
+      "preference_id": "00000007-0006-4000-8000-000000000001",
+      "profile_id": "00000007-0005-4000-8000-000000000001",
+      "term_id": "00000007-0001-4000-8000-000000000001",
+      "structured_constraints_json": {
+        "requiredCourseCodes": [
+          "CSE-007"
+        ],
+        "optionalCourseCodes": [],
+        "minCredits": 4,
+        "maxCredits": 4,
+        "blockedTimes": [
+          {
+            "dayOfWeek": 1,
+            "startTime": "00:00",
+            "endTime": "10:00"
+          },
+          {
+            "dayOfWeek": 2,
+            "startTime": "00:00",
+            "endTime": "10:00"
+          },
+          {
+            "dayOfWeek": 3,
+            "startTime": "00:00",
+            "endTime": "10:00"
+          },
+          {
+            "dayOfWeek": 4,
+            "startTime": "00:00",
+            "endTime": "10:00"
+          },
+          {
+            "dayOfWeek": 5,
+            "startTime": "00:00",
+            "endTime": "10:00"
+          }
+        ],
+        "lockedSectionIds": [],
+        "softPreferences": {}
+      },
+      "original_request": "Demo: schedule CSE 007 for 4 credits. No classes before 10 AM.",
+      "schema_version": 1
+    }
+  ],
+  "generated_schedule": [],
+  "generated_schedule_section": [],
+  "expected_scenarios": [
+    {
+      "scenario": "all_complete_time_feasible_pairs",
+      "expected_section_pairs": [
+        [
+          "00000007-0002-4000-8000-000000000001",
+          "00000007-0002-4000-8000-000000000003"
+        ],
+        [
+          "00000007-0002-4000-8000-000000000001",
+          "00000007-0002-4000-8000-000000000004"
+        ],
+        [
+          "00000007-0002-4000-8000-000000000002",
+          "00000007-0002-4000-8000-000000000004"
+        ]
+      ],
+      "expected_total_credits_per_pair": 4,
+      "eligibility": "UNKNOWN"
+    },
+    {
+      "scenario": "no_classes_before_10",
+      "earliest_start": "10:00",
+      "expected_section_pairs": [
+        [
+          "00000007-0002-4000-8000-000000000002",
+          "00000007-0002-4000-8000-000000000004"
+        ]
+      ],
+      "eligibility": "UNKNOWN"
+    },
+    {
+      "scenario": "friday_morning_blocked",
+      "blocked_time": {
+        "day_of_week": 5,
+        "start_time": "08:00",
+        "end_time": "12:00"
+      },
+      "expected_section_pairs": []
+    },
+    {
+      "scenario": "missing_lab",
+      "selected_section_ids": [
+        "00000007-0002-4000-8000-000000000001"
+      ],
+      "expected_error": "MISSING_REQUIRED_COMPONENT"
+    },
+    {
+      "scenario": "two_labs_in_one_group",
+      "selected_section_ids": [
+        "00000007-0002-4000-8000-000000000001",
+        "00000007-0002-4000-8000-000000000003",
+        "00000007-0002-4000-8000-000000000004"
+      ],
+      "expected_error": "MULTIPLE_COMPONENTS_IN_GROUP"
+    },
+    {
+      "scenario": "incompatible_lab",
+      "selected_section_ids": [
+        "00000007-0002-4000-8000-000000000002",
+        "00000007-0002-4000-8000-000000000003"
+      ],
+      "expected_error": "INCOMPATIBLE_COMPONENT"
+    },
+    {
+      "scenario": "overlapping_linked_pair",
+      "selected_section_ids": [
+        "00000007-0002-4000-8000-000000000002",
+        "00000007-0002-4000-8000-000000000005"
+      ],
+      "expected_error": "TIME_CONFLICT"
+    },
+    {
+      "scenario": "tba_section",
+      "selected_section_ids": [
+        "00000007-0002-4000-8000-000000000006"
+      ],
+      "expected_warnings": [
+        "INCOMPLETE_MEETING_METADATA",
+        "UNKNOWN_DELIVERY_TYPE"
+      ],
+      "eligible_for_time_feasibility": false
+    }
+  ]
+}

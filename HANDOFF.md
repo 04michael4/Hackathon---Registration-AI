@@ -546,15 +546,167 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 
 ## Data and Frontend
 
-**Owner:** _TBD_ · **Status:** ⬜ Not started (placeholders: [data/README.md](data/README.md), [frontend/README.md](frontend/README.md))
+**2026-10-17 — Codex, authorized pre-main publication:** Prepared all 75 non-ZIP/PDF file changes from `881b366` as one commit based on `pre-main` `c58072c`, excluding the two added PDFs and `Syllo-updated-frontend.zip` from incoming history. Existing archives on `pre-main`, the original local branch and local files are preserved. No application code was edited during this publishing task. `git diff --check` passed. Backend verification through Git Bash/JDK 21, `./mvnw -B -o -Dmaven.repo.local=C:/Users/puram/.m2/repository test`, returned `Tests run: 774, Failures: 0, Errors: 0, Skipped: 30` and `BUILD SUCCESS`; the default Maven cache was inaccessible, so the successful run used the existing owner cache. Frontend `npm test -- --reporter=dot` could not start because Vitest is not installed; this host has Node 18.17.0 while the project requires Node 24. Terminal GitHub HTTPS was unreachable, so publication uses the connected GitHub app. No live AI or opt-in database tests were run.
 
-**Completed:** _none_.
+**Owner:** David · **Status:** 🟡 Active CSE 007 database fixture and browser-local
+Next.js frontend prototype implemented; backend persistence/integration is not started.
+
+**2026-10-17 22:35 EDT — Claude Code for Sunny, free electives of any credit amount: 🟡 implemented, committed in `a8042c8`.**
+The two Degree Planner elective slots no longer require exactly 4 and 3 credits. Any elective fits as long as the semester stays at
+21 credits or fewer (`MAX_TERM_CREDITS` in `data.js`). The cap is enforced when choosing an elective (replacing one counts the old course
+out), adding from search, and moving courses singly or in bulk; the plan check flags any semester over 21. New store helpers
+`termCredits`, `electiveReasons`; `degree.js` uses them. Added MUS 001 (1-credit demo elective). The retained typed module
+`src/lib/planner.ts` still models the old 4/3-credit slots; it isn't used by the running app.
+Verification: `npm test` → `Tests 56 passed (56)`; lint and `tsc --noEmit` clean; build compiled. Headless Chrome: elective picker 7/7,
+Degree Planner 48/48, semester planner 58/58, no browser errors.
+
+**2026-10-17 22:10 EDT — Claude Code for Sunny, Degree Planner redesign and features-hub removal: 🟡 implemented, committed in `a8042c8`.**
+Same branch, on top of the Plan My Semester pass below. Sign-in now opens Plan My Semester (the "What would you like to do?" hub is
+removed). Degree Planner: one-screen layout at ≥1100×650; header reduced to Lehigh University, "Degree Planner" and a profile menu;
+one search with Course code / Major / Minor / GenEd / Interest tags (the separate interest box is merged here only; the semester planner's
+Search by interest is unchanged); a "Requirements & unassigned courses" staging area with Humanities, General education and minor credit
+trackers, where choosing a minor stages its courses; Lehigh category colors with text tags; Shift+click and box selection with bulk move and
+delete; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z redo (new redo stack in `data.js`); and a draggable floating Syllo AI (minimize, close, dock, full screen)
+replacing the Ask Syllo AI tab. New files `ai-widget.js`, `degree-ux.css`, `src/lib/degree-planner.test.ts`. Demo additions in `data.js`:
+Economics minor (ECO 105, ECO 146), Ethics & Technology concentration, SOC 001, PSY 001 (simulated).
+Verification: `npm test` → `Tests 49 passed (49)`; `npm run lint` clean; `npx tsc --noEmit` exit 0; `npm run build` compiled. Headless Chrome on
+`next start`: semester planner 58/58, Degree Planner 48/48 (fit at 1440×900 and 1280×720, no horizontal scroll at 900 px and 390 px), other
+screens load, no browser errors. Note: iCloud Drive had created 2,563 "name 2" duplicates inside `frontend/node_modules`, which broke
+`next build`; `npm ci` fixed it. Known gaps: elective-slot cards aren't part of multi-select (they belong to their slot); the trackers'
+"completed" credits count only itemized demo courses, because earlier terms are summarized as credit totals.
+
+**2026-10-17 21:20 EDT — Claude Code for Sunny, Plan My Semester UX pass: 🟡 implemented, committed in `a8042c8`.**
+On `feature/data-cse007-snapshot` at `b00b2f8`. Collapsible navigation (all signed-in screens); title "Plan My Semester"; countdown and a clearer
+Syllo AI control top right; Undo (with real enabled/disabled state), Save and credits beside the calendar; "Use in degree plan" removed;
+forgiving course-code search; merged course list with R/P class types; professor-rating colors with a legend and hover/focus tooltip;
+non-destructive "Preview other sections" from the calendar context menu, Shift+F10 or the card button. New
+`public/reference/planner-logic.js` holds the pure rules; `src/styles/planner-ux.css` loads last. Demo alternative sections were added to
+`data.js` (simulated, like the rest of that file). Search by interest is unchanged.
+Verification: `npm test` → `Test Files 2 passed (2)`, `Tests 29 passed (29)`; `npm run lint` clean; `npx tsc --noEmit` exit 0;
+`npm run build` → static `/` generated. A headless Chrome run of 58 checks (navigation, header, Undo, search variants, R/P list, ratings and
+tooltip placement, previews: show, toggle, replace, Escape, outside click, stale clearing, leaving the planner, no change to plan, credits,
+storage or undo; 800 px and 390 px without horizontal scroll) passed against both `next dev` and `next start`, with no browser errors
+besides the known missing favicon. Known gaps: the reference-parity verifier now reports differences by design; ESLint ignores
+`public/reference/**`, so those scripts were checked with `node --check` only; the planner calendar still scrolls horizontally at phone width
+as before.
+
+**2026-10-17 19:55 EDT — Codex, authoritative frontend parity: completed.**
+Replaced the divergent React-rendered interface with the exact markup, stylesheet
+cascade, crest asset and ordered browser-local runtime from
+`Syllo-updated-frontend.zip`, hosted directly by the existing Next.js route without
+an iframe. The reference HTML, six runtime scripts, five stylesheets and crest all
+match the archive by SHA-256. Added a no-dependency headless Chrome parity verifier
+covering login, the four-card start page, semester AI, conflict and expanded-calendar
+dialogs, saved schedules, degree selection/details, electives, advisor feedback,
+multi-status filters and approval across desktop, laptop, tablet and mobile sizes.
+
+Verification on Node.js 24.22.0 and Chrome:
+`npm run lint` completed with no findings;
+`npm test` reported `Test Files 1 passed (1)` and `Tests 4 passed (4)`;
+`npm run build` reported `Compiled successfully`, completed TypeScript and generated
+the static `/` route; the parity verifier against the production `next start` output
+reported 11 of 11 screenshot pairs byte-identical, all workflow probes identical and
+valid, and `failures: []`. Both the reference and implementation made the same missing
+favicon request (`404`); no browser JavaScript exception occurred. The project-wide
+`backend/.\mvnw.cmd test` check was attempted but failed before Maven started with
+`Cannot index into a null array` / `Cannot start maven from wrapper`; no backend test
+success is claimed. The supplied ZIP remains an untracked reference attachment.
+
+**2026-10-17 16:52 EDT — Codex, frontend framework migration: completed.**
+Migrated the standalone `dist/` HTML/CSS/JavaScript prototype to Next.js 16.4.2,
+React 19, strict TypeScript and Tailwind CSS 4. The App Router project now uses
+reusable screen components, a typed local state context, extracted deterministic
+planner/audit rules, browser-local persistence and a pinned npm lockfile. Preserved
+the login/role demo, feature navigation, semester search/calendar/conflict choices,
+local assistant previews, saved schedules/undo, degree drag/drop/electives, course
+details, advisor comments/status/approval and the existing responsive visual styles.
+No backend endpoint, API contract or AI provider is connected.
+
+Verification on Node.js 24.22.0, rerun at 2026-10-17 17:58 EDT before commit:
+`npm run lint` completed with no findings;
+`npm test` reported `Test Files 1 passed (1)` and `Tests 4 passed (4)`;
+`npm run build` reported `Compiled successfully`, completed TypeScript, and generated
+the static `/` route; `npm run dev` reached `Ready in 484ms`, and an HTTP smoke test
+returned status `200` with `text/html; charset=utf-8`. The development server was
+stopped afterward. A project-wide `backend/.\mvnw.cmd test` check was also attempted,
+but the wrapper failed before starting Maven with `Cannot index into a null array` /
+`Cannot start maven from wrapper`; no new backend test result is claimed. `npm ci`
+completed from the lockfile and reported 5 high-severity dependency advisories; no
+automatic breaking upgrade was applied.
+
+**2026-10-16 10:45 EDT — Codex for David, database branch verification: completed.**
+Created `feature/data-cse007-snapshot` from merged `main`. Regenerated the active
+screenshot fixture after verifying all eight source hashes, then verified all three
+PostgreSQL schemas against the local loopback server. Actual result lines:
+`PASS: 1 course, 5 sections, 9 meetings; 3 feasible pairs; 1 after 10; 0 with Friday morning blocked`;
+`PASS: PDF fixture: 1 course, 6 sections, 9 meetings, 4 links; 3 time-feasible pairs, 1 after 10, 0 Friday-free; credits, TBA, provenance and 9 rejection checks passed`;
+`PASS: SuY corrections: 2 valid lecture/lab choices at 4 credits; 3 nullable requirement rows; 0 open issues; 5 selection scenarios and 8 rejection checks passed`.
+The local database server was stopped after verification. `backend/.\mvnw.cmd test`
+failed before running tests with `Cannot start maven from wrapper` / `Cannot index
+into a null array`; no Java test success is claimed.
+
+**2026-10-15 22:07 EDT — Codex, screenshot-based CSE 007 database: completed.**
+Inspected all seven supplied `Images for courses` PNGs. The active dataset is now
+`data/cse007-snapshot/fixture.json`, loaded as schema `cse007_snapshot` in the local
+`registration_demo` database (127.0.0.1:55432). Includes Spring 2027 term 202710,
+lecture 010/CRN 12275, labs 060/13132 and 062/12638, five per-day meetings, Brian
+Chen, eight attributes, the confirmed 010/060 pair and the lab-060 seat snapshot.
+`source_asset` preserves all file paths/hashes and transcription-check times;
+capture time/URL remain unknown. All rows are static screenshot observations.
+
+`database.sql` is a standalone pgAdmin-compatible import. Fresh creation,
+transactional stable-ID reimport, sample queries and an isolated rollback of the
+complete SQL bundle were verified. Actual results:
+`PASS: 7 screenshot hashes verified; generated V2__seed.sql and database.sql`
+`PASS: screenshot dataset: 3 sections, 5 meetings, 1 confirmed link; 4 provisional credits; source conflicts retained; 6 rejection checks passed`.
+`git diff --check` passed. Backend `.\mvnw.cmd test` again failed before tests with
+`Cannot start maven from wrapper` / `Cannot index into a null array`; no Java test
+success is claimed. The backend remains unconnected.
+
+Open data issues: lab-060 credits conflict (list 0 vs detail 4), lab-062 link
+target unknown, full lecture component group unknown, unreadable prerequisite
+rules, ambiguous FLEX delivery and missing locations/date ranges for 010/062.
+These are stored in `data_issue` rather than inferred. Seat counts are explicitly
+not live. Earlier demo schemas remain archival; README points to this snapshot.
+No work in progress. Files remain uncommitted on `main`.
+
+**2026-10-15 21:46 EDT — Codex, PDF-aligned CSE 007 fixture: completed and SQL-verified.**
+Read all six pages of `Course Scheduling App — Proposed Database Structure.pdf`.
+Added `data/cse007-pdf/fixture.json`, ordered schema/seed SQL, standard-library
+seed generator, examples and dataset checks. Loaded schema `cse007_pdf_demo` in
+the existing local database. Uses UUIDs, code `CSE-007`, section credits (4 + 0),
+meeting provenance, one TBA case and synthetic profile/preferences. The earlier
+`cse007_demo` remains intact. Prerequisite and generated-schedule tables are empty;
+eligibility is unknown and scoring remains a team decision. No HTTP contract or
+backend implementation changes. PDF-reader dependencies are ignored in Git.
+
+Verification (fresh load, then transactional seed reimport and query):
+`PASS: PDF fixture: 1 course, 6 sections, 9 meetings, 4 links; 3 time-feasible pairs, 1 after 10, 0 Friday-free; credits, TBA, provenance and 9 rejection checks passed`.
+`git diff --check` passed. Reattempted `backend/.\mvnw.cmd test`: failed before
+tests with `Cannot start maven from wrapper` / `Cannot index into a null array`.
+Java/backend tests are not verified in this session. JSON warning names/preference
+shape are fixture proposals; reconcile the provisional API contract before wiring
+the backend. Changes remain uncommitted on `main`. No work in progress.
+
+**2026-10-15 21:02 EDT — Codex, CSE 007 demo:** Created standalone PostgreSQL
+schema/seed scripts and local database `registration_demo` on 127.0.0.1:55432.
+One catalog-sourced course, five simulated sections, nine meetings and four lab links.
+Setup, provenance, queries and expected scenarios are in `data/README.md`.
+Backend integration remains unimplemented; no API changes. Cluster files are git-ignored.
+Verified with `psql -f data/cse007/create.sql`:
+`PASS: 1 course, 5 sections, 9 meetings; 3 feasible pairs; 1 after 10; 0 with Friday morning blocked`.
+Backend tests attempted with `.\mvnw.cmd test`: failed before tests with
+`Cannot start maven from wrapper` / `Cannot index into a null array`.
+Only Java 17 found on PATH; backend requires 21. No claim of passing Java tests.
+Repository discrepancy: current branch is `main`, commit `76a8310` (merged Phase 1),
+whereas earlier handoff says unmerged. Existing entries preserved. Changes uncommitted.
+Next: connect the course API to this dataset when its DTO contract is agreed.
 
 **In progress:** _none_.
 
 **Next recommended**
 1. **Data:** identify a permitted source for Lehigh course/section data, and record its format, terms of use and refresh process in `data/README.md`. Meanwhile, create a small **synthetic** sample catalog so the Engine and Backend API work can proceed.
-2. **Frontend:** scaffold Next.js + TypeScript + Tailwind in `frontend/`; add a page that calls `GET /api/health`; document the run commands in `frontend/README.md` and the README.
+2. **Frontend:** review the migrated browser-local Next.js prototype. When the API owners are ready, replace `src/lib/mock-data.ts` and browser-only planner boundaries with documented backend calls; do not connect Claude from the browser.
 3. Decide CORS vs. a Next.js proxy with the Backend API owner.
 
 **Blockers:** real data depends on step 1.
@@ -633,7 +785,7 @@ In priority order, across the team:
 1. ~~Review Phase 1 on `feature/backend-foundation`, then merge it to `main`.~~ Resolved 2026-10-15 (PR #1).
 2. ~~Assign module owners, and fill in the README team table and this file.~~ Resolved 2026-10-15 (README team table).
 3. Decide the course data source (or agree on a synthetic dataset for the hackathon).
-4. Start, in parallel: engine core (no dependencies), frontend scaffold, CI.
+4. Start, in parallel: engine core (no dependencies), frontend/backend integration planning, CI.
 5. Integrate the feature branches into **`pre-main`** (the shared integration branch; `main` stays untouched). AI: done locally on `integrate/ai-into-pre-main` (177/177 tests); PR pending.
 
 ## Instructions for the next developer or AI agent
@@ -653,6 +805,12 @@ Newest first, one line per session. Append only.
 | When | Who | Module | Summary |
 |---|---|---|---|
 | 2026-10-17 | Claude Code for Michael | Backend API + Database | Connected the backend to the researched Spring 2027 catalog on branch `feature/backend-unified-database` (from `origin/pre-main` `c58072c`), [ADR-0007](docs/decisions/0007-serve-researched-courses-with-their-conditions.md). New read-only schema `catalog_serving` (`data/catalog-serving/`: `course_offering`, `section_offering`, `section_meeting` with the exact `catalog_live` shapes, plus `course_condition`) serving the READY and CONDITIONAL research offerings (40 courses, 50 sections; BLOCKED ones never). Backend: `catalog_serving` added to the `DB_CATALOG_SCHEMA` allow-list; `ConditionCatalog`/`JdbcConditionCatalog`; `GET /api/courses/{id}` gains an additive `conditions` list (**contract change**, documented). Tests: `./mvnw test` 785 run, 0 failures, 35 skipped; opt-in `ServingCatalogIntegrationTest` 5/5 on an isolated copy; `verify_serving.py` 14/14. Not yet installed in the team database, not committed. Known limits: descriptions/instructors still come from the CSE 007 snapshot; schedule endpoints return no conditions; prerequisites are shown, not enforced. |
+| 2026-10-17 | Codex | Integration | User authorized publishing all changes to `pre-main` except ZIPs/PDFs. Prepared 75 included file changes from `881b366` on base `c58072c`; original local branch preserved. Backend: `Tests run: 774, Failures: 0, Errors: 0, Skipped: 30`, `BUILD SUCCESS`. Frontend test runner unavailable (Vitest not installed); see Data and Frontend note. |
+| 2026-10-17 22:35 EDT | Claude Code for Sunny | Frontend | Degree Planner electives: any credit amount, with a 21-credit semester cap enforced on every placement and flagged in the plan check. Vitest 56/56; browser checks passed. Committed in `a8042c8`. |
+| 2026-10-17 22:10 EDT | Claude Code for Sunny | Frontend | Removed the features hub (sign-in opens Plan My Semester) and redesigned the Degree Planner: one-screen layout, unified search with tags, staging bucket with credit trackers, Lehigh category colors, multi-select with bulk move/delete, undo/redo keys, floating Syllo AI. Vitest 49/49, lint, typecheck and build passed; 58 + 48 headless Chrome checks passed on `next start`. Committed in `a8042c8`. |
+| 2026-10-17 21:20 EDT | Claude Code for Sunny | Frontend | Plan My Semester UX pass on `feature/data-cse007-snapshot` (collapsible nav, header, Undo/Save beside calendar, forgiving code search, merged R/P course list, professor-rating colors and tooltip, other-section previews). Vitest 29/29, lint and build passed; 58 headless Chrome checks passed on dev and production. Committed in `a8042c8`. |
+| 2026-10-17 19:55 EDT | Codex for David | Frontend | Matched the authoritative ZIP inside Next.js without an iframe; 11/11 production screenshot pairs were byte-identical and all workflow probes matched. Lint, 4/4 Vitest tests and production build passed; Maven wrapper still fails before backend tests. |
+| 2026-10-17 17:59 EDT | Codex for David | Frontend | Prepared the Next.js migration for commit; `npm ci` completed, lint passed, Vitest passed 4/4 tests, and the production build compiled. Maven wrapper still fails before backend tests; npm reported 5 high-severity advisories. |
 | 2026-10-17 | Claude Code for Michael | Database | Built the additive `professor_ratings` schema (instructors from Banner, RMP aggregates, conservative name matching, append-only decisions) in `data/professor-ratings/` per [ADR-0006](docs/decisions/0006-store-professor-ratings-separately-from-the-catalog.md). Local isolated database only; not committed, not pushed, not installed in the shared database. Two owner decisions with open risks: all Banner instructor names are stored (redistribution unverified) and RMP is fetched automatically (against RMP's terms). Results: 16 unit tests, 29 database scenarios (7 of 8 mutation checks caught, the eighth is harmless), structure check passes; 42 of 66 instructors matched automatically, 5 await review, 19 have no RMP profile. Later the same day: the owner reviewed the queue (5 confirmed, 1 rejected; 46 instructors rated) and asked for semester trends; added `V3__rating_history.sql` (individual rating dates and scores, no text; semester and year trend views), `fetch-ratings` and `decisions --export/--apply`. 19 unit tests, 36 scenarios pass. The owner then allowed the ratings fetch: 1,226 ratings of 43 professors (2003 to 2026-10-16) stored in the scratch database; for 19 professors RMP's summary count differs from the ratings returned by one. Then, at the owner's request, added V4 (`student_rating`: ratings and comments submitted in our app, accumulating per semester next to RMP's; moderation; `professor_overview` and `professor_comment` for a future Professors tab; `semesters_apart` in the trend views) and `make_trend_chart.py` (local HTML preview, written outside the repo). 19 unit tests and 51 scenarios pass; app-rating mutation checks 6/6 caught. Then V5 + `predict_ratings.py`: Spring 2027 quality/difficulty predictions per professor, section and course (recency-weighted mean, parameters chosen by a backtest since 2019: MAE quality 0.889 vs 0.910 for the all-time average; 43 of 66 instructors predicted, 47 courses fully and 7 partly), shown dashed in the chart. 33 unit tests and 61 scenarios pass; prediction mutation checks 9/9 caught. Runbook: `data/professor-ratings/README.md`. Then, with the owner's approval, installed into the team database `registration_unified_spring2027` after a backup (same input hashes and checksums as scratch; every other schema unchanged; `catalog_reader` reads 9 views only) and committed locally on `feature/data-professor-ratings`. Not pushed. |
 | 2026-10-16 (evening) | Claude Code for Michael | Database | Created `integrate/database-into-pre-main` from `origin/pre-main` `b715f86` (later merged with `4fb4ff2`) and integrated the CSE 007 snapshot, `catalog_api` views, `banner_evidence` schema and collector, JDBC catalog adapter and a local database setup script; reconciled `pom.xml`, `application.properties`, `.env.example` and `README.md` with the engine-bearing pre-main. Replaced the adapter's recording engine double with the real engine: CSE 007 at 4 credits yields two valid schedules. Default build 683 tests (merged tree), 0 failures, 10 skipped (opt-in); opt-in database tests 10/10. |
 | 2026-10-16 20:34 EDT | Codex | Backend API | Resolved 14 local pull conflicts against pre-main 5aa3e82, retaining authoritative persistence/native solver plus local terms/metadata/explanation. Moved obsolete draft datasource to test-only; 715 regular + 45 integration + 3 source tests passed, zero failures/errors/skips. All resolutions staged; merge commit pending, no push. |
@@ -691,6 +849,11 @@ Newest first, one line per session. Append only.
 | 2026-10-15 21:42 EDT | Claude Code for Sunny | Scheduling Engine | Renamed the local branch `Scheduling-Engine` → `feature/engine-core`. Added the engine records and the `ScheduleSolver` interface (types only, no solver), 17 plain-JUnit tests, and architecture.md § 7–8 (engine API, scoring formula). `cd backend && ./mvnw -B test` → `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS. Nothing committed. |
 | 2026-10-15 21:30 EDT | Claude Code for @04michael4 | docs | Credit limits updated from Lehigh's overload policy (cap 21, overload flag); updated api-contract.md, architecture.md, README, HANDOFF.md. Docs only. |
 | 2026-10-15 21:22 EDT | Claude Code for @04michael4 | docs | Team agreed the API contract as written; removed "provisional" markers from api-contract.md, architecture.md and HANDOFF.md. Docs only, no code changes. |
+| 2026-10-16 10:45 EDT | Codex for David | Data | Created `feature/data-cse007-snapshot`; regenerated the active seed with 8 verified source hashes and reran all three PostgreSQL verification suites successfully. Maven wrapper still fails before tests. |
+| 2026-10-15 22:07 EDT | Codex | Data | Rebuilt active CSE 007 data from all 7 supplied screenshots: 3 sections, 5 meetings, 1 confirmed link and explicit unresolved fields. Imported cse007_snapshot; hashes, reimport, full SQL bundle and 6 rejection checks passed. Backend Maven wrapper still fails before tests. |
+| 2026-10-15 21:46 EDT | Codex | Data | Read the 6-page database PDF; created JSON and PostgreSQL fixture in cse007_pdf_demo with UUIDs, section credits, TBA and synthetic preferences. Fresh load and stable-ID reimport verified; 9 rejection checks passed. Maven wrapper still fails before tests. |
+| 2026-10-15 21:02 EDT | Codex | Data | Created and SQL-verified local CSE 007 PostgreSQL demo; setup in data/README.md. Maven wrapper failed before tests; Java 17 on PATH. Backend not connected. |
 | 2026-10-15 16:45 EDT | Claude Code for @04michael4 | Backend API / docs | Pre-commit checks; marked API contract, credit limits and team roles as provisional; re-ran tests (3/3 pass) and verified health with curl. Committed Phase 1 and pushed to `origin/feature/backend-foundation`; not merged to `main`. |
 | 2026-10-15 16:40 EDT | Claude Code for @04michael4 | Backend API / docs | Wrote README, CLAUDE.md, AGENTS.md, HANDOFF.md, architecture.md, api-contract.md, development-guide.md, ADR-0001. Re-ran tests: 3/3 pass; health verified with curl. Nothing committed. |
 | 2026-10-15 16:27 EDT | Claude Code for @04michael4 | Backend API | Phase 1 backend foundation: Spring Boot 4.1.1 skeleton, `/api/health`, tests (3/3 pass), `.gitignore`, `.env.example`. Nothing committed. |
+
