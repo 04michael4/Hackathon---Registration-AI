@@ -36,6 +36,11 @@ function section(value: unknown): boolean {
       typeof meeting.start === "string" && typeof meeting.end === "string" && nullableText(meeting.location));
 }
 
+function history(value: unknown): boolean {
+  return record(value) && typeof value.name === "string" && Array.isArray(value.years) && value.years.every(year => record(year) &&
+    Number.isInteger(year.year) && score(year.quality) && score(year.difficulty) && count(year.ratings) && typeof year.lowSample === "boolean");
+}
+
 export function courseIdFromCode(code: string): string {
   const match = /^([A-Za-z]+)[ -]*(\d+)(?:-(\d+))?$/.exec(code.trim());
   if (!match) throw new Error("Invalid course code");
@@ -71,8 +76,9 @@ export async function loadCourseDetail(code: string, term: string, signal?: Abor
       !Array.isArray(data.sections) || !data.sections.every(section) ||
       !Array.isArray(data.conditions) || !data.conditions.every(condition => record(condition) &&
         typeof condition.code === "string" && typeof condition.message === "string" &&
-        typeof condition.evidenceLevel === "string" && condition.outcome === "UNVERIFIED")) {
+        typeof condition.evidenceLevel === "string" && condition.outcome === "UNVERIFIED") ||
+      (data.ratingHistory !== undefined && (!Array.isArray(data.ratingHistory) || !data.ratingHistory.every(history)))) {
     throw new Error("Invalid catalog response");
   }
-  return data as unknown as CourseDetail;
+  return { ...data, ratingHistory: data.ratingHistory ?? [] } as unknown as CourseDetail;
 }

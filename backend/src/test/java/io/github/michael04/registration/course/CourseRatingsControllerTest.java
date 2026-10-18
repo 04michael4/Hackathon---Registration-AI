@@ -45,6 +45,13 @@ class CourseRatingsControllerTest {
 							new InstructorRating("Testwick, Alder", new BigDecimal("3.66"), new BigDecimal("2.95"), "MEDIUM", 12, true),
 							new InstructorRating("Quillon, Bree", null, null, null, null, false))) : Map.of();
 				}
+
+				@Override
+				public Map<String, List<YearRating>> yearlyHistory(List<String> instructorNames) {
+					return instructorNames.contains("Testwick, Alder") ? Map.of("Testwick, Alder", List.of(
+							new YearRating(2024, new BigDecimal("3.20"), new BigDecimal("3.40"), 2, true),
+							new YearRating(2025, new BigDecimal("3.90"), new BigDecimal("2.80"), 9, false))) : Map.of();
+				}
 			};
 		}
 
@@ -72,10 +79,21 @@ class CourseRatingsControllerTest {
 	}
 
 	@Test
+	void detailShowsTheYearlyHistoryOfInstructorsThatHaveOneOnly() throws Exception {
+		mvc.perform(get("/api/courses/CSE-017").param("term", "2027-SPRING")).andExpect(status().isOk())
+			.andExpect(jsonPath("$.ratingHistory[*].name").value(contains("Testwick, Alder")))
+			.andExpect(jsonPath("$.ratingHistory[0].years[*].year").value(contains(2024, 2025)))
+			.andExpect(jsonPath("$.ratingHistory[0].years[0].quality").value(3.20))
+			.andExpect(jsonPath("$.ratingHistory[0].years[0].lowSample").value(true))
+			.andExpect(jsonPath("$.ratingHistory[0].years[1].ratings").value(9));
+	}
+
+	@Test
 	void aCourseWithoutRatingsHasNullAndEmptyLists() throws Exception {
 		mvc.perform(get("/api/courses/MATH-021").param("term", "2027-SPRING")).andExpect(status().isOk())
 			.andExpect(jsonPath("$.predictedRating").value(nullValue()))
-			.andExpect(jsonPath("$.sections[0].instructorRatings").isEmpty());
+			.andExpect(jsonPath("$.sections[0].instructorRatings").isEmpty())
+			.andExpect(jsonPath("$.ratingHistory").isEmpty());
 	}
 
 }

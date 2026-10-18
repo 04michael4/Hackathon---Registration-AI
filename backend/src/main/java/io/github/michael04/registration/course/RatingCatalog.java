@@ -15,4 +15,9 @@ public interface RatingCatalog {
 	/** The instructors of a course's sections by CRN, ordered by name, with their predictions. */
 	Map<String, List<InstructorRating>> instructorsByCrn(String term, String courseId);
 
+	/** Each named instructor's stored yearly ratings, oldest first, only for names that have any. Empty when unavailable. */
+	default Map<String, List<YearRating>> yearlyHistory(List<String> instructorNames) {
+		return Map.of();
+	}
+
 }

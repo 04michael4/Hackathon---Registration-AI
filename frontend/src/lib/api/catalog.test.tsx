@@ -20,6 +20,10 @@ const detail: CourseDetail = {
     { crn: "99002", sectionCode: "060", componentType: "LAB", lectureLink: "99001", credits: 0, status: "CLOSED", meetings: [],
       instructors: ["Fixture, Gamma"], instructorRatings: [{ name: "Fixture, Gamma", predictedQuality: 4.1, predictedDifficulty: 3.1, confidence: "HIGH", ratingCount: 0, courseSpecific: false }] },
   ],
+  ratingHistory: [{ name: "Fixture, Alpha", years: [
+    { year: 2022, quality: 3.2, difficulty: 3.0, ratings: 5, lowSample: false }, { year: 2023, quality: 3.5, difficulty: 2.9, ratings: 2, lowSample: true },
+    { year: 2024, quality: 3.9, difficulty: 2.7, ratings: 6, lowSample: false }, { year: 2025, quality: 4.0, difficulty: 2.8, ratings: 8, lowSample: false },
+  ] }],
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -47,6 +51,18 @@ describe("prediction and conditions presentation", () => {
     expect(html).toContain("Instructor history across courses");
     expect(html).toContain("No prediction available");
     expect(html).not.toContain("0.00 / 5");
+  });
+
+  it("charts each instructor's yearly ratings with the term prediction, a trend and a table, and names instructors without history", () => {
+    const html = renderToStaticMarkup(createElement(CatalogCourseDetails, { course: detail, term: "2027-SPRING" }));
+    expect(html).toContain("Professor rating history");
+    expect(html).toContain("Spring 2027 (predicted)");
+    expect(html).toContain("Quality improving: 3.90 in 2023–2025 vs 3.20 in 2022 (+0.70, 21 ratings)");
+    expect(html).toContain("<th scope=\"row\">2023</th><td>3.50</td><td>2.90</td><td>2 (few)</td>");
+    expect(html).toContain("No rating history: Fixture, Beta, Fixture, Gamma");
+    const none = renderToStaticMarkup(createElement(CatalogCourseDetails, { course: { ...detail, ratingHistory: [] } }));
+    expect(none).toContain("No rating history is available");
+    expect(none).not.toContain("rating-chart-plot");
   });
 
   it("shows conditions as unverified and never interprets an empty list as eligibility", () => {
