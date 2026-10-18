@@ -28,7 +28,7 @@ Related: [API contract](api-contract.md) · [Decision records](decisions/README.
 
 ```mermaid
 flowchart LR
-    S([Student]) --> FE["Next.js frontend ⬜"]
+    S([Student]) --> FE["Next.js frontend 🟡<br/>browser-local mock"]
     FE -->|"HTTP/JSON /api/**"| API["Spring Boot backend ✅ foundation"]
     subgraph API_INT [Backend]
         API --> COURSE["course ⬜<br/>catalog search"]
@@ -54,7 +54,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 2. Frontend and backend responsibilities
 
-| Concern | Frontend (Next.js) ⬜ | Backend (Spring Boot) |
+| Concern | Frontend (Next.js) 🟡 mock implemented | Backend (Spring Boot) |
 |---|---|---|
 | UI, routing, calendar view | ✔ | |
 | Free-text input and editable preference form | ✔ | |
@@ -70,6 +70,8 @@ The **central design principle** is that the AI interprets and explains, and the
 ## 3. Component interaction and data flow
 
 Main user flow (status per package in [§4](#4-backend-package-structure)):
+
+The frontend currently implements these screens against browser-local mock data (see [frontend/README.md](../frontend/README.md)); it does not call the backend or Claude yet.
 
 ```mermaid
 sequenceDiagram
@@ -148,6 +150,43 @@ Rules:
 **Implemented:** PostgreSQL through pre-main's existing `CatalogDatabaseConfiguration` (HikariCP),
 `JdbcCatalogDao` (`JdbcClient`), `JdbcCourseCatalog`, `JdbcSectionCatalog`, `CatalogProperties` and `TermMapping`.
 No JPA/Spring Data implementation exists; this integration does not introduce one or add a second datasource.
+
+**Earlier standalone fixtures (history):**
+
+**Active screenshot dataset (2026-10-15):** `data/cse007-snapshot/` supersedes the
+synthetic fixtures for CSE-007. Schema `cse007_snapshot` stores the supplied Spring
+2027 sections, actual CRNs and term code, per-image provenance, attributes,
+non-live enrollment observations and explicit data issues. Source files replace
+unavailable source URLs. `Hackathon Ideas - SuY.pdf` supplies user corrections:
+lecture 010 contributes 4 credits and requires exactly one zero-credit lab, 060
+or 062; all sections are in person; three nullable requirement rows explicitly
+record no CSE-007 prerequisites/corequisites/enrollment restrictions per user.
+V3 adds requirement/group tables and source-backed review resolution; V4 applies
+the corrections while retaining V1/V2 history. Lecture location is TBD and its
+date range is an explicit demo term default; lab 062 room 11/dates come from SuY.
+`data_issue` has six resolved and two accepted items, with no open review flags.
+Future requirement expressions can hold JSONB course/AND/OR rules; evaluation is
+not implemented. Seat precision is out of demo scope and snapshot counts are not
+used as scheduling constraints. These are user-confirmed demo facts, not a live
+institutional eligibility verification.
+UUIDs and same-course/term foreign keys are retained. See its README for schema
+details and import commands. This is standalone storage; the backend/API remains
+unconnected. The two earlier schemas below are archival synthetic fixtures.
+
+**Standalone demo (2026-10-15):** `data/cse007/` contains versioned PostgreSQL schema/seed
+scripts for one catalog-sourced CSE 007 course and simulated term sections, meetings and
+lecture/lab links. It runs separately in the `cse007_demo` schema; see `data/README.md`.
+No Spring persistence dependency, repository, migration runner or endpoint integration has
+been added. The full application database design below remains planned.
+
+**PDF-aligned fixture (2026-10-15):** `data/cse007-pdf/fixture.json` and its schema/seed
+scripts use the supplied PDF's UUID-based physical fields. The separate
+`cse007_pdf_demo` schema contains CSE-007, simulated sections/meetings/links, and one
+synthetic profile/preference. Prerequisite and generated-schedule tables remain
+empty because eligibility and scoring are unresolved. See its README for the
+additional join-table term consistency field and dataset checks. These storage
+fields do not change the provisional REST contract; reconcile IDs and DTOs before
+backend integration. The earlier text-ID demo remains available for reference.
 
 The local draft is reconciled with this implementation. `JdbcCourseMetadataCatalog` uses that same Hikari datasource to read term names/capture dates, descriptions and instructor names from the existing qualified Data tables. `CourseService` adds only those display fields to certified courses/sections; eligibility, status, credits and lecture links still come from the authoritative catalogs/views. `SectionLookupCatalog` resolves explanation CRNs through those same catalogs. The older independent datasource, repository and catalog are retained under src/test only and excluded from the production JAR. No schema/view or engine algorithm is changed.
 
@@ -461,7 +500,7 @@ flowchart LR
 | Engine unit tests | Plain JUnit 5, no Spring | Correctness, infeasibility diagnostics, **determinism** (run twice, compare), "no returned schedule has a conflict" checks | ⬜ |
 | AI layer | JUnit with a fake `PreferenceExtractor` / recorded responses | Validation pipeline, error mapping. **No real API calls in `./mvnw test`.** | ⬜ |
 | Persistence | Testcontainers Postgres or `@DataJpaTest` (_TBD_) | Queries and migrations | ⬜ |
-| Frontend | _TBD_ (e.g. Vitest / Playwright) | UI behavior | ⬜ |
+| Frontend | Vitest for pure planner rules; Next production build + ESLint | Deterministic mock rules, strict types and build integrity | 🟡; browser workflow automation remains planned |
 | CI | _None yet_. Recommended: GitHub Actions running `./mvnw test` on every PR. | | ⬜ |
 
 **Why slice tests first?** They're fast and need no database, so `./mvnw test` stays a one-command check that every teammate and AI agent can run before every PR.

@@ -124,7 +124,7 @@ If a conflict touches someone else's module and the intent isn't obvious, stop a
 | `./mvnw clean test` | When something behaves strangely (clears stale build output) |
 | `./mvnw spring-boot:run`, then `curl` the changed endpoint | When you change or add an endpoint |
 
-Frontend test commands: _TBD once `frontend/` is scaffolded._
+Frontend commands (run from `frontend/`): `npm run lint` · `npm test` · `npm run build`. Use Node.js 24 LTS and install the pinned dependencies with `npm ci`.
 
 ## 7. Working with Claude Code and Codex
 

@@ -15,13 +15,13 @@ hs_err_pid*
 node_modules/
 .next/
 frontend/out/
-next-env.d.ts
 *.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .vercel
+.tools/
 
 ### IDEs ###
 .idea/
@@ -39,3 +39,6 @@ pnpm-debug.log*
 ### OS ###
 .DS_Store
 Thumbs.db
+
+# Temporary PDF reader installed for local document inspection.
+tmp/pdf-tools/
