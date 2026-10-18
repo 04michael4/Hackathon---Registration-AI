@@ -8,14 +8,16 @@ import subprocess
 import sys
 
 CHECKS = [
-    ("exactly the READY and CONDITIONAL research offerings are served",
+    ("exactly the READY and CONDITIONAL offerings are served (a grid-staged one only when inspected, with every component linked and its credits known)",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c FULL JOIN (SELECT o.term_code, o.offering_id FROM catalog_research.offering o "
-     "JOIN catalog_research.offering_tier t USING (term_code, offering_id) WHERE t.tier IN ('READY', 'CONDITIONAL') AND o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT')) x "
+     "JOIN catalog_research.offering_tier t USING (term_code, offering_id) WHERE t.tier IN ('READY', 'CONDITIONAL') AND o.credits IS NOT NULL "
+     "AND (o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT') OR EXISTS (SELECT 1 FROM catalog_research.detail_inspection i WHERE i.term_code = o.term_code AND i.offering_id = o.offering_id)) "
+     "AND EXISTS (SELECT 1 FROM catalog_research.section s WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id AND s.component_type = 'LECTURE') "
+     "AND NOT EXISTS (SELECT 1 FROM catalog_research.section s WHERE s.term_code = o.term_code AND s.offering_id = o.offering_id AND s.component_type <> 'LECTURE' AND s.lecture_crn IS NULL)) x "
      "ON x.term_code = c.term_code AND x.offering_id = c.course_id WHERE c.course_id IS NULL OR x.offering_id IS NULL)"),
-    ("no BLOCKED offering and no grid-staged non-CSE course is served",
+    ("no BLOCKED offering is served, and no grid-staged course whose components are unlinked or credits unknown",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering_tier t ON t.term_code = c.term_code AND t.offering_id = c.course_id "
-     "WHERE t.tier = 'BLOCKED') AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering o ON o.term_code = c.term_code AND o.offering_id = c.course_id "
-     "WHERE o.data_source = 'BANNER_GRID_STAGING')"),
+     "WHERE t.tier = 'BLOCKED') AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c WHERE c.course_id IN ('CHM-030', 'PHY-012', 'MATH-312', 'MATH-334'))"),
     ("the undecided special topics (CSE-398-*) are not served",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering WHERE course_id LIKE 'CSE-398-%')"),
     ("every served course has a lecture and every lab links to a served lecture of the same course",

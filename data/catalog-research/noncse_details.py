@@ -16,7 +16,7 @@ SUBJECTS = {
     "Computer Science & Engineering": "CSE", "Mathematics": "MATH", "Physics": "PHY", "Chemistry": "CHM", "Economics": "ECO",
     "Engineering": "ENGR", "Industrial & Systems Engr": "ISE", "Industrial & Systems Engineering": "ISE", "Writing": "WRT", "Marketing": "MKT",
     "Business Information Systems": "BIS", "Business Analytics": "BUAN", "Electrical & Computer Engr": "ECE", "Statistics": "STAT",
-    "Finance": "FIN", "Accounting": "ACCT", "Management": "MGT", "Data Science": "DSCI", "Mechanical Engr & Mechanics": "ME",
+    "Industrial&Systems Engineering": "ISE", "Finance": "FIN", "Accounting": "ACCT", "Management": "MGT", "Data Science": "DSCI", "Mechanical Engr & Mechanics": "ME",
     "Materials Science & Engineering": "MAT", "Bioengineering": "BIOE", "Biological Sciences": "BIOS", "Earth & Environmental Sciences": "EES",
 }
 NONE_RESTRICTIONS = "No course restriction information is available."
