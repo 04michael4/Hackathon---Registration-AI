@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CatalogMetadata } from "./CatalogMetadata";
+import { ConnectedPlanner } from "./ConnectedPlanner";
 
 const runtimeFiles = [
   "data.js",
@@ -28,23 +29,29 @@ function loadScript(file: (typeof runtimeFiles)[number]) {
   });
 }
 
-export function ReferenceRuntime({ catalogEnabled = false }: Readonly<{ catalogEnabled?: boolean }>) {
+export function ReferenceRuntime({ catalogEnabled = false, demo = false }: Readonly<{ catalogEnabled?: boolean; demo?: boolean }>) {
+  const [hosts, setHosts] = useState<{ planner: Element; saved: Element | null } | null>(null);
   useEffect(() => {
     const marker = document.documentElement.dataset;
+    marker.sylloMode = demo ? "demo" : "api";
     marker.sylloCatalog = catalogEnabled ? "enabled" : "disabled";
-    if (marker.sylloRuntime === "loading" || marker.sylloRuntime === "loaded") return;
+    const mount = () => { const planner = document.getElementById("api-planner-root"); if (planner && !demo) setHosts({ planner, saved: document.getElementById("saved-list") }); };
+    if (marker.sylloRuntime === "loaded") { mount(); return; }
+    if (marker.sylloRuntime === "loading") { document.addEventListener("syllo:runtime-ready", mount, { once: true }); return () => document.removeEventListener("syllo:runtime-ready", mount); }
 
     marker.sylloRuntime = "loading";
-    void runtimeFiles
+    void runtimeFiles.filter(file => demo || file !== "semester.js")
       .reduce((chain, file) => chain.then(() => loadScript(file)), Promise.resolve())
       .then(() => {
         marker.sylloRuntime = "loaded";
+        document.dispatchEvent(new Event("syllo:runtime-ready"));
+        mount();
       })
       .catch((error: unknown) => {
         marker.sylloRuntime = "error";
         console.error(error);
       });
-  }, [catalogEnabled]);
+  }, [catalogEnabled, demo]);
 
-  return <CatalogMetadata enabled={catalogEnabled} />;
+  return <>{demo && <CatalogMetadata enabled={catalogEnabled} />}{hosts && <ConnectedPlanner host={hosts.planner} savedHost={hosts.saved} />}</>;
 }

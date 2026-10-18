@@ -1,0 +1,92 @@
+/* Keep the approved semester layout; these styles only adapt its real API controls. */
+#syllo-reference-root[data-mode="api"] .planner-layout { display: block; }
+#syllo-reference-root[data-mode="api"] .planner-layout > .manual-planner,
+#syllo-reference-root[data-mode="api"] .planner-layout > .ai-assistant-shell { display: none; }
+#syllo-reference-root[data-mode="api"] .planner-header-aside { display: flex; }
+.api-planner { color: var(--theme-ink); min-width: 0; padding-bottom: 24px; }
+.api-planner [hidden] { display: none !important; }
+.api-planner h2 { font-size: 20px; margin: 0 0 10px; }
+.api-planner h3 { font-size: 15px; margin: 8px 0; }
+.api-planner p { margin: 8px 0; line-height: 1.5; }
+.api-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.api-planner-columns { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 18px; }
+.api-planner-columns.is-assistant-open { grid-template-columns: minmax(0, 1fr) 350px; }
+.api-semester-main.manual-planner { display: block; min-width: 0; overflow: visible; padding: 18px; border: 1px solid var(--theme-line); border-radius: 14px; background: var(--theme-white); }
+.api-planner label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; min-width: 0; }
+.api-planner input:not([type="checkbox"]), .api-planner select, .api-planner textarea { border: 1px solid var(--theme-line); border-radius: 7px; padding: 9px; background: var(--theme-white); color: var(--theme-ink); min-width: 0; max-width: 100%; font: inherit; }
+.api-planner button, .api-saved button { cursor: pointer; }
+.api-planner button:disabled { cursor: default; opacity: .5; }
+.api-planner .api-check { flex-direction: row; align-items: center; margin: 12px 0; }
+.api-term-label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: white; }
+.api-term-label select { background: transparent; color: white; border: 0; padding: 0; font: 600 15px 'DM Sans', sans-serif; max-width: 235px; }
+.api-term-label option { background: white; color: #30251e; }
+.api-catalog-panel { position: relative; min-width: 0; }
+.api-search { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 12px; align-items: end; }
+.api-search .api-search-label { gap: 8px; font-size: 11px; }
+.api-search-control { display: flex; gap: 10px; align-items: center; height: 45px; padding: 4px 5px 4px 14px; border: 1px solid var(--theme-muted); border-radius: 8px; }
+.api-search-control svg { width: 18px; height: 18px; fill: none; stroke: var(--theme-muted); stroke-width: 1.6; flex-shrink: 0; }
+.api-search-control input[aria-label] { flex: 1; border: 0; padding: 0; font-size: 13px; outline: none; background: transparent; }
+.api-search-control:focus-within { outline: 2px solid var(--theme-brown); outline-offset: 2px; }
+.api-search-control .button { height: 35px; min-height: 35px; padding: 0 14px; font-size: 12px; }
+.api-search .api-subject-label { font-size: 10px; }
+.api-subject-label input { height: 45px; }
+.api-planner .catalog-note { margin: 8px 0 0; font-size: 11px; color: var(--theme-muted); }
+.api-search-dropdown { position: absolute; z-index: 25; top: 100%; left: 0; right: 0; margin-top: 12px; padding: 14px; border: 1px solid var(--theme-muted); border-radius: 12px; background: white; box-shadow: 0 16px 28px #30251e18; max-height: 520px; overflow: auto; }
+.api-search-dropdown > .api-row { color: var(--theme-muted); font-size: 11px; }
+.api-close { border: 0; background: transparent; color: var(--theme-muted); font-size: 22px; padding: 0 5px; }
+.api-course-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.api-course-results article { border: 1px solid var(--theme-line); border-radius: 10px; padding: 14px; font-size: 11px; }
+.api-course-results article > .api-row > strong { color: var(--theme-accent, #a87923); font-size: 11px; }
+.api-course-results h3 { font-size: 14px; }.api-course-results .button { padding: 0 10px; height: 33px; font-size: 11px; }
+.api-search-pages button { border: 1px solid var(--theme-line); padding: 5px 10px; background: white; border-radius: 6px; }
+.api-schedule-workspace.schedule-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; border-top: 1px solid var(--theme-line); padding-top: 16px; margin-top: 14px; overflow: visible; align-items: start; }
+.api-calendar-column.schedule-calendar-column { min-width: 0; display: block; overflow: visible; }
+.api-course-sidebar { min-width: 0; overflow: visible; }
+.api-course-sidebar > .course-list-panel { padding: 14px; border: 1px solid var(--theme-line); border-radius: 10px; }
+.api-course-sidebar .course-list-tools { margin: 12px 0; }.api-course-sidebar .course-list-tools input { width: 100%; }
+.api-course-sidebar .course-list-key { display: flex; margin: 10px 0; font-size: 11px; gap: 14px; }
+.api-course-sidebar .course-list-key span { display: flex; align-items: center; gap: 5px; }
+.api-sidebar-courses { display: flex; flex-direction: column; gap: 8px; max-height: 440px; overflow: auto; }
+.api-sidebar-card { padding: 10px; border: 1px solid var(--theme-line); border-radius: 10px; background: var(--theme-surface); font-size: 12px; }
+.api-sidebar-card > .api-row:first-child { justify-content: start; gap: 8px; }
+.api-course-title { display: block; border: 0; background: transparent; padding: 6px 0; text-align: left; font: 600 13px/1.4 'DM Sans', sans-serif; color: var(--theme-ink); }
+.api-sidebar-card .button { min-height: 28px; height: 28px; padding: 0 8px; font-size: 10px; }
+.api-sidebar-card select { font-size: 10px; padding: 5px; }
+.api-sidebar-card .catalog-prediction { font-size: 10px; margin: 5px 0 10px; }
+.api-sidebar-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.api-sidebar-actions .button { width: 100%; font-size: 12px; min-height: 36px; }
+.api-plan-panel { padding: 20px; border: 1px solid var(--theme-line); background: var(--theme-white); border-radius: 14px; min-width: 0; }
+.api-plan-panel .intelligence-heading { margin-bottom: 14px; border-bottom: 1px solid var(--theme-line); padding-bottom: 14px; }
+.api-plan-panel .intelligence-heading strong { font-size: 19px; }.api-plan-panel .intelligence-heading small { display: block; font-size: 12px; margin-top: 4px; color: var(--theme-muted); }
+.api-ai { margin-bottom: 20px; border-bottom: 1px solid var(--theme-line); padding-bottom: 20px; }
+.api-ai textarea { width: 100%; min-height: 90px; margin: 8px 0; }.api-ai p { font-size: 12px; color: var(--theme-muted); }
+.api-ai pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; font-size: 11px; }
+.api-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.api-planner details { margin: 12px 0; }.api-planner summary { cursor: pointer; font-weight: 600; font-size: 12px; }
+.api-day-options { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }.api-day-options label { flex-direction: row; align-items: center; font-size: 10px; }
+.api-error { color: #76281e; background: #fff1ed; border: 1px solid #dfac9c; border-radius: 9px; padding: 10px 12px; margin: 10px 0; overflow-wrap: anywhere; font-size: 12px; }
+.api-error small { display: block; }.api-field-error { color: #a02e20; }.api-error .button { margin-top: 8px; font-size: 11px; }
+.api-results { padding: 14px 0; margin-top: 14px; border-top: 1px solid var(--theme-line); }
+.api-alternatives { display: flex; gap: 10px; overflow-x: auto; margin: 12px 0; }
+.api-alternatives button { display: flex; flex-direction: column; gap: 8px; text-align: left; min-width: 200px; max-width: 320px; padding: 12px; border: 1px solid var(--theme-line); border-radius: 10px; background: white; font-size: 12px; }
+.api-alternatives button[aria-pressed="true"] { border-color: var(--theme-brown); background: var(--theme-tint); }
+.api-schedule-facts { display: flex; gap: 8px 14px; flex-wrap: wrap; margin: 12px 0; font-size: 12px; }.api-schedule-facts small { width: 100%; color: var(--theme-muted); }.api-schedule-facts dl > div { display: flex; gap: 14px; }
+.api-week .manual-schedule-heading { margin: 0 0 12px; }.api-week .sem-credit-meter { margin: 0; }
+.api-calendar-scroll { overflow: auto; max-height: max(300px, calc(100dvh - 310px)); border: 1px solid var(--theme-muted); border-radius: 8px; }
+.api-calendar-sheet { --calendar-hour: 50px; --calendar-gutter: 76px; min-width: calc(var(--calendar-gutter) + var(--calendar-days) * 92px); }
+.api-calendar-days { display: grid; grid-template-columns: var(--calendar-gutter) repeat(var(--calendar-days), minmax(0,1fr)); min-height: 44px; align-items: center; position: sticky; top: 0; z-index: 3; background: var(--theme-surface); text-align: center; border-bottom: 1px solid var(--theme-line); }
+.api-calendar-days strong { font-size: 10px; color: var(--theme-brown); }
+.api-calendar-grid { position: relative; height: calc(var(--calendar-hours) * var(--calendar-hour)); background-image: linear-gradient(to right,var(--theme-line) 1px,transparent 1px),linear-gradient(to bottom,var(--theme-line) 1px,transparent 1px); background-size: calc((100% - var(--calendar-gutter)) / var(--calendar-days)) 100%, 100% var(--calendar-hour); background-position: var(--calendar-gutter) 0; }
+.api-calendar-hour { position: absolute; top: calc(var(--hour) * var(--calendar-hour)); width: var(--calendar-gutter); height: var(--calendar-hour); padding: 5px 10px 0 0; text-align: right; font-size: 11px; font-weight: 600; background: var(--theme-surface); color: var(--theme-muted); border-right: 1px solid var(--theme-line); }
+.api-calendar-event { position: absolute; left: calc(var(--calendar-gutter) + var(--event-day) * ((100% - var(--calendar-gutter)) / var(--calendar-days)) + 3px); width: calc((100% - var(--calendar-gutter)) / var(--calendar-days) - 6px); top: calc(var(--event-top) * var(--calendar-hour)); height: calc(var(--event-height) * var(--calendar-hour)); min-height: 22px; padding: 7px; border: 0; border-left: 4px solid var(--theme-brown); border-radius: 6px; background: var(--theme-tint); color: var(--theme-ink); overflow: auto; text-align: left; font-size: 11px; }
+.api-calendar-event strong { color: var(--theme-brown); }.api-calendar-event span, .api-calendar-event small { display: block; }
+.api-section-list { padding-left: 18px; font-size: 11px; }.api-section-list:empty { display: none; }.api-section-list li { padding: 5px 0; }.api-section-list button { margin-left: 10px; border: 1px solid var(--theme-line); background: white; border-radius: 5px; }
+.api-week > p { color: var(--theme-muted); font-size: 11px; }
+.api-course-dialog, .api-calendar-dialog { border: 1px solid var(--theme-line); border-radius: 14px; padding: 24px; margin: auto; max-width: min(950px, 95vw); width: 95vw; max-height: 90vh; overflow: auto; background: var(--theme-white); color: var(--theme-ink); }
+.api-calendar-dialog { max-width: 96vw; }.api-calendar-dialog .api-calendar-scroll { max-height: 75vh; margin-top: 14px; }
+.api-course-dialog::backdrop, .api-calendar-dialog::backdrop { background: #21181088; }
+.api-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }.api-actions .button { font-size: 12px; }
+.api-prototype-label { color: var(--theme-brown); }.api-saved { display: contents; }
+@media(max-width: 1200px) { .api-planner-columns.is-assistant-open { grid-template-columns: minmax(0,1fr); }.api-plan-panel { grid-row: 1; }.api-planner-columns.is-assistant-open .api-plan-panel { max-height: 65vh; overflow: auto; } }
+@media(max-width: 900px) { .api-schedule-workspace.schedule-workspace { grid-template-columns: minmax(0,1fr); }.api-course-sidebar { max-height: 440px; }.api-sidebar-courses { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }.api-course-sidebar > .course-list-panel { padding: 12px; } }
+@media(max-width: 600px) { .api-semester-main.manual-planner { padding: 12px; }.api-search { grid-template-columns: minmax(0,1fr); gap: 7px; }.api-search .api-subject-label { flex-direction: row; align-items: center; justify-content: start; gap: 8px; }.api-subject-label input { height: 29px; width: 130px; font-size: 10px; }.api-course-results { grid-template-columns: 1fr; }.api-sidebar-courses { grid-template-columns: 1fr; }.api-week .schedule-tools { gap: 4px; }.api-week .schedule-tools .button { padding: 0 8px; height: 32px; font-size: 11px; }.api-calendar-days strong { font-size: 9px; }.api-term-label select { max-width: 205px; font-size: 12px; } }

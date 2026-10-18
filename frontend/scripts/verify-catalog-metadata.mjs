@@ -13,7 +13,7 @@ let socket;
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks++; };
 const fixture = {
-  courseId: "CSE-099", title: "Synthetic Catalog Course", credits: 3, description: "Synthetic test data only.",
+  courseId: "CSE-099", subject: "CSE", number: "099", sectionCount: 2, title: "Synthetic Catalog Course", credits: 3, description: "Synthetic test data only.",
   predictedRating: { quality: 3.66, difficulty: 2.95, confidence: "LOW", basis: "PREDICTED", sectionsPredicted: 1, sections: 2 },
   conditions: [{ code: "PREREQUISITE", message: "Fixture prerequisite is unverified", evidenceLevel: "TEAM_POLICY", outcome: "UNVERIFIED" }],
   sections: [{ crn: "99001", sectionCode: "010", componentType: "LECTURE", lectureLink: null, credits: 3, status: "UNKNOWN", meetings: [],
@@ -64,7 +64,7 @@ async function availablePort() {
 async function startApp(enabled) {
   const port = await availablePort();
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], {
-    cwd: process.cwd(), env: { ...process.env, BACKEND_URL: enabled ? `http://127.0.0.1:${backendPort}` : "" }, windowsHide: true, stdio: "ignore",
+    cwd: process.cwd(), env: { ...process.env, FRONTEND_MODE: "demo", BACKEND_URL: enabled ? `http://127.0.0.1:${backendPort}` : "" }, windowsHide: true, stdio: "ignore",
   });
   children.push(child);
   for (let attempt = 0; attempt < 120; attempt++) {
@@ -132,7 +132,26 @@ try {
   if (developmentUrl) {
     check((await fetch(app)).status === 200, "Development page returns HTTP 200");
     check(await evaluate("document.body.dataset.activeScreen==='planner'"), "Development login opens planner");
-    check(await evaluate("document.querySelectorAll('.course-list-card').length>0"), "Development planner renders courses");
+    const apiMode = await evaluate("document.documentElement.dataset.sylloMode==='api'");
+    if (apiMode) {
+      await waitFor("document.querySelector('[data-api-planner]')", "development API planner");
+      check(await evaluate("getComputedStyle(document.querySelector('.api-planner-columns')).display==='grid'"), "API planner stylesheet loaded in development");
+      check(await evaluate("getComputedStyle(document.querySelector('.planner-layout > .manual-planner')).display==='none'"), "API mode hides the prototype planner");
+      check(await evaluate("document.querySelector('.api-plan-panel').hidden"), "Planning preferences start collapsed");
+      check(await evaluate("document.querySelector('#syllo-ai-toggle').checkVisibility()"), "Original header AI button remains visible");
+      for (const [width, height] of [[1440,900], [800,700], [390,844]]) {
+        await screenshot(`semester-api-${width}.png`, width, height);
+        check(await evaluate("document.documentElement.scrollWidth<=innerWidth+1"), `${width}: restored semester layout fits viewport`);
+        check(await evaluate("document.querySelector('.api-week').checkVisibility()"), `${width}: calendar remains in the main workspace`);
+        if (width === 1440) check(await evaluate("document.querySelector('.api-calendar-column').getBoundingClientRect().right<=document.querySelector('.api-course-sidebar').getBoundingClientRect().left"), "Calendar is left of the course list");
+      }
+      await evaluate("document.querySelector('#syllo-ai-toggle').click()");
+      check(await evaluate("!document.querySelector('.api-plan-panel').hidden&&document.querySelector('#syllo-ai-toggle').getAttribute('aria-expanded')==='true'"), "Header button opens actual API preferences");
+      await evaluate("document.querySelector('[aria-label=\"Close Intelligent Planning\"]').click()");
+      check(await evaluate("document.querySelector('.api-plan-panel').hidden"), "Planning assistant closes again");
+    } else {
+      check(await evaluate("document.querySelectorAll('.course-list-card').length>0"), "Development planner renders courses");
+    }
     check(await evaluate("(()=>{const probe=document.createElement('div');probe.className='catalog-prediction';document.body.append(probe);const loaded=getComputedStyle(probe).borderTopStyle==='dashed';probe.remove();return loaded})()"), "Catalog stylesheet loaded in development");
     check(errors.length === 0, "No development browser exceptions or console errors");
     console.log(`PASS: ${checks} running-development-server checks`);

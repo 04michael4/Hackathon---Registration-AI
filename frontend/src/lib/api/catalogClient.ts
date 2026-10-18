@@ -1,4 +1,5 @@
 import type { CourseDetail, CourseSearchResponse } from "./types";
+import { requestJson } from "./httpClient";
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const count = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value >= 0;
@@ -15,7 +16,7 @@ function prediction(value: unknown): boolean {
 
 function summary(value: unknown): boolean {
   return record(value) && typeof value.courseId === "string" && /^[A-Z]+-\d+(?:-\d+)?$/.test(value.courseId) &&
-    typeof value.title === "string" && count(value.credits) && prediction(value.predictedRating);
+    typeof value.subject === "string" && typeof value.number === "string" && typeof value.title === "string" && count(value.credits) && prediction(value.predictedRating);
 }
 
 function instructor(value: unknown): boolean {
@@ -48,16 +49,14 @@ export function termIdFromPlanner(term: string): string {
 }
 
 async function readJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { cache: "no-store", credentials: "omit", signal });
-  // Do not log response bodies: they can contain real instructor names.
-  if (!response.ok) throw new Error(response.status === 404 ? "Course not found in this term" : "Catalog unavailable");
-  return response.json();
+  return requestJson<unknown>(url, { signal });
 }
 
-export async function searchCatalog(text: string, term: string, page = 0, signal?: AbortSignal): Promise<CourseSearchResponse> {
+export async function searchCatalog(text: string, term: string, page = 0, signal?: AbortSignal, subject = ""): Promise<CourseSearchResponse> {
   const query = new URLSearchParams({ term, q: text, page: String(page), size: "20" });
-  const data = await readJson(`/api/catalog/courses?${query}`, signal);
-  if (!record(data) || !Array.isArray(data.items) || !data.items.every(summary) ||
+  if (subject) query.set("subject", subject);
+  const data = await readJson(`/api/backend/courses?${query}`, signal);
+  if (!record(data) || !Array.isArray(data.items) || !data.items.every(item => summary(item) && record(item) && count(item.sectionCount)) ||
       ![data.page, data.size, data.totalItems, data.totalPages].every(count)) {
     throw new Error("Invalid catalog response");
   }
@@ -67,7 +66,7 @@ export async function searchCatalog(text: string, term: string, page = 0, signal
 export async function loadCourseDetail(code: string, term: string, signal?: AbortSignal): Promise<CourseDetail> {
   const courseId = courseIdFromCode(code);
   const query = new URLSearchParams({ term });
-  const data = await readJson(`/api/catalog/courses/${encodeURIComponent(courseId)}?${query}`, signal);
+  const data = await readJson(`/api/backend/courses/${encodeURIComponent(courseId)}?${query}`, signal);
   if (!record(data) || !summary(data) || data.courseId !== courseId || !nullableText(data.description) ||
       !Array.isArray(data.sections) || !data.sections.every(section) ||
       !Array.isArray(data.conditions) || !data.conditions.every(condition => record(condition) &&

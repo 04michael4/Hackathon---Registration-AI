@@ -21,10 +21,12 @@ const referenceBody = referenceBodyMatch[1].replace(
 );
 
 export default function Home() {
+  const demo = process.env.FRONTEND_MODE === "demo";
+  const body = demo ? referenceBody : referenceBody.replace('<div class="planner-layout ai-closed">', '<div class="planner-layout ai-closed"><div id="api-planner-root"></div>').replace(/<div class="sem-registration">[\s\S]*?<\/div>/, '<div class="sem-registration" id="api-term-header"></div>').replace("Sign in with Lehigh SSO", "Continue to course planner").replace("Demo entry · SSO is not connected", "No account required · SSO is not connected");
   return (
     <>
-      <div id="syllo-reference-root" dangerouslySetInnerHTML={{ __html: referenceBody }} />
-      <ReferenceRuntime catalogEnabled={Boolean(process.env.BACKEND_URL)} />
+      <div id="syllo-reference-root" data-mode={demo ? "demo" : "api"} dangerouslySetInnerHTML={{ __html: body }} />
+      <ReferenceRuntime demo={demo} catalogEnabled={Boolean(process.env.BACKEND_URL)} />
     </>
   );
 }

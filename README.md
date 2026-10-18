@@ -8,7 +8,7 @@ Students describe what they want in plain English, for example *"I need CSE 17 a
 
 | | |
 |---|---|
-| **Current phase** | Local merge resolution on `feature/backend-course-schedule-completion-integrated`: pulls `pre-main` `5aa3e82` into the saved draft `4969f25`. One authoritative PostgreSQL catalog and native solver are used; local terms, metadata and explanation features are retained. Frontend: Next.js browser-local prototype (Plan My Semester, Degree Planner, Advisor portal, Saved schedules) on `feature/data-cse007-snapshot`; not yet connected to these endpoints. |
+| **Current phase** | Frontend/backend integration on `feature/frontend-backend-integration`, based on approved `pre-main` `64c9ed7`. Normal semester planning uses the Course/Schedule APIs, authoritative PostgreSQL catalogs and native solver. Degree/transcript/advisor workspaces remain labeled prototypes. See [run and verification guide](docs/frontend-backend-integration.md). |
 | **What works today** | Course search/detail, terms, generation, manual checks and elective suggestions use the authoritative persistence layer and native solver. Description/instructor metadata and grounded AI explanation from the local draft are retained. Demo catalogs and the superseded draft datasource are test-only. See [merge verification](docs/merge-resolution.md) and the [earlier integration evidence](docs/schedule-final-integration.md). |
 | **Live status** | [HANDOFF.md](HANDOFF.md) |
 
@@ -41,12 +41,12 @@ The AI never decides whether a schedule is valid, so results are always correct,
 |---|---|---|
 | Backend foundation and health check | ✔ | ✅ Implemented, verified |
 | Shared error handling, validation infrastructure, CORS | ✔ | ✅ Implemented, verified locally on `feature/backend-common` |
-| Course search by code/title for a term | ✔ | ✅ Existing endpoints use the authoritative PostgreSQL catalogs; production has no hardcoded catalog. Frontend search (forgiving codes) is 🟡 browser-local, not wired to the API |
+| Course search by code/title for a term | ✔ | Implemented in the API and connected semester UI, with subject filters/pagination and actual PostgreSQL data |
 | AI preference extraction from free text | ✔ | ✅ Implemented and live-verified; integrated with `common` on `integrate/ai-into-pre-main` (PR to `pre-main` pending) |
-| Editable preference form (works without AI too) | ✔ | 🟡 Browser-local form in the frontend prototype; not wired to the API |
+| Editable preference form (works without AI too) | ✔ | Connected to the Schedule API with required/optional courses, credits, weights, times and backend validation |
 | Conflict-free schedule generation, ranked by preferences | ✔ | ✅ Authoritative PostgreSQL catalog, real native engine and actual HTTP verified |
-| Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | 🟡 Backend done (`/api/schedules/check`, `/api/schedules/suggest-electives`); the frontend prototype has a browser-local manual planner not yet wired to them |
-| Weekly calendar view of generated schedules | ✔ | 🟡 Browser-local calendar in the frontend prototype; not wired to the API |
+| Manual mode (drag sections, live conflict/lab checks) and elective suggestions | ✔ | Connected semester UI uses `/api/schedules/check` and `/api/schedules/suggest-electives`; real HTTP/native-engine behavior verified |
+| Weekly calendar view of generated schedules | ✔ | Connected to returned sections/meetings, with alternative selection, exact credits/scores and TBA handling |
 | AI explanation of a schedule | Stretch | ✅ Implemented; offline full-pipeline provider tests pass; paid-provider quality not evaluated |
 | Prerequisite checking, degree audit, saved schedules, user accounts, actually registering for classes | ✘ Out of scope | — |
 
@@ -58,7 +58,7 @@ The AI never decides whether a schedule is valid, so results are always correct,
 | Scheduling | Plain Java (no solver library) | Small problem size; deterministic, dependency-free and easy to debug ([Architecture § 7](docs/architecture.md#7-scheduling-engine)) |
 | Database | PostgreSQL with the integrated Hikari/Spring JDBC catalog | Reuses `CatalogDatabaseConfiguration`, `JdbcCatalogDao`, `JdbcCourseCatalog`, `JdbcSectionCatalog` and Data's checked-in views (see [docs/database.md](docs/database.md)); no competing persistence architecture |
 | AI | Anthropic Claude API via the official Java SDK *(planned)* | Structured, schema-constrained output for reliable extraction |
-| Frontend | **Next.js 16 + React 19 + strict TypeScript + Tailwind CSS 4** | Typed UI and reusable components; browser-local mock implemented, backend integration planned |
+| Frontend | **Next.js 16 + React 19 + strict TypeScript + Tailwind CSS 4** | Semester catalog/scheduling integrated; remaining degree/advisor prototypes explicitly labeled |
 
 ## Architecture
 
@@ -144,7 +144,7 @@ cd Hackathon---Registration-AI
 ### 3. Environment variables
 
 ```bash
-cp .env.example .env    # optional right now; nothing is required yet
+cp .env.example .env    # placeholders only; export backend variables in your shell
 ```
 
 | Variable | Used by | Required now? | Default |
@@ -159,10 +159,12 @@ cp .env.example .env    # optional right now; nothing is required yet
 | `AI_PROVIDER` | Backend | No | `none`: AI extraction returns 503. `dummy`: fixed example, no key. `claude`: real Claude API. |
 | `ANTHROPIC_API_KEY` | Backend, only when `AI_PROVIDER=claude` | For real AI only | Unset: with `claude`, the endpoint returns 503. Never commit it. |
 | `ANTHROPIC_MODEL` | Backend | No | `claude-haiku-5-5` |
-| `NEXT_PUBLIC_API_BASE_URL` | Frontend backend integration *(planned; unused today)* | No | `http://localhost:8080` |
-| `BACKEND_URL` | Next.js server, optional private live catalog browser | No | Unset (offline demo). Set to `http://127.0.0.1:8080` in `frontend/.env.local` to show API predictions with confidence, conditions and per-section instructor ratings; keep unset for public deployments while Banner redistribution is unresolved |
+| `FRONTEND_MODE` | Next.js server | No | `api`; set exactly `demo` for the explicit offline prototype |
+| `BACKEND_URL` | Next.js server | Required for live semester workflows | Set `http://127.0.0.1:8080` in `frontend/.env.local`; browser uses the same-origin proxy. Missing config shows an error. Private app only while Banner redistribution is unresolved |
 
 `.env` is git-ignored; never commit real credentials. Spring Boot does **not** read `.env` automatically. Export variables in your shell (`export PORT=9090`) or set them in your IDE's run configuration.
+
+On Windows, the local launcher reads the private root `.env` without printing its values. From the repository root run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\backend\start-local.ps1`. It loads the file into that process, uses JDK 21 when installed, and starts through the repository Maven wrapper (Git Bash is preferred to avoid the existing Windows wrapper issue). Add `-Packaged` to run the already-built JAR instead; rebuild after Java changes. No machine-wide execution-policy change is made. Keep database credentials in root `.env`, and only the server URL in `frontend/.env.local`.
 
 `CORS_ALLOWED_ORIGINS` accepts comma-separated exact frontend origins, for example `http://localhost:3000,https://planner.example`. Do not include trailing slashes, paths, or wildcards. The allowlist replaces the localhost default. An empty value disables cross-origin access when using a same-origin frontend proxy. CORS covers `/api/**`, allows GET/HEAD/POST/OPTIONS with Accept/Content-Type headers, and disables credentials. Error responses use Problem Details with a `requestId` and matching `X-Request-Id` header; see the [API contract](docs/api-contract.md#error-responses).
 
@@ -277,10 +279,11 @@ Stop the server with `Ctrl+C`. PostgreSQL configuration is required for the prod
 ```bash
 cd frontend
 npm ci
-npm run dev        # http://localhost:3000; browser-local mock, no backend required
+# Set BACKEND_URL in frontend/.env.local using frontend/.env.example; preserve existing settings.
+npm run dev        # http://localhost:3000; backend and PostgreSQL run separately
 ```
 
-Run `npm run lint`, `npm test`, and `npm run build` before review. See [frontend/README.md](frontend/README.md) for the project structure and production commands.
+Run `npm run lint`, `npm test`, and `npm run build` before review. See the [integration runbook](docs/frontend-backend-integration.md) for database-backed acceptance tests and connection troubleshooting. Set `FRONTEND_MODE=demo` explicitly for the offline prototype.
 
 ### Troubleshooting
 
@@ -325,7 +328,7 @@ Database setup, running the backend in database mode, and what data is (and is n
 | Course catalog | Authoritative read-only PostgreSQL adapters integrated from pre-main; hardcoded catalogs retained only as test fixtures See [docs/database.md](docs/database.md) |
 | Scheduling engine | ✅ Implemented and connected to `/api/schedules/generate`; manual-mode checks and elective suggestions exposed (see [architecture.md § 7](docs/architecture.md#7-scheduling-engine)) |
 | AI integration (preference extraction) | ✅ Implemented and live-verified (eval 19/20); integrated with Marpu's error handling and CORS on `integrate/ai-into-pre-main` (177/177 tests), PR to `pre-main` pending. Schedule explanation (stretch) ⬜ |
-| Frontend | ✅ Next.js/React/TypeScript/Tailwind prototype implemented and verified (browser-local data; Plan My Semester, Degree Planner, Advisor portal, Saved schedules). Backend integration ⬜ planned |
+| Frontend | Semester catalog/scheduling integrated and verified with PostgreSQL/native solver. Degree/advisor remain labeled sample data; explicit offline demo retained. |
 | CI, deployment | ⬜ Not started; no deployed URL exists |
 
 Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
@@ -346,7 +349,7 @@ Details, test results and next steps: **[HANDOFF.md](HANDOFF.md)**.
 **Current limitations**
 - Production scheduling is verified through PostgreSQL and the native solver. Only the certified CSE 007 source dataset is shipped; full-university/current-seat coverage and deployment remain separate work.
 - The catalog views deliberately expose only certified schedulable courses. Fractional/unknown credits and unconfirmed relationships remain excluded by the authoritative readiness rules; historical availability remains UNKNOWN.
-- The frontend is a browser-local mock and is not connected to the backend catalog, scheduling or AI endpoints yet.
+- The semester frontend connects to catalog/scheduling/AI APIs. Degree/transcript/advisor APIs and server-side accounts/saved plans do not exist; those workspaces remain prototypes and semester plans save in this browser only. Live paid AI was not rerun for this integration.
 - No CI pipeline and no deployment.
 - No authentication. This is acceptable because the MVP stores no user data.
 - `.env` files aren't loaded automatically by Spring.
@@ -614,53 +617,11 @@ RUN_LIVE_AI=true ./mvnw test -Dtest=ClaudeLiveEval -Dsurefire.failIfNoSpecifiedT
 
 **Owns:** `frontend/`.
 
-**Responsibilities**
-- [ ] Create the Next.js project.
-- [ ] Write a typed API client that mirrors `api-contract.md`.
-- [ ] Build the free-text input page, the editable preferences form, and the results page with a weekly calendar.
-- [ ] Handle loading, error and empty states. If AI is unavailable, fall back to the manual form.
-- [ ] Proxy API calls to the backend.
+The existing Next.js project now connects semester planning to the approved Course/Schedule APIs. Shared JSON types live in `src/lib/api/types.ts`; `httpClient.ts`, `catalogClient.ts`, and `scheduleClient.ts` handle requests/validation. The allowlisted `/api/backend` route uses server-only `BACKEND_URL`, preserves Problem Details and does not forward cookies or keys. Avoid a broad rewrite or a second incompatible client.
 
-**How to build it**
+The normal flow is catalog search/detail, required/optional selection, editable scheduling constraints, optional reviewed AI extraction, real generation, alternative comparison and a seven-day calendar. Manual changes and saved-plan refresh call the backend checker. Scores are never computed locally. Degree/transcript/advisor APIs remain unavailable, so their workspaces are explicitly sample data. `FRONTEND_MODE=demo` retains the original offline prototype without becoming a normal-mode fallback.
 
-1. **Create the project:**
-   ```bash
-   npx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir
-   ```
-   If it refuses because `frontend/README.md` exists, move that file out, create the project, then merge the notes back.
-2. **Avoid CORS with a proxy.** In `next.config.ts`:
-   ```ts
-   async rewrites() {
-     return [{ source: "/api/:path*", destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/api/:path*` }];
-   }
-   ```
-   The frontend then calls relative `/api/...` URLs. Add `BACKEND_URL` to `.env.example`, and tell Marpu so no CORS config is needed.
-3. **Types and client.** `src/lib/api/types.ts` mirrors the JSON in `api-contract.md`. `src/lib/api/client.ts` wraps `fetch` and turns error responses into typed errors.
-4. **Mock first.** `src/lib/api/mocks.ts` returns the example responses from `api-contract.md` when `NEXT_PUBLIC_USE_MOCKS=true`. You can then build every screen before the backend is ready.
-5. **User flow:**
-   - **`/`:** term picker and a text box ("Describe your ideal schedule"). Submitting calls `/api/preferences/extract`.
-   - **Preferences form:**
-     - required and optional courses, with search-as-you-type using `/api/courses`;
-     - blocked times;
-     - earliest start and latest end;
-     - day-off toggles;
-     - 0–5 weight sliders.
-
-     The student edits these values, then clicks **Generate**.
-   - **`/results`:** ranked schedules, each shown on a weekly calendar with its score breakdown.
-6. **Weekly calendar.** A CSS grid with Tailwind is enough; you don't need a calendar library. Use 5 columns (Mon–Fri) and one row per 15 minutes from 08:00 to 22:00.
-   - Place each meeting at row `(startMinutes − 480) / 15 + 1`, spanning `durationMinutes / 15` rows.
-   - Example: 10:45 is 645 minutes after midnight, so it starts at row 12.
-7. **States to handle:**
-   - Show a spinner while loading.
-   - Show the `detail` field from error responses.
-   - On `503` from AI, open the manual form.
-   - If `schedules` is empty, show `diagnostics`.
-
-**Done when:**
-- The full flow works against the real backend, and with mocks offline.
-- `npm run lint` passes.
-- The run commands are in `frontend/README.md` and this README.
+Setup, endpoint mapping, supported limits, commands and acceptance fixture provisioning are in the [integration runbook](docs/frontend-backend-integration.md) and [frontend README](frontend/README.md). Before review run unit tests, lint/build, synthetic catalog/degree regressions and the real PostgreSQL/Spring Boot browser suite. Do not use shared databases for tests or publish real instructor names while redistribution is unresolved.
 
 ---
 

@@ -9,7 +9,7 @@ import type { CourseDetail, PredictedRating } from "./types";
 const prediction: PredictedRating = { quality: 3.66, difficulty: 2.95, confidence: "LOW", basis: "PREDICTED", sectionsPredicted: 1, sections: 3 };
 // Synthetic instructors only; never copy Banner names or API captures into fixtures.
 const detail: CourseDetail = {
-  courseId: "CSE-099", title: "Synthetic Fixture Course", credits: 3, description: null,
+  courseId: "CSE-099", subject: "CSE", number: "099", title: "Synthetic Fixture Course", credits: 3, description: null,
   predictedRating: prediction,
   conditions: [{ code: "PREREQUISITE", message: "Prerequisite has not been verified", evidenceLevel: "TEAM_POLICY", outcome: "UNVERIFIED" }],
   sections: [{ crn: "99001", sectionCode: "010", componentType: "LECTURE", lectureLink: null, credits: 3, status: "UNKNOWN", meetings: [],
@@ -90,7 +90,7 @@ describe("runtime catalog client", () => {
   });
 
   it("searches the actual API catalog with pagination and retains prediction metadata", async () => {
-    const response = { items: [detail], page: 2, size: 20, totalItems: 41, totalPages: 3 };
+    const response = { items: [{ ...detail, sectionCount: 2 }], page: 2, size: 20, totalItems: 41, totalPages: 3 };
     const fetcher = vi.fn().mockResolvedValue(Response.json(response));
     vi.stubGlobal("fetch", fetcher);
     expect(await searchCatalog("CSE 099", "2027-SPRING", 2)).toEqual(response);
@@ -111,7 +111,7 @@ describe("runtime catalog client", () => {
       { code: "COMMON_EXAMS", message: "Fixture exam condition", evidenceLevel: "BANNER", outcome: "UNVERIFIED" },
       { code: "NOT_CHECKED", message: "Fixture eligibility is unchecked", evidenceLevel: "TEAM_POLICY", outcome: "UNVERIFIED" },
     ] };
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ items: [topic], page: 0, size: 20, totalItems: 1, totalPages: 1 }))
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ items: [{ ...topic, sectionCount: 2 }], page: 0, size: 20, totalItems: 1, totalPages: 1 }))
       .mockResolvedValueOnce(Response.json(topic));
     vi.stubGlobal("fetch", fetcher);
     expect((await searchCatalog("CSE 398", "2027-SPRING")).items[0].courseId).toBe("CSE-398-042");
@@ -121,7 +121,7 @@ describe("runtime catalog client", () => {
 
   it("rejects unavailable or malformed detail instead of returning demo ratings", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ detail: "unavailable" }, { status: 503 })));
-    await expect(loadCourseDetail("CSE 099", "2027-SPRING")).rejects.toThrow("Catalog unavailable");
+    await expect(loadCourseDetail("CSE 099", "2027-SPRING")).rejects.toThrow("unavailable");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...detail, courseId: "CSE-100" })));
     await expect(loadCourseDetail("CSE 099", "2027-SPRING")).rejects.toThrow("Invalid catalog response");
   });
@@ -163,7 +163,7 @@ describe("private read-only catalog proxy", () => {
     expect(fetcher).not.toHaveBeenCalled();
     fetcher.mockResolvedValue(Response.json({ detail: "Fixture, PrivateName" }, { status: 500 }));
     const failure = await proxyCatalog(new Request("http://localhost/api/catalog/courses"), ["courses"], "http://localhost:8080");
-    expect(failure.status).toBe(503);
+    expect(failure.status).toBe(500);
     expect(await failure.text()).not.toContain("PrivateName");
   });
 

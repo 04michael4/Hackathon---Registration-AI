@@ -43,24 +43,27 @@
     document.body.classList.toggle('welcome-only',screen==='login');$('product-nav').classList.toggle('hidden',screen==='login');
     document.body.dataset.activeScreen=screen;
     document.querySelectorAll('[data-route]').forEach(button=>{const active=button.dataset.route===screen;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
-    if(screen==='planner')window.SylloPlanner.render();
+    if(screen==='planner')window.SylloPlanner?.render();
     if(screen==='requirements'){S.state.preferences.hiddenDegreeTerms=[];S.persist();window.SylloDegree.render()}
     if(screen==='advisor')window.SylloDegree.renderAdvisor();
     if(screen==='saved')renderSaved();
     renderNotifications();window.scrollTo({top:0});
   }
   function renderSaved(){
+    if(document.documentElement.dataset.sylloMode==='api')return;
     $('saved-list').innerHTML=S.state.saved.length?S.state.saved.map(item=>{
       const ids=item.courses.filter(id=>S.catalog[id]),credit=ids.reduce((sum,id)=>sum+S.catalog[id].credits,0);
       return `<article class="saved-card"><div class="saved-card-kicker"><span>SPRING 2027</span><button data-action="delete-saved" data-id="${safe(item.id)}" aria-label="Delete ${safe(item.name)}">×</button></div><h2>${safe(item.name)}</h2><p>${ids.map(id=>safe(S.catalog[id].code)).join(' · ')||'Empty schedule'}</p><div class="saved-card-meta"><strong>${credit} credits · ${ids.length} courses</strong><time>${safe(new Date(item.savedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))}</time></div><button class="button primary" data-action="load-saved" data-id="${safe(item.id)}">Open schedule →</button><button class="saved-rename" data-action="rename-saved" data-id="${safe(item.id)}">Rename</button></article>`;
     }).join(''):'<div class="saved-empty"><span>↗</span><h2>A good week is worth saving.</h2><p>Build your schedule, choose Save schedule, and find it here.</p><button class="button primary" data-action="open-schedules">Build your first plan →</button></div>';
   }
   function syncDegreeToCalendar(){
+    if(document.documentElement.dataset.sylloMode==='api'){showToast('Sample degree workspace','Select the matching live catalog courses in Plan My Semester. Degree and transcript APIs are not connected.');navigate('planner');return;}
     const ids=(S.state.degree[S.nextTerm]||[]).filter(id=>S.eligible(id).ok),blocked=(S.state.degree[S.nextTerm]||[]).filter(id=>!S.eligible(id).ok);
     S.change('Use degree plan in semester calendar',state=>{state.planner=ids});navigate('planner');
     showToast('Degree courses added to your calendar',blocked.length?`Preview only: ${blocked.map(id=>S.catalog[id].code).join(', ')}. Check their prerequisites or section details.`:'Review the meeting times and save your schedule.');
   }
   function syncCalendarToDegree(){
+    if(document.documentElement.dataset.sylloMode==='api'){showToast('Sample degree workspace','Live semester plans are separate from the sample degree plan.');return;}
     const next=S.nextTerm,later=S.terms.find(t=>!t.past&&t.id!==next).id,candidate=JSON.parse(JSON.stringify(S.state.degree)),ids=S.state.planner;
     const deferred=candidate[next].filter(id=>!ids.includes(id));
     S.terms.filter(t=>!t.past).forEach(t=>{candidate[t.id]=candidate[t.id].filter(id=>!ids.includes(id))});
@@ -111,6 +114,6 @@
   });
   $('saved-name-form').addEventListener('submit',event=>{event.preventDefault();const name=$('saved-name-input').value.trim(),id=$('saved-name-dialog').dataset.id;if(!name)return;S.change('Rename saved schedule',state=>{const item=state.saved.find(item=>item.id===id);if(item)item.name=name.slice(0,80)});$('saved-name-dialog').close()});
   S.subscribe(()=>{renderNotifications();renderSaved()});
-  window.SylloPlanner.init();window.SylloDegree.init();window.SylloAIWidget.init();document.body.dataset.activeScreen=activeScreen;
+  window.SylloPlanner?.init();window.SylloDegree.init();window.SylloAIWidget.init();document.body.dataset.activeScreen=activeScreen;
   renderSaved();renderNotifications();
 })();
