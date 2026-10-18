@@ -96,24 +96,11 @@
     if(closeDrawer&&document.getElementById('detail-drawer').classList.contains('open'))document.querySelector('[data-action="close-drawer"]')?.click();
   }
   document.addEventListener('syllo:drawer-closed',()=>clearDegreeFocus());
+  // The degree page now has one unified search (with an Interest tag) and a floating Syllo AI widget,
+  // so it no longer gets the separate interest box or the calendar / AI tabs. Course focus still applies.
   function enhanceDegree(){
-    const shell=document.querySelector('.degree-shell');if(!shell)return;
-    if(shell.querySelector('.degree-workspace-tabs')){
-      const ai=shell.querySelector('.degree-ai-card');
-      if(ai&&!ai.dataset.degreePanel){ai.dataset.degreePanel='ai';ai.id='degree-panel-ai';ai.setAttribute('role','tabpanel');ai.setAttribute('aria-labelledby','degree-tab-ai');ai.hidden=degreeTab!=='ai'}
-      highlightDegreeCourses();return;
-    }
-    const plan=shell.querySelector('.degree-four-year-plan'),ai=shell.querySelector('.degree-ai-card');
-    if(!plan)return;
-    const search=shell.querySelector('.degree-course-search');
-    if(search&&!search.querySelector('.interest-search'))search.insertAdjacentHTML('beforeend',interestMarkup('requirements'));
-    const tabs=document.createElement('div');tabs.className='degree-workspace-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Degree planning views');
-    tabs.innerHTML=[['plan','Degree calendar'],['ai','Ask Syllo AI']].map(([id,label])=>`<button type="button" role="tab" id="degree-tab-${id}" aria-controls="degree-panel-${id}" data-polish="degree-tab" data-tab="${id}">${label}</button>`).join('');
-    search.after(tabs);
-    [[plan,'plan'],[ai,'ai']].forEach(([el,id])=>{if(el){el.dataset.degreePanel=id;el.id='degree-panel-'+id;el.setAttribute('role','tabpanel');el.setAttribute('aria-labelledby','degree-tab-'+id)}});
-    setDegreeTab(degreeTab);
+    if(!document.querySelector('.degree-shell .degree-semester-calendar'))return;
     highlightDegreeCourses();
-    const input=shell.querySelector('#interest-requirements');if(input){input.value=interestQuery.requirements;if(input.value)renderInterest(input.closest('.interest-search'))}
   }
   function courseStatus(id){
     return S.completed.has(id)?'Done':S.state.preferences.advisorCourseStatuses?.[id]||(S.state.review.comments.some(c=>c.courseId===id)||S.state.review.status==='submitted'?'Review':'Planned');
@@ -184,6 +171,7 @@
   });
   document.addEventListener('click',e=>{
     const cardButton=e.target.closest('.degree-semester-calendar .degree-course-info');
+    if(cardButton&&e.shiftKey)return; // Shift+click selects several courses (degree.js), it doesn't focus one.
     if(cardButton){
       const id=cardButton.dataset.course;
       if(selected===id){e.preventDefault();e.stopImmediatePropagation();clearDegreeFocus(true)}

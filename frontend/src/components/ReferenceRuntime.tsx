@@ -5,8 +5,10 @@ import { useEffect } from "react";
 const runtimeFiles = [
   "data.js",
   "degree-ai.js",
+  "planner-logic.js",
   "semester.js",
   "degree.js",
+  "ai-widget.js",
   "app.js",
   "polish.js",
 ] as const;

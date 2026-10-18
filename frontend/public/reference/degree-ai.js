@@ -17,7 +17,7 @@
     }).join('\n\n');
     if(/elective|interest/.test(text)){
       const choices=Object.entries(api.catalog).filter(([,c])=>!c.required);
-      return `Your plan has ${api.slots.length} free-elective slots. Here are options in the demo catalog:\n\n${choices.map(([,c])=>`${c.code} · ${c.name} — ${c.credits} credits, ${c.interest}${c.prereqs.length?`; take ${c.prereqs.map(id=>api.catalog[id].code).join(', ')} first`:''}`).join('\n')}\n\nClick an elective slot below to compare courses and choose one. Each slot checks credits and prerequisites.`;
+      return `Your plan has ${api.slots.length} free-elective slots. Here are options in the demo catalog:\n\n${choices.map(([,c])=>`${c.code} · ${c.name} — ${c.credits} credits, ${c.interest}${c.prereqs.length?`; take ${c.prereqs.map(id=>api.catalog[id].code).join(', ')} first`:''}`).join('\n')}\n\nClick an elective slot below to compare courses and choose one. Any credit amount works; each semester stays at 21 credits or fewer, and prerequisites are checked.`;
     }
     if(/prereq|sequence|order|before|after/.test(text)){
       const pairs=api.requiredIds.filter(id=>api.catalog[id].prereqs.some(pre=>!api.completed.has(pre)));

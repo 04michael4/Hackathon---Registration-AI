@@ -5,7 +5,10 @@
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   let ready = false, searchOpen = false, searchMode = 'all', contextId = null;
   let preview = null, pendingAdd = null, returnFocus = null;
+  // Temporary "other sections" overlay: { courseId } or null. Never written to the plan, history or storage.
+  let sectionPreview = null, listFilter = 'all', listQuery = '', tipTarget = null;
   const S = () => window.Syllo;
+  const L = () => window.SylloPlannerLogic;
   const esc = value => S().escape(String(value ?? ''));
   const course = id => S().catalog[id];
   const state = () => S().state;
@@ -51,18 +54,17 @@
       </div></details>`;
   }
   function renderSearch() {
-    const query = $('course-search').value.trim().toLowerCase();
-    const tokens = query.split(/\s+/).filter(Boolean);
-    const matches = Object.entries(S().catalog).filter(([id, c]) => {
-      if (searchMode === 'electives' && c.required) return false;
-      const text = [c.code, c.name, c.description, c.requirement, c.section, c.interest].join(' ').toLowerCase();
-      return tokens.every(token => text.includes(token));
-    }).sort(([a], [b]) => Number(eligible(b).ok) - Number(eligible(a).ok));
+    const query = $('course-search').value;
+    // Course codes match without case, spaces or leading zeros (cse17 → CSE 017); titles and keywords as before.
+    const matches = Object.entries(S().catalog)
+      .map(([id, c]) => [id, c, L().searchScore(c, query)])
+      .filter(([, c, score]) => score > 0 && !(searchMode === 'electives' && c.required))
+      .sort((a, b) => b[2] - a[2] || Number(eligible(b[0]).ok) - Number(eligible(a[0]).ok));
     $('course-search-results').innerHTML = `<div class="sem-search-summary">${matches.length} ${searchMode === 'electives' ? 'elective' : 'course'} result${matches.length === 1 ? '' : 's'} · ${esc(termName())}<button type="button" data-sem-action="close-search" aria-label="Close course results">×</button></div>` +
       (matches.length ? matches.map(([id, c]) => {
         const access = eligible(id), added = planned(id), conflicts = clashes(id);
         return `<article class="search-result ${access.ok ? '' : 'sem-blocked'}" draggable="${access.ok && !added}" ${access.ok && !added ? `data-sem-drag="${id}"` : ''}>
-          <div class="search-result-main"><div><span>${esc(c.code)}</span><strong>${esc(c.name)}</strong><small>${c.credits} credits · ${esc(c.days)} · ${esc(c.time)}</small></div>
+          <div class="search-result-main"><div><span>${classTypeBadge(id)}${esc(c.code)}</span><strong>${esc(c.name)}</strong><small>${c.credits} credits · ${esc(c.days)} · ${esc(c.time)}</small></div>
           <button class="button ${added || !access.ok ? 'quiet' : 'primary'}" type="button" data-sem-action="add" data-id="${id}" ${added || !access.ok ? 'disabled' : ''}>${added ? 'Added' : access.ok ? 'Add to Schedule' : 'Preview only'}</button></div>
           ${!access.ok ? `<p class="course-warning sem-prerequisite">${access.reasons.map(esc).join(' ')}${c.prereqs?.length ? ` Take ${esc(prerequisites(c))} first, then revisit this course in a later ${esc(offering(c).toLowerCase())} term.` : ''}</p>` : ''}
           ${access.ok && !added && conflicts.length ? `<p class="course-warning conflict">Overlaps ${conflicts.map(other => esc(course(other).code)).join(', ')}. You can choose which to keep.</p>` : ''}
@@ -70,39 +72,158 @@
       }).join('') : '<div class="empty-state">No matches. Try a course code, department, or a different keyword.</div>');
     setSearch(searchOpen);
   }
-  function sidebarItem(id, type) {
-    const c = course(id), added = planned(id);
-    return `<article class="planner-sidebar-course ${type === 'planned' ? 'planned' : ''}" ${type !== 'planned' && !added ? `draggable="true" data-sem-drag="${id}"` : ''}>
-      <span class="sidebar-course-color" style="background:${c.color}"></span><div><button class="sem-course-link" type="button" data-sem-action="details" data-id="${id}" title="${esc(c.name)} · Open course details"><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span></button></div>
-      <div class="sem-card-actions">${type === 'planned' ? `<button type="button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}">×</button>` : `<button class="course-add-button" type="button" data-sem-action="add" data-id="${id}" aria-label="${added?'Added':'Add'} ${esc(c.code)}" title="${added?'On your schedule and included in AI planning':'Add to your schedule and include in AI planning'}" ${added?'disabled':''}>${added?'Added':'Add'}</button>`}</div></article>`;
+  /** P or R for a course that's on the schedule or recommended; nothing otherwise. */
+  function classTypeOf(id) {
+    return planned(id) ? 'planned' : S().recommendations().includes(id) ? 'recommended' : null;
   }
-  function renderSidebar() {
-    const recommendations = S().recommendations();
-    $('required-course-count').textContent = recommendations.length;
-    $('planned-course-count').textContent = state().planner.length;
-    $('required-course-list').innerHTML = recommendations.length ? recommendations.map(id => sidebarItem(id, 'recommended')).join('') : '<div class="sidebar-empty">No eligible required courses in the demo catalog this term.</div>';
-    $('planned-course-list').innerHTML = state().planner.length ? state().planner.map(id => sidebarItem(id, 'planned')).join('') : '<div class="sidebar-empty">Your calendar is ready. Add a course above.</div>';
+  function classTypeBadge(id) {
+    const type = classTypeOf(id);
+    if (!type) return '';
+    const meta = L().CLASS_TYPES[type];
+    return `<b class="class-type class-type--${type}" aria-hidden="true" title="${meta.label}">${meta.letter}</b><span class="syllo-sr-only">${meta.label}: </span>`;
+  }
+  function ratingChip(id) {
+    const r = L().professorRating(course(id));
+    const value = r.quality === null ? 'n/a' : r.quality.toFixed(1);
+    const label = r.quality === null ? 'Professor rating not available' : `Professor rating ${value} out of 5, ${r.label.toLowerCase()}`;
+    return `<span class="rating-chip rating-${r.tier}" tabindex="0" data-tip="rating" data-id="${id}" aria-label="${esc(label)}"><i aria-hidden="true"></i>${value}</span>`;
+  }
+  function courseCard({ id, type, alsoRecommended }) {
+    const c = course(id), meta = L().CLASS_TYPES[type], previewing = sectionPreview?.courseId === id;
+    const spoken = type === 'planned' && alsoRecommended ? `${meta.label}, also recommended for your degree` : meta.label;
+    const actions = type === 'planned'
+      ? `<button type="button" class="card-icon-button" data-sem-action="preview-sections" data-id="${id}" aria-pressed="${previewing}" aria-label="Preview other sections of ${esc(c.code)}" title="Preview other sections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="10" height="9" rx="1.5"/><rect x="10.5" y="10" width="10" height="9" rx="1.5" stroke-dasharray="2.4 2"/></svg></button><button type="button" class="card-icon-button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}" title="Remove from schedule">×</button>`
+      : `<button class="course-add-button" type="button" data-sem-action="add" data-id="${id}" aria-label="Add ${esc(c.code)} to your schedule">Add</button>`;
+    return `<article class="course-list-card is-${type}${previewing ? ' is-previewing' : ''}" role="listitem" ${type === 'recommended' ? `draggable="true" data-sem-drag="${id}"` : ''}>
+      <b class="class-type class-type--${type}" aria-hidden="true" title="${meta.label}">${meta.letter}</b>
+      <button class="sem-course-link" type="button" data-sem-action="details" data-id="${id}" title="${esc(c.name)} · open course details"><span class="syllo-sr-only">${esc(spoken)}: </span><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span></button>
+      ${ratingChip(id)}<div class="sem-card-actions">${actions}</div></article>`;
+  }
+  function renderCourseList() {
+    // Re-rendering replaces the cards; keep keyboard focus on the same control (or the same course).
+    const active = document.activeElement?.closest?.('#course-list-items [data-id]');
+    const focusKey = active ? { action: active.dataset.semAction, id: active.dataset.id } : null;
+    const items = L().courseList(state().planner, S().recommendations());
+    const counts = { all: items.length, planned: items.filter(i => i.type === 'planned').length, recommended: items.filter(i => i.type === 'recommended').length };
+    document.querySelectorAll('[data-course-filter]').forEach(button => {
+      const key = button.dataset.courseFilter;
+      button.setAttribute('aria-pressed', String(key === listFilter));
+      button.innerHTML = `${({ all: 'All', planned: 'Planned', recommended: 'Recommended' })[key]} <span>${counts[key]}</span>`;
+    });
+    const visible = items.filter(item => (listFilter === 'all' || item.type === listFilter) && L().searchScore(course(item.id), listQuery) > 0);
+    $('course-list-count').textContent = visible.length;
+    $('course-list-items').innerHTML = visible.length ? visible.map(courseCard).join('')
+      : `<div class="sidebar-empty">${items.length ? 'No courses match this filter.' : 'Nothing planned or recommended yet. Search for a course above.'}</div>`;
+    if (focusKey) (document.querySelector(`#course-list-items [data-sem-action="${focusKey.action}"][data-id="${focusKey.id}"]`) || document.querySelector(`#course-list-items [data-sem-action="details"][data-id="${focusKey.id}"]`))?.focus();
+  }
+  function sectionPreviewData() {
+    if (!sectionPreview) return null;
+    const c = course(sectionPreview.courseId);
+    const sections = L().alternativeSections(c);
+    return { c, sections, blocks: L().previewBlocks(c, sections, weekdays) };
+  }
+  const statusText = status => status ? `${status} · demo seat status` : 'Seat status not available';
+  function previewBlockMarkup(block, c, lanes) {
+    const { lane, lanes: count } = lanes[block.key] || { lane: 0, lanes: 1 };
+    const top = Math.max(0, (block.start - 480) / 540 * 100), height = Math.min(100 - top, (block.end - block.start) / 540 * 100);
+    const label = `Alternative section preview: ${c.code} section ${block.section}, ${block.component}, ${block.days} ${block.time}, ${block.instructor || 'instructor not listed'}, ${statusText(block.status)}. Not on your schedule.`;
+    return `<div class="planner-calendar-event is-section-preview" tabindex="0" role="group" aria-label="${esc(label)}" data-tip="section" data-id="${sectionPreview.courseId}" data-section="${esc(block.section)}" style="--day:${weekdays.indexOf(block.day) + 1};--top:${top}%;--height:${height}%;--sem-lane:${lane};--sem-lanes:${count}">
+      <strong>${esc(c.code)} · ${esc(block.section)}</strong><span>${esc(block.component)}</span><em class="preview-status">${esc(block.status || 'Status n/a')}</em></div>`;
+  }
+  function renderSectionPreviewNotice(alt) {
+    const box = $('sem-section-preview');
+    if (!alt) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    const n = alt.sections.length, code = esc(alt.c.code);
+    box.innerHTML = n
+      ? `<span class="preview-swatch" aria-hidden="true"></span><p><strong>Previewing ${n} other section${n === 1 ? '' : 's'} of ${code}</strong><span>Dashed outlines aren’t on your schedule. Hover or focus one for details.</span></p><button type="button" class="button quiet" data-sem-action="clear-section-preview">Clear preview <span aria-hidden="true">×</span></button>`
+      : `<p><strong>${code} has no other sections in ${esc(termName())}.</strong><span>Your scheduled section ${esc(L().sectionNumber(alt.c))} is the only one offered.</span></p><button type="button" class="button quiet" data-sem-action="clear-section-preview">Dismiss</button>`;
+  }
+  function renderUndo() {
+    const button = $('sem-undo'), label = S().undoLabel;
+    button.disabled = !S().canUndo;
+    button.setAttribute('aria-label', label ? `Undo: ${label}` : 'Undo, nothing to undo yet');
+    button.title = label ? `Undo “${label}” (Ctrl or ⌘ + Z)` : 'Nothing to undo yet';
   }
   function renderCalendar() {
     const ids = state().planner;
     $('planner-credit-total').textContent = credits(ids);
+    $('planner-credit-target').textContent = `planned · target ${preferences().minCredits}–${preferences().maxCredits}`;
+    renderUndo();
     const pairs = pairConflicts(ids), conflictIds = new Set(pairs.flat());
     const holder = $('planner-calendar-events');
-    holder.innerHTML = ids.length ? ids.flatMap(id => {
+    const alt = sectionPreviewData();
+    // With a preview showing, placed courses and previews share lanes so nothing hides behind a preview.
+    const placedBlocks = ids.flatMap(id => { const range = S().timeRange(id); return range ? S().days(id).filter(day => weekdays.includes(day)).map(day => ({ key: `${id}|${day}`, day, start: range[0], end: range[1] })) : []; });
+    const lanes = alt ? L().assignLanes([...placedBlocks, ...alt.blocks]) : null;
+    holder.innerHTML = ids.length || alt?.blocks.length ? ids.flatMap(id => {
       const c = course(id), range = S().timeRange(id);
       if (!range) return [];
       const [start, end] = range;
       const top = Math.max(0, (start - 480) / 540 * 100), height = Math.min(100 - top, (end - start) / 540 * 100);
+      const r = L().professorRating(c), source = sectionPreview?.courseId === id;
+      const ratingText = r.quality === null ? 'professor rating not available' : `professor rating ${r.quality.toFixed(1)} of 5, ${r.label.toLowerCase()}`;
       return S().days(id).filter(day => weekdays.includes(day)).map(day => {
-        const sameDayOverlap = ids.filter(other => other !== id && S().days(other).includes(day) && clashes(id, [other]).includes(other));
-        const overlapGroup = [id, ...sameDayOverlap].sort(), lane = overlapGroup.indexOf(id), lanes = overlapGroup.length;
-        return `<article class="planner-calendar-event ${conflictIds.has(id) ? 'has-conflict' : ''}" draggable="false" style="--day:${weekdays.indexOf(day) + 1};--top:${top}%;--height:${height}%;--event-color:${c.color};--event-bg:${c.bg};--sem-lane:${lane};--sem-lanes:${lanes}" data-sem-course="${id}" tabindex="0" role="button" aria-label="${esc(c.code)}, ${day}, ${formatTime(start)} to ${formatTime(end)}. Open course details; right-click for options." title="${esc(c.name)} · ${esc(c.time)}${conflictIds.has(id) ? ' · Time conflict' : ''}">
-        <button type="button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}">×</button><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span><small>${formatTime(start)}–${formatTime(end)}</small>${conflictIds.has(id) ? '<b class="sem-event-warning">Overlap</b>' : ''}</article>`;
+        let lane, lanesCount;
+        if (lanes) ({ lane, lanes: lanesCount } = lanes[`${id}|${day}`]);
+        else {
+          const sameDayOverlap = ids.filter(other => other !== id && S().days(other).includes(day) && clashes(id, [other]).includes(other));
+          const overlapGroup = [id, ...sameDayOverlap].sort(); lane = overlapGroup.indexOf(id); lanesCount = overlapGroup.length;
+        }
+        return `<article class="planner-calendar-event rating-${r.tier} ${conflictIds.has(id) ? 'has-conflict' : ''} ${source ? 'is-preview-source' : ''}" draggable="false" style="--day:${weekdays.indexOf(day) + 1};--top:${top}%;--height:${height}%;--event-color:${c.color};--event-bg:${c.bg};--sem-lane:${lane};--sem-lanes:${lanesCount}" data-sem-course="${id}" tabindex="0" role="button" aria-label="${esc(c.code)}, ${day}, ${formatTime(start)} to ${formatTime(end)}, ${ratingText}${source ? ', current section' : ''}. Open course details; right-click or press Shift+F10 for options." title="${esc(c.name)} · ${esc(c.time)}${conflictIds.has(id) ? ' · Time conflict' : ''}">
+        <button type="button" data-sem-action="remove" data-id="${id}" aria-label="Remove ${esc(c.code)}">×</button><strong>${esc(c.code)}</strong><span>${esc(c.name)}</span><small>${formatTime(start)}–${formatTime(end)}</small>${source ? '<b class="event-current">Current</b>' : ''}<i class="event-rating" aria-hidden="true">${r.quality === null ? 'n/a' : r.quality.toFixed(1)}</i>${conflictIds.has(id) ? '<b class="sem-event-warning">Overlap</b>' : ''}</article>`;
       });
-    }).join('') : '<p class="planner-calendar-empty">Add a course or drop one here</p>';
+    }).join('') + (alt ? alt.blocks.map(block => previewBlockMarkup(block, alt.c, lanes)).join('') : '') : '<p class="planner-calendar-empty">Add a course or drop one here</p>';
+    renderSectionPreviewNotice(alt);
     $('sem-conflict-notice').innerHTML = pairs.length ? `<span>${pairs.length} time conflict${pairs.length > 1 ? 's' : ''} in this plan.</span> <button type="button" data-sem-action="resolve-existing">Review conflicts</button>` : '';
     $('sem-conflict-notice').hidden = !pairs.length;
     if($('sem-full-calendar')?.open)renderFullCalendar();
+  }
+  function setSectionPreview(action) {
+    const before = sectionPreview?.courseId ?? null;
+    sectionPreview = L().nextSectionPreview(sectionPreview, action);
+    if ((sectionPreview?.courseId ?? null) === before && action.type === 'sync') return;
+    hideTip();
+    if (ready) { renderCalendar(); renderCourseList(); }
+  }
+  function clearSectionPreview() { if (sectionPreview) setSectionPreview({ type: 'clear' }); }
+
+  /* One shared tooltip for rating chips and section previews: hover or keyboard focus. */
+  function tipMarkup(el) {
+    const c = course(el.dataset.id);
+    if (!c) return null;
+    if (el.dataset.tip === 'rating') {
+      const r = L().professorRating(c);
+      return { tier: r.tier, html: `<strong>${esc(r.name || 'Professor not listed')}</strong><span>Quality <b>${r.quality === null ? 'not rated' : `${r.quality.toFixed(1)} / 5`}</b> · ${esc(r.label)}</span><span>Difficulty <b>${r.difficulty === null ? 'not rated' : `${r.difficulty.toFixed(1)} / 5`}</b></span><small>${esc(c.code)} · demo Rate My Professor data</small>` };
+    }
+    const alt = L().alternativeSections(c).find(item => item.section === el.dataset.section);
+    if (!alt) return null;
+    const r = L().professorRating(alt);
+    return { tier: 'preview', html: `<strong>${esc(c.code)} · Section ${esc(alt.section)}</strong>${alt.meetings.map(m => `<span>${esc(m.component)} · ${esc(m.days)} · ${esc(m.time)}</span>`).join('')}<span>${esc(alt.instructor || 'Instructor not listed')}${r.quality === null ? '' : ` · ${r.quality.toFixed(1)} / 5`}</span><span>${esc(statusText(alt.status))}</span><small>Preview only · your schedule is unchanged</small>` };
+  }
+  function showTip(el) {
+    const content = tipMarkup(el), tip = $('planner-tip');
+    if (!content) return;
+    tipTarget?.removeAttribute('aria-describedby');
+    tipTarget = el;
+    tip.className = `planner-tip tip-${content.tier}`;
+    tip.innerHTML = content.html;
+    tip.hidden = false;
+    el.setAttribute('aria-describedby', 'planner-tip');
+    // List chips: open beside the card so its code and title stay visible. Calendar blocks: beside the block.
+    const anchor = el.closest('.course-list-card') || el, a = anchor.getBoundingClientRect(), t = tip.getBoundingClientRect(), gap = 8;
+    let left = a.left - t.width - gap;
+    if (left < 8) left = a.right + gap;
+    if (left + t.width > window.innerWidth - 8) left = Math.max(8, Math.min(a.left, window.innerWidth - t.width - 8));
+    let top = left >= a.right || left + t.width <= a.left ? a.top : a.bottom + gap;
+    top = Math.max(8, Math.min(top, window.innerHeight - t.height - 8));
+    tip.style.left = `${left}px`; tip.style.top = `${top}px`;
+  }
+  function hideTip() {
+    const tip = $('planner-tip');
+    if (tip) tip.hidden = true;
+    tipTarget?.removeAttribute('aria-describedby');
+    tipTarget = null;
   }
   function renderFullCalendar(){
     const allDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],ids=state().planner;
@@ -134,7 +255,9 @@
   function setAi(open) {
     preferences().aiOpen = open;
     $('syllo-ai-toggle').setAttribute('aria-expanded', String(open));
-    $('syllo-ai-toggle').querySelector('.syllo-ai-label').textContent = open ? 'Close AI' : 'Syllo AI';
+    $('syllo-ai-toggle').querySelector('.syllo-ai-label').textContent = open ? 'Hide Syllo AI' : 'Ask Syllo AI';
+    $('syllo-ai-toggle').querySelector('.syllo-ai-hint').textContent = open ? 'Close the assistant panel' : 'AI planning assistant';
+    $('syllo-ai-toggle').setAttribute('aria-label', open ? 'Hide Syllo AI planning assistant' : 'Ask Syllo AI, your AI planning assistant');
     $('syllo-ai-panel').classList.toggle('is-collapsed', !open);
     $('syllo-ai-panel').setAttribute('aria-hidden', String(!open));
     $('syllo-ai-panel').inert = !open;
@@ -151,12 +274,15 @@
     const left = target - new Date();
     const days = Math.max(0, Math.ceil(left / 86400000));
     $('sem-countdown-number').textContent = left > 0 ? `${days} ${days===1?'day':'days'}` : 'Open';
-    document.querySelector('.sem-registration b').textContent = left > 0 ? 'Until registration opens' : 'Registration is open';
+    document.querySelector('.sem-registration b').textContent = left > 0 ? 'until registration opens' : 'Registration is open';
     $('sem-countdown-detail').textContent = 'Nov 2, 2026 · 7:00 AM ET · Demo date';
   }
   function render() {
     if (!ready) return;
-    renderSearch(); renderCalendar(); renderSidebar(); renderChat(); renderPreferences();
+    const active = document.querySelector('[data-screen="planner"]').classList.contains('active');
+    sectionPreview = L().nextSectionPreview(sectionPreview, { type: 'sync', plannerIds: state().planner, active });
+    if (!sectionPreview) hideTip();
+    renderSearch(); renderCalendar(); renderCourseList(); renderChat(); renderPreferences();
     updateCountdown();
     if (preview) renderPreview();
   }
@@ -198,7 +324,7 @@
   function openContext(event, id) {
     event.preventDefault(); contextId = id;
     const menu = $('calendar-context-menu'), c = course(id);
-    menu.innerHTML = `<div class="sem-context-summary"><strong>${esc(c.code)}</strong><span>${esc(instructor(c))}</span><small>${c.rating ? `★ ${esc(c.rating)} / 5 · demo rating` : 'Rating unavailable'}</small></div><button role="menuitem" data-sem-action="details" data-id="${id}"><span>Course & professor details</span><small>Prerequisites, workload, and meetings</small></button><button class="danger" role="menuitem" data-sem-action="remove" data-id="${id}"><span>Remove course</span><small>Delete from this plan</small></button>`;
+    menu.innerHTML = `<div class="sem-context-summary"><strong>${esc(c.code)}</strong><span>${esc(instructor(c))}</span><small>${c.rating ? `★ ${esc(c.rating)} / 5 · demo rating` : 'Rating unavailable'}</small></div><button role="menuitem" data-sem-action="details" data-id="${id}"><span>Course & professor details</span><small>Prerequisites, workload, and meetings</small></button>${(() => { const n = L().alternativeSections(c).length, on = sectionPreview?.courseId === id; return `<button role="menuitem" data-sem-action="preview-sections" data-id="${id}"><span>${on ? 'Hide other sections' : 'Preview other sections'}</span><small>${n ? `${n} other section${n === 1 ? '' : 's'} in ${esc(termName())}` : `No other sections in ${esc(termName())}`}</small></button>`; })()}<button class="danger" role="menuitem" data-sem-action="remove" data-id="${id}"><span>Remove course</span><small>Delete from this plan</small></button>`;
     menu.classList.remove('hidden');
     const rect = menu.getBoundingClientRect();
     menu.style.left = `${Math.max(8, Math.min(event.clientX || rect.width, window.innerWidth - rect.width - 12))}px`;
@@ -283,7 +409,7 @@
     const range = lower.match(/(\d{1,2})\s*(?:-|to|–)\s*(\d{1,2})\s*credits/);
     if (range) { p.minCredits = Number(range[1]); p.maxCredits = Number(range[2]); understood = true; }
     Object.entries(S().catalog).forEach(([id, c]) => { if (lower.includes(c.code.toLowerCase()) && eligible(id).ok) { p.seeds = [...new Set([...p.seeds, id])]; understood = true; } });
-    persistUI(); renderPreferences(); renderSidebar();
+    persistUI(); renderPreferences(); renderCourseList();
     if (understood || /generate|build|plan|suggest|workload|degree|schedule/.test(lower)) generatePreview();
     else appendMessage('assistant', 'This demo understands course codes, a day off, “start after 10 AM,” “finish by 4 PM,” and a credit range such as “12 to 16 credits.” You can also set these in Planning preferences and preview a plan.');
   }
@@ -297,6 +423,8 @@
     preview = null; persistUI(); renderPreview();
   }
   function onClick(event) {
+    const filter = event.target.closest('[data-course-filter]');
+    if (filter) { listFilter = filter.dataset.courseFilter; renderCourseList(); return; }
     const button = event.target.closest('[data-sem-action]');
     if (!button) {
       const calendarCourse = event.target.closest('[data-sem-course]');
@@ -312,6 +440,8 @@
       case 'add': add(id); break;
       case 'remove': remove(id); break;
       case 'details': closeContext(); S().openCourse(id); break;
+      case 'preview-sections': closeContext(); setSectionPreview({ type: 'toggle', courseId: id }); break;
+      case 'clear-section-preview': clearSectionPreview(); break;
       case 'undo': preview = null; S().undo(); renderPreview(); break;
       case 'save': save(); break;
       case 'confirm-save': {
@@ -345,16 +475,12 @@
     if (ready) return;
     const root = document.querySelector('[data-screen="planner"]'); if (!root) return;
     ready = true;
-    root.querySelector('.planner-header .features-kicker').textContent = `${termName().toUpperCase()} · NEXT SEMESTER`;
-    root.querySelector('.planner-header h1').textContent = 'Semester Planner';
-    root.querySelector('.planner-header p').textContent = 'Build your next semester, one course at a time.';
-    root.querySelector('.planner-header').insertAdjacentHTML('afterend', `<div class="sem-toolbar"><div class="sem-registration"><strong id="sem-countdown-number"></strong><span><b>Until registration</b><small id="sem-countdown-detail"></small></span></div><div class="sem-toolbar-actions"><button class="button quiet" type="button" data-sem-action="undo" title="Undo last planning change (Ctrl or Command + Z)">↶ Undo</button><button class="button primary" type="button" data-sem-action="save">Save schedule</button></div></div>`);
+    document.body.insertAdjacentHTML('beforeend', '<div class="planner-tip" id="planner-tip" role="tooltip" hidden></div>');
+    $('rating-legend-list').innerHTML = [...L().RATING_TIERS, L().NO_RATING].map(t => `<li><span class="rating-chip rating-${t.tier}" aria-hidden="true"><i></i>${t.tier === 'none' ? 'n/a' : t.min.toFixed(1)}</span>${esc(t.label)} <small>${esc(t.range)}</small></li>`).join('') + '<li class="rating-legend-note">Demo Rate My Professor data. Hover or focus a rating for the professor and scores.</li>';
     root.querySelector('.catalog-note').textContent = 'Demo catalog · sections, prerequisites, ratings, and offerings are simulated.';
     $('course-search').insertAdjacentHTML('afterend', '<button class="sem-search-button" type="button" data-sem-action="search">Search</button>');
     root.querySelector('.catalog-note').insertAdjacentHTML('afterend', '<div class="sem-search-controls"><label><span>Explore</span><select id="sem-search-mode"><option value="all">All courses</option><option value="electives">Electives & prerequisites</option></select></label><span>Unavailable courses can be previewed.</span></div>');
-    root.querySelector('.planner-course-sidebar section>p').textContent = 'Needed for your demo degree, prerequisites met, and offered next semester. Drag to your calendar or use +.';
     root.querySelector('.manual-schedule-heading').insertAdjacentHTML('afterend', '<div class="sem-conflict-notice" id="sem-conflict-notice" role="status" hidden></div>');
-    root.querySelector('.manual-schedule-heading').insertAdjacentHTML('beforeend','<button class="button quiet sem-expand-calendar" type="button" data-sem-action="expand-calendar">View bigger <span aria-hidden="true">↗</span></button>');
     document.body.insertAdjacentHTML('beforeend',`<dialog class="sem-full-calendar" id="sem-full-calendar" aria-labelledby="sem-full-title"><header class="sem-full-header"><div><h2 id="sem-full-title">Full weekly calendar</h2><p>Monday–Sunday · All 24 hours · Scroll to see earlier or later times</p></div><button class="button quiet" type="button" id="sem-full-close" aria-label="Close expanded calendar">Close ×</button></header><div class="sem-full-scroll" id="sem-full-scroll"><div class="sem-full-week"><div class="sem-full-days"><span></span>${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day=>`<strong>${day}</strong>`).join('')}</div><div class="sem-full-grid"><div class="sem-full-times">${Array.from({length:25},(_,hour)=>`<span style="top:${hour/24*100}%">${formatTime(hour*60)}</span>`).join('')}</div><div class="sem-full-lines"></div><div class="sem-full-events" id="sem-full-events"></div></div></div></div></dialog>`);
     $('sem-full-close').addEventListener('click',()=>$('sem-full-calendar').close());
     const fullCourseDetails=event=>{const item=event.target.closest('[data-full-course]');if(!item)return;event.preventDefault();$('sem-full-calendar').close();S().openCourse(item.dataset.fullCourse)};
@@ -387,6 +513,12 @@
     $('course-search').addEventListener('input', () => { renderSearch(); setSearch(true); });
     $('course-search').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); renderSearch(); setSearch(true); $('course-search-results').querySelector('button:not([disabled])')?.focus(); } });
     $('sem-search-mode').addEventListener('change', event => { searchMode = event.target.value; renderSearch(); setSearch(true); });
+    $('course-list-query').addEventListener('input', event => { listQuery = event.target.value; renderCourseList(); });
+    root.addEventListener('pointerover', event => { const el = event.target.closest('[data-tip]'); if (el && el !== tipTarget) showTip(el); });
+    root.addEventListener('pointerout', event => { const el = event.target.closest('[data-tip]'); if (el && el === tipTarget && !el.contains(event.relatedTarget)) hideTip(); });
+    root.addEventListener('focusin', event => { const el = event.target.closest('[data-tip]'); if (el) showTip(el); });
+    root.addEventListener('focusout', event => { if (event.target === tipTarget) hideTip(); });
+    root.addEventListener('scroll', hideTip, true);
     root.addEventListener('change', event => {
       if (event.target.dataset.semPref) readPreference(event.target);
     });
@@ -408,17 +540,26 @@
     calendar.addEventListener('dragover', event => { if ([...event.dataTransfer.types].includes('application/x-syllo-course')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; calendar.classList.add('dragging'); } });
     calendar.addEventListener('dragleave', event => { if (!calendar.contains(event.relatedTarget)) calendar.classList.remove('dragging'); });
     calendar.addEventListener('drop', event => { event.preventDefault(); calendar.classList.remove('dragging'); const id = event.dataTransfer.getData('application/x-syllo-course'); if (id) add(id); });
-    document.addEventListener('pointerdown', event => { if (!event.target.closest('#course-search-area')) setSearch(false); if (!event.target.closest('#calendar-context-menu')) closeContext(); });
+    document.addEventListener('pointerdown', event => {
+      if (!event.target.closest('#course-search-area')) setSearch(false);
+      if (!event.target.closest('#calendar-context-menu')) closeContext();
+    });
+    // A click outside the previews (and the controls that toggle them) dismisses them. This runs on click,
+    // after the clicked control's own action, so the re-render never swallows that click.
+    document.addEventListener('click', event => {
+      if (sectionPreview && !event.target.closest('.is-section-preview, #sem-section-preview, #calendar-context-menu, [data-sem-action="preview-sections"]')) clearSectionPreview();
+    });
     document.addEventListener('keydown', event => {
       if (!root.classList.contains('active')) return;
       const editing = event.target.closest('input, textarea, select, [contenteditable="true"]');
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey && !editing && !$('sem-dialog').open) { event.preventDefault(); preview = null; S().undo(); renderPreview(); }
-      if (event.key === 'Escape') { setSearch(false); closeContext(); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !editing && !$('sem-dialog').open) { event.preventDefault(); preview = null; if (event.shiftKey) S().redo(); else S().undo(); renderPreview(); }
+      else if (event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'y' && !editing && !$('sem-dialog').open) { event.preventDefault(); preview = null; S().redo(); renderPreview(); }
+      if (event.key === 'Escape') { const menuOpen = contextId !== null; setSearch(false); closeContext(); hideTip(); if (!menuOpen) clearSectionPreview(); }
       if (contextId && ['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); const buttons = [...$('calendar-context-menu').querySelectorAll('button')]; const at = buttons.indexOf(document.activeElement); buttons[(at + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus(); }
     });
-    window.addEventListener('resize', closeContext);
+    window.addEventListener('resize', () => { closeContext(); hideTip(); });
     S().subscribe(render); render();
     setInterval(updateCountdown, 60000);
   }
-  window.SylloPlanner = { init, render, add, remove, generatePreview, getPreview: () => preview };
+  window.SylloPlanner = { init, render, add, remove, generatePreview, getPreview: () => preview, clearSectionPreview, getSectionPreview: () => sectionPreview };
 })();

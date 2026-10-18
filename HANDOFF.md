@@ -145,6 +145,45 @@ The engine **logic** can be built and unit-tested now, before the database or ca
 **Owner:** David · **Status:** 🟡 Active CSE 007 database fixture and browser-local
 Next.js frontend prototype implemented; backend persistence/integration is not started.
 
+**2026-10-17 22:35 EDT — Claude Code for Sunny, free electives of any credit amount: 🟡 implemented, uncommitted for review.**
+The two Degree Planner elective slots no longer require exactly 4 and 3 credits. Any elective fits as long as the semester stays at
+21 credits or fewer (`MAX_TERM_CREDITS` in `data.js`). The cap is enforced when choosing an elective (replacing one counts the old course
+out), adding from search, and moving courses singly or in bulk; the plan check flags any semester over 21. New store helpers
+`termCredits`, `electiveReasons`; `degree.js` uses them. Added MUS 001 (1-credit demo elective). The retained typed module
+`src/lib/planner.ts` still models the old 4/3-credit slots; it isn't used by the running app.
+Verification: `npm test` → `Tests 56 passed (56)`; lint and `tsc --noEmit` clean; build compiled. Headless Chrome: elective picker 7/7,
+Degree Planner 48/48, semester planner 58/58, no browser errors.
+
+**2026-10-17 22:10 EDT — Claude Code for Sunny, Degree Planner redesign and features-hub removal: 🟡 implemented, uncommitted for review.**
+Same branch, on top of the Plan My Semester pass below. Sign-in now opens Plan My Semester (the "What would you like to do?" hub is
+removed). Degree Planner: one-screen layout at ≥1100×650; header reduced to Lehigh University, "Degree Planner" and a profile menu;
+one search with Course code / Major / Minor / GenEd / Interest tags (the separate interest box is merged here only; the semester planner's
+Search by interest is unchanged); a "Requirements & unassigned courses" staging area with Humanities, General education and minor credit
+trackers, where choosing a minor stages its courses; Lehigh category colors with text tags; Shift+click and box selection with bulk move and
+delete; Ctrl/⌘+Z, Ctrl/⌘+Shift+Z redo (new redo stack in `data.js`); and a draggable floating Syllo AI (minimize, close, dock, full screen)
+replacing the Ask Syllo AI tab. New files `ai-widget.js`, `degree-ux.css`, `src/lib/degree-planner.test.ts`. Demo additions in `data.js`:
+Economics minor (ECO 105, ECO 146), Ethics & Technology concentration, SOC 001, PSY 001 (simulated).
+Verification: `npm test` → `Tests 49 passed (49)`; `npm run lint` clean; `npx tsc --noEmit` exit 0; `npm run build` compiled. Headless Chrome on
+`next start`: semester planner 58/58, Degree Planner 48/48 (fit at 1440×900 and 1280×720, no horizontal scroll at 900 px and 390 px), other
+screens load, no browser errors. Note: iCloud Drive had created 2,563 "name 2" duplicates inside `frontend/node_modules`, which broke
+`next build`; `npm ci` fixed it. Known gaps: elective-slot cards aren't part of multi-select (they belong to their slot); the trackers'
+"completed" credits count only itemized demo courses, because earlier terms are summarized as credit totals.
+
+**2026-10-17 21:20 EDT — Claude Code for Sunny, Plan My Semester UX pass: 🟡 implemented, uncommitted for review.**
+On `feature/data-cse007-snapshot` at `b00b2f8`. Collapsible navigation (all signed-in screens); title "Plan My Semester"; countdown and a clearer
+Syllo AI control top right; Undo (with real enabled/disabled state), Save and credits beside the calendar; "Use in degree plan" removed;
+forgiving course-code search; merged course list with R/P class types; professor-rating colors with a legend and hover/focus tooltip;
+non-destructive "Preview other sections" from the calendar context menu, Shift+F10 or the card button. New
+`public/reference/planner-logic.js` holds the pure rules; `src/styles/planner-ux.css` loads last. Demo alternative sections were added to
+`data.js` (simulated, like the rest of that file). Search by interest is unchanged.
+Verification: `npm test` → `Test Files 2 passed (2)`, `Tests 29 passed (29)`; `npm run lint` clean; `npx tsc --noEmit` exit 0;
+`npm run build` → static `/` generated. A headless Chrome run of 58 checks (navigation, header, Undo, search variants, R/P list, ratings and
+tooltip placement, previews: show, toggle, replace, Escape, outside click, stale clearing, leaving the planner, no change to plan, credits,
+storage or undo; 800 px and 390 px without horizontal scroll) passed against both `next dev` and `next start`, with no browser errors
+besides the known missing favicon. Known gaps: the reference-parity verifier now reports differences by design; ESLint ignores
+`public/reference/**`, so those scripts were checked with `node --check` only; the planner calendar still scrolls horizontally at phone width
+as before.
+
 **2026-10-17 19:55 EDT — Codex, authoritative frontend parity: completed.**
 Replaced the divergent React-rendered interface with the exact markup, stylesheet
 cascade, crest asset and ordered browser-local runtime from
@@ -292,6 +331,9 @@ Newest first, one line per session. Append only.
 
 | When | Who | Module | Summary |
 |---|---|---|---|
+| 2026-10-17 22:35 EDT | Claude Code for Sunny | Frontend | Degree Planner electives: any credit amount, with a 21-credit semester cap enforced on every placement and flagged in the plan check. Vitest 56/56; browser checks passed. Uncommitted. |
+| 2026-10-17 22:10 EDT | Claude Code for Sunny | Frontend | Removed the features hub (sign-in opens Plan My Semester) and redesigned the Degree Planner: one-screen layout, unified search with tags, staging bucket with credit trackers, Lehigh category colors, multi-select with bulk move/delete, undo/redo keys, floating Syllo AI. Vitest 49/49, lint, typecheck and build passed; 58 + 48 headless Chrome checks passed on `next start`. Uncommitted for review. |
+| 2026-10-17 21:20 EDT | Claude Code for Sunny | Frontend | Plan My Semester UX pass on `feature/data-cse007-snapshot` (collapsible nav, header, Undo/Save beside calendar, forgiving code search, merged R/P course list, professor-rating colors and tooltip, other-section previews). Vitest 29/29, lint and build passed; 58 headless Chrome checks passed on dev and production. Left uncommitted for review. |
 | 2026-10-17 19:55 EDT | Codex for David | Frontend | Matched the authoritative ZIP inside Next.js without an iframe; 11/11 production screenshot pairs were byte-identical and all workflow probes matched. Lint, 4/4 Vitest tests and production build passed; Maven wrapper still fails before backend tests. |
 | 2026-10-17 17:59 EDT | Codex for David | Frontend | Prepared the Next.js migration for commit; `npm ci` completed, lint passed, Vitest passed 4/4 tests, and the production build compiled. Maven wrapper still fails before backend tests; npm reported 5 high-severity advisories. |
 | 2026-10-16 10:45 EDT | Codex for David | Data | Created `feature/data-cse007-snapshot`; regenerated the active seed with 8 verified source hashes and reran all three PostgreSQL verification suites successfully. Maven wrapper still fails before tests. |

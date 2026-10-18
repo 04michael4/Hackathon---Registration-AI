@@ -34,51 +34,33 @@
       </section>
 
       <nav id="product-nav" class="product-nav hidden" aria-label="Planning sections">
-        <div class="product-nav-tabs">
-          <button data-action="open-schedules" data-route="planner">Plan next semester</button>
-          <button data-action="open-degree" data-route="requirements">Plan your degree</button>
-          <button data-action="open-advisor" data-route="advisor">Advisor portal <span id="advisor-alert" class="hidden"></span></button>
-          <button data-action="open-saved" data-route="saved">Saved schedules</button>
+        <button class="product-brand" data-action="back-features" aria-label="Syllo, go to Plan My Semester">syllo.</button>
+        <button class="product-nav-toggle" id="product-nav-toggle" type="button" aria-expanded="false" aria-controls="product-nav-panel"><span class="product-nav-toggle-label">Menu</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="product-nav-panel" id="product-nav-panel">
+          <div class="product-nav-tabs">
+            <button data-action="open-schedules" data-route="planner">Plan My Semester</button>
+            <button data-action="open-degree" data-route="requirements">Degree Planner</button>
+            <button data-action="open-advisor" data-route="advisor">Advisor portal <span id="advisor-alert" class="hidden"></span></button>
+            <button data-action="open-saved" data-route="saved">Saved schedules</button>
+          </div>
+          <button class="product-role" id="role-switch" data-action="switch-role">Student demo ⇄</button>
         </div>
-        <button class="product-role" id="role-switch" data-action="switch-role">Student demo ⇄</button>
-        <button class="product-brand" data-action="back-features" aria-label="Syllo home">syllo.</button>
       </nav>
       <div id="feedback-notification" class="feedback-notification hidden" role="status"></div>
-      <section class="screen features-screen" data-screen="features">
-        <div class="features-shell">
-          <div class="features-header">
-            <h1>What would you like to do?</h1>
-          </div>
-
-          <div class="features-grid">
-            <article class="feature-card">
-              <h2>Semester Planner</h2>
-              <p>Build your schedule manually, then use intelligent suggestions when you want help.</p>
-              <button class="feature-link" data-action="open-schedules">Open Semester Planner <span>→</span></button>
-            </article>
-
-            <article class="feature-card">
-              <h2>Degree Planner</h2>
-              <p>Plan your courses year by year, from your first semester to graduation.</p>
-              <button class="feature-link" data-action="open-degree">Open Degree Planner <span>→</span></button>
-            </article>
-
-            <article class="feature-card">
-              <h2>Academic Advisor Portal</h2>
-              <p>Share your plan, receive feedback, and make changes with your advisor.</p>
-              <button class="feature-link" data-action="open-advisor">Open Advisor Portal <span>→</span></button>
-            </article>
-            <article class="feature-card"><h2>Saved schedules</h2><p>Keep options and return to the schedule that fits.</p><button class="feature-link" data-action="open-saved">See saved schedules <span>→</span></button></article>
-          </div>
-        </div>
-      </section>
-
-      <section class="screen saved-screen" data-screen="saved"><div class="saved-shell"><div class="saved-heading"><div><span class="features-kicker">SAVED SCHEDULES</span><h1>Your plans, kept together.</h1><p>Save options from the semester planner and reopen them here.</p></div><button class="button primary" data-action="open-schedules">Plan next semester →</button></div><div id="saved-list" class="saved-list"></div></div></section>
+      <section class="screen saved-screen" data-screen="saved"><div class="saved-shell"><div class="saved-heading"><div><span class="features-kicker">SAVED SCHEDULES</span><h1>Your plans, kept together.</h1><p>Save options from the semester planner and reopen them here.</p></div><button class="button primary" data-action="open-schedules">Plan My Semester →</button></div><div id="saved-list" class="saved-list"></div></div></section>
 
       <section class="screen planner-screen" data-screen="planner">
         <div class="planner-shell">
-          <div class="screen-topline"><button class="text-button" data-action="back-features">← All features</button></div>
-          <div class="planner-header"><div><span class="features-kicker">MANUAL-FIRST PLANNING</span><h1>Semester Planner</h1><p>Search the demo catalog, review course details, and build your schedule one course at a time.</p></div><div class="planner-total"><strong id="planner-credit-total">0</strong><span>planned credits</span></div></div>
+          <div class="planner-header">
+            <h1>Plan My Semester</h1>
+            <div class="planner-header-aside">
+              <button class="syllo-ai-toggle" id="syllo-ai-toggle" type="button" data-action="toggle-ai" aria-expanded="false" aria-controls="syllo-ai-panel" aria-label="Open Syllo AI, your AI planning assistant">
+                <span class="syllo-ai-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3.5 11.7 8.3 16.5 10l-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7z"/><path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+                <span class="syllo-ai-text"><span class="syllo-ai-label">Ask Syllo AI</span><small class="syllo-ai-hint">AI planning assistant</small></span>
+              </button>
+              <div class="sem-registration"><strong id="sem-countdown-number"></strong><span><b>until registration opens</b><small id="sem-countdown-detail"></small></span></div>
+            </div>
+          </div>
 
           <div class="planner-layout ai-closed">
             <div class="manual-planner">
@@ -90,7 +72,15 @@
 
               <div class="schedule-workspace">
                 <div class="schedule-calendar-column">
-                  <div class="manual-schedule-heading"><h2>My schedule</h2></div>
+                  <div class="manual-schedule-heading">
+                    <div class="schedule-title"><h2>My schedule</h2><p class="sem-credit-meter" aria-live="polite"><strong id="planner-credit-total">0</strong> credits <span id="planner-credit-target"></span></p></div>
+                    <div class="schedule-tools">
+                      <button class="button quiet sem-undo" id="sem-undo" type="button" data-sem-action="undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span></button>
+                      <button class="button primary sem-save" type="button" data-sem-action="save">Save schedule</button>
+                      <button class="button quiet sem-expand-calendar" type="button" data-sem-action="expand-calendar">View bigger <span aria-hidden="true">↗</span></button>
+                    </div>
+                  </div>
+                  <div class="sem-section-preview" id="sem-section-preview" role="status" hidden></div>
                   <div class="planner-week-calendar" id="planner-week-calendar" aria-label="Monday through Friday class calendar">
                     <div class="planner-calendar-days"><span></span><strong>MONDAY</strong><strong>TUESDAY</strong><strong>WEDNESDAY</strong><strong>THURSDAY</strong><strong>FRIDAY</strong></div>
                     <div class="planner-calendar-grid">
@@ -100,15 +90,20 @@
                     </div>
                   </div>
                 </div>
-                <aside class="planner-course-sidebar" aria-label="Course planning lists">
-                  <section>
-                    <div class="planner-sidebar-heading"><div><span>DEGREE PATH</span><h3>Recommended classes</h3></div><strong id="required-course-count">0</strong></div>
-                    <p>Suggested courses based on the available prototype degree data.</p>
-                    <div class="planner-sidebar-list" id="required-course-list"></div>
-                  </section>
-                  <section>
-                    <div class="planner-sidebar-heading"><div><span>THIS SEMESTER</span><h3>Planned classes</h3></div><strong id="planned-course-count">0</strong></div>
-                    <div class="planner-sidebar-list" id="planned-course-list"></div>
+                <aside class="planner-course-sidebar" aria-label="Course list">
+                  <section class="course-list-panel">
+                    <div class="planner-sidebar-heading"><h3 id="course-list-title">Course list</h3><strong id="course-list-count" aria-label="Courses shown">0</strong></div>
+                    <p class="course-list-key"><span><b class="class-type class-type--planned" aria-hidden="true">P</b>Planned</span><span><b class="class-type class-type--recommended" aria-hidden="true">R</b>Recommended</span></p>
+                    <div class="course-list-tools">
+                      <div class="course-list-filter" role="group" aria-label="Show class type">
+                        <button type="button" data-course-filter="all" aria-pressed="true">All</button>
+                        <button type="button" data-course-filter="planned" aria-pressed="false">Planned</button>
+                        <button type="button" data-course-filter="recommended" aria-pressed="false">Recommended</button>
+                      </div>
+                      <input type="search" id="course-list-query" placeholder="Filter this list" autocomplete="off" aria-label="Filter the course list by code or title">
+                    </div>
+                    <details class="rating-legend"><summary>Professor rating colors</summary><ul id="rating-legend-list"></ul></details>
+                    <div class="planner-sidebar-list" id="course-list-items" role="list" aria-labelledby="course-list-title"></div>
                   </section>
                 </aside>
               </div>
@@ -119,11 +114,6 @@
             </div>
 
             <div class="ai-assistant-shell">
-              <button class="syllo-ai-toggle" id="syllo-ai-toggle" type="button" data-action="toggle-ai" aria-expanded="false" aria-controls="syllo-ai-panel">
-                <svg class="syllo-ai-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5c3.8-4.8 7.1-4.8 10.5-1.2 2.5 2.7 4.6 2.6 7.5-.5"/><path d="M3 15.5c3.8-4.8 7.1-4.8 10.5-1.2 2.5 2.7 4.6 2.6 7.5-.5"/></svg>
-                <span class="syllo-ai-label">Syllo AI</span>
-                <span class="syllo-ai-close" aria-hidden="true">×</span>
-              </button>
               <aside class="intelligence-panel is-collapsed" id="syllo-ai-panel" aria-hidden="true" inert>
               <div class="intelligence-heading"><span class="spark">✦</span><div><strong>Intelligent Planning</strong><small id="planner-chat-context">Ask Syllo to adjust your plan</small></div></div>
               <div class="planner-chat" id="planner-chat" role="log" aria-live="polite">
@@ -147,7 +137,7 @@
 
       <section class="screen advisor-screen" data-screen="advisor">
         <div class="advisor-shell">
-          <button class="text-button advisor-back" data-action="back-features">← All features</button>
+          <button class="text-button advisor-back" data-action="back-features">← Plan My Semester</button>
           <span class="features-kicker">ACADEMIC ADVISOR PORTAL</span>
           <h1>David Hwang’s degree plan</h1>
           <p class="advisor-intro">Review the proposed schedule, leave feedback, or approve the plan.</p>
@@ -271,7 +261,7 @@
 
       <section class="screen progress-screen" data-screen="requirements">
         <div class="degree-shell">
-          <div class="screen-topline"><button class="text-button" data-action="back-features">← All features</button><span class="demo-badge">DEMO DEGREE DATA</span></div>
+          <div class="screen-topline"><span class="demo-badge">DEMO DEGREE DATA</span></div>
           <div class="progress-page-header"><span class="eyebrow compact"><span></span> Degree Planner</span><h2>Computer Science, B.S.</h2><p>Catalog year 2024–2025 · Planned graduation <strong id="degree-grad-date">May 2028</strong></p></div>
           <div class="progress-overview"><div class="big-ring"><span>68%</span><small>complete</small></div><div class="progress-copy"><strong>82 of 120 credits completed</strong><p><span id="degree-planned-credits">12</span> additional demo credits are currently planned.</p><div class="progress-bar"><i id="degree-progress-fill"></i></div><div class="progress-legend"><span>82 completed</span><span id="degree-planned-label">12 planned</span><span id="degree-remaining-label">26 remaining</span></div></div></div>
 
@@ -314,8 +304,10 @@
   <div class="toast" id="toast"><span>✓</span><div><strong>Plan saved</strong><small>You can return and edit it anytime.</small></div></div>
   <script src="data.js"></script>
   <script src="degree-ai.js"></script>
+  <script src="planner-logic.js"></script>
   <script src="semester.js"></script>
   <script src="degree.js?v=degree-clean-3"></script>
+  <script src="ai-widget.js"></script>
   <script src="app.js?v=degree-details-layout-4"></script>
   <script src="polish.js?v=degree-relation-colors-6"></script>
 </body>

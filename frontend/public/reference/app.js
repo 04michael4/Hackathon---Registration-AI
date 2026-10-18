@@ -25,11 +25,13 @@
     if(notices.length)banner.innerHTML=`<div><strong>New advisor feedback</strong><span>${safe(notices.at(-1).text)}</span></div><button data-action="open-advisor">View feedback →</button><button data-action="dismiss-feedback" aria-label="Mark advisor updates as read">×</button>`;
   }
   function navigate(screen){
-    if(!['login','features','planner','requirements','advisor','saved'].includes(screen))screen='features';
-    activeScreen=screen;closeDrawer();
+    // The old "What would you like to do?" hub is gone: anything that pointed to it opens Plan My Semester.
+    if(!['login','planner','requirements','advisor','saved'].includes(screen))screen='planner';
+    if(screen!=='planner')window.SylloPlanner?.clearSectionPreview?.();
+    activeScreen=screen;closeDrawer();setNavOpen(false);
     document.querySelectorAll('[data-screen]').forEach(element=>element.classList.toggle('active',element.dataset.screen===screen));
     document.body.classList.toggle('welcome-only',screen==='login');$('product-nav').classList.toggle('hidden',screen==='login');
-    document.querySelector('.product-nav-tabs').classList.toggle('hidden',screen==='login'||screen==='features');
+    document.body.dataset.activeScreen=screen;
     document.querySelectorAll('[data-route]').forEach(button=>{const active=button.dataset.route===screen;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
     if(screen==='planner')window.SylloPlanner.render();
     if(screen==='requirements'){S.state.preferences.hiddenDegreeTerms=[];S.persist();window.SylloDegree.render()}
@@ -58,17 +60,34 @@
     S.change('Use semester calendar in degree plan',state=>{state.degree=candidate;S.slots.forEach(slot=>{if(ids.includes(state.electives[slot.id]))state.electives[slot.id]=null})});
     navigate('requirements');showToast('Semester schedule added to degree plan','Other required courses remain planned in future semesters. Review the graduation checks.');
   }
+  /* Collapsible navigation: a slim bar with the logo; the tabs appear on intentional hover,
+   * keyboard focus or the Menu button. Short open/close delays stop flicker between tabs. */
+  const nav=$('product-nav'),navToggle=$('product-nav-toggle');let navOpenTimer,navCloseTimer;
+  function setNavOpen(open){
+    clearTimeout(navOpenTimer);clearTimeout(navCloseTimer);
+    nav.classList.toggle('is-open',open);navToggle.setAttribute('aria-expanded',String(open));
+    navToggle.querySelector('.product-nav-toggle-label').textContent=open?'Close':'Menu';
+  }
+  nav.classList.add('is-collapsible');
+  nav.addEventListener('pointerenter',event=>{if(event.pointerType!=='mouse')return;clearTimeout(navCloseTimer);if(!nav.classList.contains('is-open'))navOpenTimer=setTimeout(()=>setNavOpen(true),140)});
+  nav.addEventListener('pointerleave',event=>{if(event.pointerType!=='mouse')return;clearTimeout(navOpenTimer);if(!nav.contains(document.activeElement))navCloseTimer=setTimeout(()=>setNavOpen(false),380)});
+  // Keyboard focus opens the bar; a mouse click on Menu focuses it too, and must only toggle once.
+  nav.addEventListener('focusin',event=>{if(event.target.matches(':focus-visible'))setNavOpen(true)});
+  nav.addEventListener('focusout',event=>{if(!nav.contains(event.relatedTarget))navCloseTimer=setTimeout(()=>{if(!nav.matches(':hover'))setNavOpen(false)},120)});
+  navToggle.addEventListener('click',()=>setNavOpen(!nav.classList.contains('is-open')));
+  nav.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav.classList.contains('is-open')){event.stopPropagation();navToggle.focus();setNavOpen(false)}});
+  document.addEventListener('pointerdown',event=>{if(nav.classList.contains('is-open')&&!nav.contains(event.target))setNavOpen(false)});
   S.showToast=showToast;S.openCourse=openCourse;S.navigate=navigate;
   document.addEventListener('click',event=>{
     const button=event.target.closest('[data-action]');if(!button||button.disabled)return;
     const action=button.dataset.action;
-    if(action==='login'||action==='advisor-login'){S.state.role=action==='login'?'student':'advisor';S.persist();navigate(action==='login'?'features':'advisor')}
-    else if(action==='switch-role'){S.state.role=S.state.role==='student'?'advisor':'student';S.persist();S.emit();navigate(S.state.role==='advisor'?'advisor':'features');showToast(S.state.role==='advisor'?'Advisor demo':'Student demo','Both roles use the same browser demo plan.')}
+    if(action==='login'||action==='advisor-login'){S.state.role=action==='login'?'student':'advisor';S.persist();navigate(action==='login'?'planner':'advisor')}
+    else if(action==='switch-role'){S.state.role=S.state.role==='student'?'advisor':'student';S.persist();S.emit();navigate(S.state.role==='advisor'?'advisor':'planner');showToast(S.state.role==='advisor'?'Advisor demo':'Student demo','Both roles use the same browser demo plan.')}
     else if(action==='open-schedules')navigate('planner');
     else if(action==='open-degree')navigate('requirements');
     else if(action==='open-advisor')navigate('advisor');
     else if(action==='open-saved')navigate('saved');
-    else if(action==='back-features')navigate('features');
+    else if(action==='back-features')navigate('planner');
     else if(action==='close-drawer')closeDrawer();
     else if(action==='dismiss-feedback'){S.state.review.notifications.forEach(item=>item.read=true);S.persist();S.emit()}
     else if(action==='degree-to-calendar')syncDegreeToCalendar();
@@ -86,12 +105,14 @@
   $('drawer-backdrop').addEventListener('click',closeDrawer);
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape')closeDrawer();
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'&&!event.shiftKey&&activeScreen!=='planner'&&activeScreen!=='login'&&!event.target.closest('input,textarea,select,[contenteditable="true"]')){event.preventDefault();S.undo()}
+    // Ctrl/⌘+Z undoes and Ctrl/⌘+Shift+Z (or Ctrl+Y) redoes. The semester planner handles its own keys.
+    const historyKey=(event.ctrlKey||event.metaKey)&&activeScreen!=='planner'&&activeScreen!=='login'&&!event.target.closest('input,textarea,select,[contenteditable="true"]');
+    if(historyKey&&event.key.toLowerCase()==='z'){event.preventDefault();if(event.shiftKey)S.redo();else S.undo()}
+    else if(historyKey&&event.ctrlKey&&!event.metaKey&&event.key.toLowerCase()==='y'){event.preventDefault();S.redo()}
     if(event.key==='Tab'&&$('detail-drawer').classList.contains('open')&&!document.body.classList.contains('degree-details-open')){const elements=[...$('detail-drawer').querySelectorAll('button:not([hidden]),a,input')],first=elements[0],last=elements.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}
   });
   $('saved-name-form').addEventListener('submit',event=>{event.preventDefault();const name=$('saved-name-input').value.trim(),id=$('saved-name-dialog').dataset.id;if(!name)return;S.change('Rename saved schedule',state=>{const item=state.saved.find(item=>item.id===id);if(item)item.name=name.slice(0,80)});$('saved-name-dialog').close()});
   S.subscribe(()=>{renderNotifications();renderSaved()});
-  window.SylloPlanner.init();window.SylloDegree.init();
-  document.querySelector('.sem-toolbar-actions').insertAdjacentHTML('afterbegin','<button class="button quiet sem-degree-sync" data-action="calendar-to-degree" title="Use the current calendar in your four-year plan">Use in degree plan</button>');
+  window.SylloPlanner.init();window.SylloDegree.init();window.SylloAIWidget.init();document.body.dataset.activeScreen=activeScreen;
   renderSaved();renderNotifications();
 })();
