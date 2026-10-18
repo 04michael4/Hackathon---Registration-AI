@@ -171,6 +171,7 @@ Terms use the configured API-to-Banner mapping (for example 2027-SPRING, not raw
 | `title` | string | Course title |
 | `credits` | number | Credit hours. _Variable-credit representation TBD._ |
 | `sectionCount` | int | Number of lectures/standalone sections this term (not linked components) |
+| `predictedRating` | object or `null` | Added 2026-10-17. Quality and difficulty **predicted** for this term from earlier terms' student opinions: `quality` and `difficulty` (1.00 to 5.00; 5 is best / hardest), `confidence` (`LOW`, `MEDIUM`, `HIGH`), `basis` (always `PREDICTED`), `sectionsPredicted` and `sections` (lecture sections with a rated instructor / all lecture sections). `null` when no instructor of the course has an earlier rating. Show it as predicted, never as the course's rating |
 
 **Example**
 
@@ -181,7 +182,8 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 ```json
 {
   "items": [
-    { "courseId": "CSE-017", "subject": "CSE", "number": "017", "title": "Programming and Data Structures", "credits": 3, "sectionCount": 4 }
+    { "courseId": "CSE-017", "subject": "CSE", "number": "017", "title": "Programming and Data Structures", "credits": 3, "sectionCount": 4,
+      "predictedRating": { "quality": 3.66, "difficulty": 2.95, "confidence": "MEDIUM", "basis": "PREDICTED", "sectionsPredicted": 1, "sections": 1 } }
   ],
   "page": 0, "size": 2, "totalItems": 1, "totalPages": 1
 }
@@ -213,13 +215,17 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
     {
       "crn": "40123",
       "sectionCode": "010",
-      "instructors": ["Instructor TBA"],
+      "instructors": ["Testwick, Alder"],
+      "instructorRatings": [
+        { "name": "Testwick, Alder", "predictedQuality": 3.66, "predictedDifficulty": 2.95, "confidence": "MEDIUM", "ratingCount": 12, "courseSpecific": true }
+      ],
       "status": "OPEN",
       "meetings": [
         { "days": ["MONDAY", "WEDNESDAY", "FRIDAY"], "start": "10:45", "end": "11:35", "location": "TBD" }
       ]
     }
   ],
+  "predictedRating": { "quality": 3.66, "difficulty": 2.95, "confidence": "MEDIUM", "basis": "PREDICTED", "sectionsPredicted": 1, "sections": 1 },
   "conditions": [
     { "code": "PREREQUISITE", "message": "Prerequisite: CSE 004 or CSE 007", "evidenceLevel": "BANNER", "outcome": "UNVERIFIED" },
     { "code": "LINKED_COMPONENTS", "message": "The lab requirement was reported by the team and is not confirmed by Banner.", "evidenceLevel": "USER_CLARIFICATION", "outcome": "UNVERIFIED" }
@@ -232,6 +238,8 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 Course IDs use uppercase subject letters, a hyphen, and digits; malformed IDs return 400. Sections are ordered by CRN. A stored instructor name is preserved as a single list item (commas within a name are not split); absent instructors produce an empty list. Meeting days with the same start/end/location are grouped and sorted Monday–Sunday. TBA/asynchronous sections have empty meetings, and null descriptions/locations remain null.
 
 Only an explicit stored `OPEN`, `CLOSED` or `UNKNOWN` availability label is used. Truncated historical seat-count snippets remain `UNKNOWN`; they are never inferred to be current availability. The authoritative readiness views expose only certified whole-credit courses; unknown/fractional or uncertified courses remain hidden rather than rounded or guessed. Prerequisite/corequisite expressions and assessment states remain in Data tables; this response has no prerequisite fields and the MVP does not evaluate student eligibility. Section componentType, credits and lectureLink remain public as defined by pre-main, alongside the retained description/instructors fields.
+
+**`predictedRating`** and each section's **`instructorRatings`** (added 2026-10-17, additive; only with `DB_CATALOG_SCHEMA=catalog_serving` and ratings installed, otherwise `null` and `[]`): what is predicted for the term from earlier terms' opinions (Rate My Professors, later also this app). A prediction is an estimate, not the course's rating: label it as predicted and show `confidence`. `instructors` is filled from the same data when the catalog stores none; an instructor with no earlier rating appears with `null` predictions (never a made-up number), and `courseSpecific` means students rated that instructor for this very course. Instructor names are real people's names: use them only inside the team's own app (ADR-0006).
 
 **`conditions`** (added 2026-10-17, additive): what the application has **not verified** about taking this course. Each item has `code` (`PREREQUISITE`, `CLASS_STANDING`, `LEVEL`, `COLLEGE`, `MAJOR`, `DEPARTMENT_APPROVAL`, `CREDIT_EXCLUSION`, `ARRANGED_MEETING`, `LINKED_COMPONENTS`, `CROSS_LISTING`, `SECTION_TYPE`), a `message` for the student, `evidenceLevel` (`BANNER`, `CATALOG`, `USER_CLARIFICATION` or `TEAM_POLICY`; user-supplied evidence is never labelled Registrar-verified) and `outcome` (always `UNVERIFIED` today: the student is not checked against it). The list is ordered by `code` kind, then message, and is **empty when the catalog has none** (the verified snapshot `catalog_api` has no conditions). An empty list is not a promise that the student may register, and a condition list never means "eligible". The frontend should show the conditions with the course and must not describe a schedule as ready to register. Schedule endpoints do not return conditions yet.
 
@@ -560,6 +568,7 @@ demo catalog), and are not a commitment: they may change or disappear after the 
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-17 | Course search items and course detail gain an additive nullable `predictedRating`; course sections gain an additive `instructorRatings` list and a filled `instructors`. Populated only with `DB_CATALOG_SCHEMA=catalog_serving` and the ratings installed; `null` / `[]` otherwise. No existing field changed. **Contract change**: the frontend owners should show it as predicted, with its confidence. | Claude Code for Michael, Database |
 | 2026-10-17 | Course detail (endpoint 4) gains an additive `conditions` list (`code`, `message`, `evidenceLevel`, `outcome`); empty unless the backend runs with `DB_CATALOG_SCHEMA=catalog_serving`. No existing field changed. **Contract change**: the frontend owner should show the conditions with the course. | Claude Code for Michael, Database |
 | 2026-10-16 | Resolve local draft/pre-main conflicts: keep authoritative database/catalog/native engine and manual/elective fields; retain terms and explanation routes plus display metadata on the same datasource. Preserve pre-main API term IDs, lecture-only sectionCount and readiness filtering. Old draft datasource is test-only. Consumer review requested for reconciled representations. | Codex, Backend API |
 | 2026-10-16 | Final Schedule integration reuses pre-main PostgreSQL catalogs and native solver. Move hardcoded catalogs to test-only sources; production defaults to database. Explicit task requirements restore ten original optional entries (11 returns 400) and the 200000 API node cap; native scoring/algorithm and public response fields unchanged. Backend/Data/frontend/AI/engine consumers should review these config/contract changes. | Codex, Backend API |

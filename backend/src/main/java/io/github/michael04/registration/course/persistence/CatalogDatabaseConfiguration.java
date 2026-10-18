@@ -16,6 +16,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import io.github.michael04.registration.course.ConditionCatalog;
 import io.github.michael04.registration.course.CourseCatalog;
 import io.github.michael04.registration.course.CourseMetadataCatalog;
+import io.github.michael04.registration.course.RatingCatalog;
 import io.github.michael04.registration.course.SectionCatalog;
 import io.github.michael04.registration.course.SectionLookupCatalog;
 
@@ -107,6 +108,11 @@ public class CatalogDatabaseConfiguration {
 	@Bean
 	ConditionCatalog jdbcConditionCatalog(DataSource catalogDataSource, TermMapping mapping, CatalogProperties properties) {
 		return new JdbcConditionCatalog(JdbcClient.create(catalogDataSource), mapping, properties.database().schema());
+	}
+
+	@Bean
+	RatingCatalog jdbcRatingCatalog(DataSource catalogDataSource, TermMapping mapping, CatalogProperties properties) {
+		return new JdbcRatingCatalog(JdbcClient.create(catalogDataSource), mapping, properties.database().schema());
 	}
 
 	@Bean

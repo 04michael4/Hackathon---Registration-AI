@@ -43,6 +43,16 @@ CHECKS = [
      "SELECT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id = 'CSE-367' AND code = 'ARRANGED_MEETING')"),
     ("the Independent Study section type is shown with its team-policy level (CSE-217)",
      "SELECT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id = 'CSE-217' AND code = 'SECTION_TYPE' AND evidence_level = 'TEAM_POLICY')"),
+    ("every predicted rating is within 1-5, with a confidence and a rating count",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.section_instructor WHERE pred_quality IS NOT NULL AND (pred_quality NOT BETWEEN 1 AND 5 OR pred_difficulty NOT BETWEEN 1 AND 5 OR confidence IS NULL OR rating_count IS NULL OR rating_count < 1)) "
+     "AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_rating WHERE pred_quality NOT BETWEEN 1 AND 5 OR pred_difficulty NOT BETWEEN 1 AND 5 OR confidence IS NULL)"),
+    ("an instructor with no earlier rating has NO prediction (never a made-up number)",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.section_instructor si WHERE si.pred_quality IS NOT NULL AND NOT EXISTS (SELECT 1 FROM professor_ratings.instructor_prediction p JOIN professor_ratings.instructor i ON i.instructor_id = p.instructor_id WHERE i.banner_name = si.instructor_name))"),
+    ("instructors and course ratings belong to served sections and courses only",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.section_instructor si LEFT JOIN catalog_serving.section_offering s ON s.term_code = si.term_code AND s.crn = si.crn WHERE s.crn IS NULL) "
+     "AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_rating r LEFT JOIN catalog_serving.course_offering c ON c.term_code = r.term_code AND c.course_id = r.course_id WHERE c.course_id IS NULL)"),
+    ("a course rating agrees with the stored professor_ratings course prediction",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_rating r JOIN professor_ratings.course_prediction p ON p.term_code = r.term_code AND p.offering_id = r.course_id WHERE r.pred_quality IS DISTINCT FROM p.pred_quality OR r.pred_difficulty IS DISTINCT FROM p.pred_difficulty)"),
 ]
 
 
