@@ -197,3 +197,12 @@
 .rating-chart-tooltip small { color: var(--theme-muted); }
 .rating-chart-table { margin-top: 6px; font-size: 11px; }.rating-chart-table table { border-collapse: collapse; margin-top: 6px; }
 .rating-chart-table th, .rating-chart-table td { padding: 3px 10px 3px 0; text-align: left; border-bottom: 1px solid var(--theme-line); }
+.api-clear { font-size: 11px !important; min-height: 28px !important; opacity: 0.8; }
+.api-clear-confirm { border: 1px solid var(--theme-line); border-radius: 8px; padding: 10px; font-size: 12px; }
+.api-clear-confirm p { margin: 0 0 8px; }
+.api-save-note { color: var(--theme-brown); font-size: 12px; font-weight: 600; align-self: center; }
+.api-ai-result { margin-top: 12px; font-size: 12px; }
+.api-ai-result b { display: block; margin-top: 8px; }
+.api-ai-result ul { margin: 4px 0 0; padding-left: 18px; }
+.api-explanation { border-left: 3px solid var(--theme-brown); padding-left: 12px; }
+.api-suggest-why { display: block; font-size: 11px; color: var(--theme-muted); margin: 2px 0 6px; }
