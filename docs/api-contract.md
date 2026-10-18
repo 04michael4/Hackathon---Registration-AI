@@ -219,6 +219,10 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
         { "days": ["MONDAY", "WEDNESDAY", "FRIDAY"], "start": "10:45", "end": "11:35", "location": "TBD" }
       ]
     }
+  ],
+  "conditions": [
+    { "code": "PREREQUISITE", "message": "Prerequisite: CSE 004 or CSE 007", "evidenceLevel": "BANNER", "outcome": "UNVERIFIED" },
+    { "code": "LINKED_COMPONENTS", "message": "The lab requirement was reported by the team and is not confirmed by Banner.", "evidenceLevel": "USER_CLARIFICATION", "outcome": "UNVERIFIED" }
   ]
 }
 ```
@@ -228,6 +232,8 @@ curl "http://localhost:8080/api/courses?term=2027-SPRING&q=data%20structures&siz
 Course IDs use uppercase subject letters, a hyphen, and digits; malformed IDs return 400. Sections are ordered by CRN. A stored instructor name is preserved as a single list item (commas within a name are not split); absent instructors produce an empty list. Meeting days with the same start/end/location are grouped and sorted Monday–Sunday. TBA/asynchronous sections have empty meetings, and null descriptions/locations remain null.
 
 Only an explicit stored `OPEN`, `CLOSED` or `UNKNOWN` availability label is used. Truncated historical seat-count snippets remain `UNKNOWN`; they are never inferred to be current availability. The authoritative readiness views expose only certified whole-credit courses; unknown/fractional or uncertified courses remain hidden rather than rounded or guessed. Prerequisite/corequisite expressions and assessment states remain in Data tables; this response has no prerequisite fields and the MVP does not evaluate student eligibility. Section componentType, credits and lectureLink remain public as defined by pre-main, alongside the retained description/instructors fields.
+
+**`conditions`** (added 2026-10-17, additive): what the application has **not verified** about taking this course. Each item has `code` (`PREREQUISITE`, `CLASS_STANDING`, `LEVEL`, `COLLEGE`, `MAJOR`, `DEPARTMENT_APPROVAL`, `CREDIT_EXCLUSION`, `ARRANGED_MEETING`, `LINKED_COMPONENTS`, `CROSS_LISTING`, `SECTION_TYPE`), a `message` for the student, `evidenceLevel` (`BANNER`, `CATALOG`, `USER_CLARIFICATION` or `TEAM_POLICY`; user-supplied evidence is never labelled Registrar-verified) and `outcome` (always `UNVERIFIED` today: the student is not checked against it). The list is ordered by `code` kind, then message, and is **empty when the catalog has none** (the verified snapshot `catalog_api` has no conditions). An empty list is not a promise that the student may register, and a condition list never means "eligible". The frontend should show the conditions with the course and must not describe a schedule as ready to register. Schedule endpoints do not return conditions yet.
 
 **Status codes:** `200`; `400` if `term` is missing; `404` if the course or term is unknown.
 
@@ -554,6 +560,7 @@ demo catalog), and are not a commitment: they may change or disappear after the 
 
 | Date | Change | By |
 |---|---|---|
+| 2026-10-17 | Course detail (endpoint 4) gains an additive `conditions` list (`code`, `message`, `evidenceLevel`, `outcome`); empty unless the backend runs with `DB_CATALOG_SCHEMA=catalog_serving`. No existing field changed. **Contract change**: the frontend owner should show the conditions with the course. | Claude Code for Michael, Database |
 | 2026-10-16 | Resolve local draft/pre-main conflicts: keep authoritative database/catalog/native engine and manual/elective fields; retain terms and explanation routes plus display metadata on the same datasource. Preserve pre-main API term IDs, lecture-only sectionCount and readiness filtering. Old draft datasource is test-only. Consumer review requested for reconciled representations. | Codex, Backend API |
 | 2026-10-16 | Final Schedule integration reuses pre-main PostgreSQL catalogs and native solver. Move hardcoded catalogs to test-only sources; production defaults to database. Explicit task requirements restore ten original optional entries (11 returns 400) and the 200000 API node cap; native scoring/algorithm and public response fields unchanged. Backend/Data/frontend/AI/engine consumers should review these config/contract changes. | Codex, Backend API |
 | 2026-10-16 | Implemented endpoints 3 and 4 (sections also carry `componentType`, `lectureLink`, `credits`); added endpoints 8 (`/api/schedules/check`, manual mode) and 9 (`/api/schedules/suggest-electives`); added `electiveAdvice` to endpoint 6. The default `CATALOG_SOURCE=dummy` now includes demo sections, so endpoint 6 works with no database. All additive. **Backend API, frontend and Data owners: please review.** | Claude Code for Sunny (at the engine owner's request; Backend API and Data areas) |

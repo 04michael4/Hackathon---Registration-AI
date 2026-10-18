@@ -1,0 +1,49 @@
+# catalog_serving
+
+The read-only views the backend uses to serve the **researched** Spring 2027 catalog: `DB_CATALOG_SCHEMA=catalog_serving`. Decision record: [ADR-0007](../../docs/decisions/0007-serve-researched-courses-with-their-conditions.md).
+
+It reads `catalog_research` and writes nothing. An offering is served when its tier is `READY` or `CONDITIONAL` (and it has a lecture, a credit value and no evidence mismatch). `BLOCKED` offerings are never served. A served `CONDITIONAL` course comes with its **conditions**: what the application has not verified about taking it. A condition never says a student is eligible.
+
+## Views
+| View | What it is |
+|---|---|
+| `course_offering`, `section_offering`, `section_meeting` | The exact columns and types of `catalog_live`; what the backend queries unchanged |
+| `course_condition` | One row per condition: `code`, `message`, `evidence_level`, `outcome` (`UNVERIFIED`), ordered by `seq` |
+| `served_offering` | The gate: which offerings are served and at which tier |
+
+## Install (database that already has `catalog_research`)
+```
+psql -X -v ON_ERROR_STOP=1 -f data/catalog-serving/install.sql                       # as the owner; one transaction, structure check inside; rerunnable
+psql -X -v ON_ERROR_STOP=1 -v reader=catalog_reader -f data/catalog-serving/grant_reader.sql
+python3 -I data/catalog-serving/verify_serving.py                                    # 14 read-only checks (safe on the team database)
+```
+The reader needs no access to `catalog_research`: the views read it as their owner. The backend also reads a few `cse007_snapshot` columns for term names and descriptions, which `data/catalog-promotion/grant_reader.sql` grants.
+
+## Run the backend on it
+```
+DB_URL=jdbc:postgresql://<host>:55437/registration_unified_spring2027 DB_USERNAME=catalog_reader DB_PASSWORD=<password> \
+  DB_CATALOG_SCHEMA=catalog_serving ./mvnw spring-boot:run          # from backend/
+curl "http://localhost:8080/api/courses?term=2027-SPRING"             # 40 courses
+curl "http://localhost:8080/api/courses/CSE-216?term=2027-SPRING"     # sections plus conditions
+```
+
+## Conditions
+| `code` | Source | Example message |
+|---|---|---|
+| `PREREQUISITE` | stored expression, or "in words only" for text Banner did not structure (CSE 303) | Prerequisite: CSE 004 or CSE 007 |
+| `CLASS_STANDING`, `LEVEL`, `COLLEGE`, `MAJOR`, `DEPARTMENT_APPROVAL` | Banner enrollment restrictions | Not open to these class standings: first-year |
+| `CREDIT_EXCLUSION` | catalog text (the CSE 127/327 conflict is left out) | No credit for both this course and CSE 413. |
+| `ARRANGED_MEETING` | a mandatory meeting without a published time (CSE 367, 467) | Includes a required meeting at a time to be arranged |
+| `LINKED_COMPONENTS` | whether a lab or recitation is required is unverified, or was reported by the team | Whether this course also requires a lab or recitation has not been verified. |
+| `CROSS_LISTING` | asserted by the team, not confirmed | Reported as cross-listed with another subject |
+| `SECTION_TYPE` | a non-lecture Banner section type allowed by team policy (CSE 217) | Banner lists this section as "Independent Study" |
+
+## Tests
+Backend (default, no database): `JdbcCatalogDaoSqlTest`, `CatalogDatabaseConfigurationTest`, `JdbcConditionCatalogTest`, `CourseConditionsControllerTest`. Opt-in against a real database: `ServingCatalogIntegrationTest` (`RUN_SERVING_IT=true`, see the class comment). Data: `verify_serving.py` and the structure check inside `install.sql`.
+
+Results on 2026-10-17: `./mvnw test` 785 run, 0 failures, 35 skipped; `ServingCatalogIntegrationTest` 5 run, 0 failures (isolated copy of the unified database); `verify_serving.py` 14/14.
+
+## Known limits
+- Descriptions and instructors come from the CSE 007 snapshot, so served courses other than CSE 007 have none yet.
+- Prerequisites and restrictions are shown, not enforced; schedule endpoints do not return conditions yet.
+- CSE 303's prerequisite is still "words only" (the grouping decision of 2026-10-17 is not yet applied to `catalog_research`).

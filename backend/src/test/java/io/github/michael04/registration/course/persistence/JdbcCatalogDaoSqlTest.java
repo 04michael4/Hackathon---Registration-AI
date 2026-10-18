@@ -57,8 +57,16 @@ class JdbcCatalogDaoSqlTest {
 	}
 
 	@Test
-	void onlyTheTwoKnownSchemasAreAccepted() {
-		assertThat(JdbcCatalogDao.ALLOWED_SCHEMAS).containsExactly("catalog_api", "catalog_live");
+	void theServingSchemaRewritesEveryQueryToo() {
+		for (String sql : ALL) {
+			String serving = JdbcCatalogDao.inSchema(sql, "catalog_serving");
+			assertThat(serving).contains("catalog_serving.").doesNotContain("catalog_api.", "catalog_live.");
+		}
+	}
+
+	@Test
+	void onlyTheThreeKnownSchemasAreAccepted() {
+		assertThat(JdbcCatalogDao.ALLOWED_SCHEMAS).containsExactly("catalog_api", "catalog_live", "catalog_serving");
 		for (String bad : new String[] { "public", "cse007_snapshot", "banner_evidence", "catalog_promoted", "catalog_api; DROP TABLE x", "",
 				"CATALOG_API" }) {
 			org.assertj.core.api.Assertions.assertThatThrownBy(() -> new JdbcCatalogDao(null, bad))

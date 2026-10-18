@@ -1,0 +1,63 @@
+"""Read-only checks of catalog_serving against catalog_research (stdlib only; needs psql). Prints PASS/FAIL per check; runs only SELECTs.
+
+    PGHOST=127.0.0.1 PGPORT=<port> PGUSER=<role> PGDATABASE=<database> python3 -I data/catalog-serving/verify_serving.py
+
+Safe on the team database: it changes nothing.
+"""
+import subprocess
+import sys
+
+CHECKS = [
+    ("exactly the READY and CONDITIONAL research offerings are served",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c FULL JOIN (SELECT o.term_code, o.offering_id FROM catalog_research.offering o "
+     "JOIN catalog_research.offering_tier t USING (term_code, offering_id) WHERE t.tier IN ('READY', 'CONDITIONAL') AND o.data_source IN ('BANNER_EVIDENCE', 'SNAPSHOT')) x "
+     "ON x.term_code = c.term_code AND x.offering_id = c.course_id WHERE c.course_id IS NULL OR x.offering_id IS NULL)"),
+    ("no BLOCKED offering and no grid-staged non-CSE course is served",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering_tier t ON t.term_code = c.term_code AND t.offering_id = c.course_id "
+     "WHERE t.tier = 'BLOCKED') AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering o ON o.term_code = c.term_code AND o.offering_id = c.course_id "
+     "WHERE o.data_source = 'BANNER_GRID_STAGING')"),
+    ("the undecided special topics (CSE-398-*) are not served",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering WHERE course_id LIKE 'CSE-398-%')"),
+    ("every served course has a lecture and every lab links to a served lecture of the same course",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c WHERE NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering s WHERE s.term_code = c.term_code "
+     "AND s.course_id = c.course_id AND s.component_type = 'LECTURE')) AND NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering l WHERE l.component_type <> 'LECTURE' "
+     "AND NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering p WHERE p.crn = l.lecture_crn AND p.course_id = l.course_id AND p.term_code = l.term_code AND p.component_type = 'LECTURE'))"),
+    ("every served section and meeting belongs to a served course",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.section_offering s LEFT JOIN catalog_serving.course_offering c ON c.term_code = s.term_code AND c.course_id = s.course_id WHERE c.course_id IS NULL) "
+     "AND NOT EXISTS (SELECT 1 FROM catalog_serving.section_meeting m LEFT JOIN catalog_serving.section_offering s ON s.term_code = m.term_code AND s.crn = m.crn WHERE s.crn IS NULL)"),
+    ("served sections equal the stored sections of served offerings",
+     "SELECT (SELECT count(*) FROM catalog_serving.section_offering) = (SELECT count(*) FROM catalog_research.section s JOIN catalog_serving.served_offering v USING (term_code, offering_id))"),
+    ("no served section has an impossible meeting (end before start, bad weekday)",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.section_meeting WHERE start_time >= end_time OR day_of_week NOT BETWEEN 1 AND 7 OR start_time !~ '^[0-2][0-9]:[0-5][0-9]$')"),
+    ("every condition has a message and a known evidence level and outcome",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE message IS NULL OR length(btrim(message)) < 10 OR evidence_level NOT IN ('BANNER', 'CATALOG', 'USER_CLARIFICATION', 'TEAM_POLICY') OR outcome <> 'UNVERIFIED')"),
+    ("every condition belongs to a served course", 
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_condition c LEFT JOIN catalog_serving.course_offering o ON o.term_code = c.term_code AND o.course_id = c.course_id WHERE o.course_id IS NULL)"),
+    ("every CONDITIONAL course shows at least one condition",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.served_offering v WHERE v.tier = 'CONDITIONAL' AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_condition c WHERE c.term_code = v.term_code AND c.course_id = v.offering_id))"),
+    ("a structured prerequisite is rendered from its expression (CSE-216 needs CSE 017)",
+     "SELECT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id = 'CSE-216' AND code = 'PREREQUISITE' AND message = 'Prerequisite: CSE 017')"),
+    ("the CSE 127/327 conflict is not shown as an exclusion (current catalog followed)",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id IN ('CSE-127', 'CSE-327') AND code = 'CREDIT_EXCLUSION')"),
+    ("the schedule-time TBA meeting of CSE 367 is shown as a condition",
+     "SELECT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id = 'CSE-367' AND code = 'ARRANGED_MEETING')"),
+    ("the Independent Study section type is shown with its team-policy level (CSE-217)",
+     "SELECT EXISTS (SELECT 1 FROM catalog_serving.course_condition WHERE course_id = 'CSE-217' AND code = 'SECTION_TYPE' AND evidence_level = 'TEAM_POLICY')"),
+]
+
+
+def main():
+    failed = 0
+    for name, sql in CHECKS:
+        r = subprocess.run(["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1"], input="SET default_transaction_read_only = on;\n" + sql + ";\n", capture_output=True, text=True, timeout=60)
+        ok = r.returncode == 0 and r.stdout.strip().splitlines()[-1:] == ["t"]
+        print(("PASS " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("     ", (r.stdout + r.stderr).strip()[:300])
+    print(f"{len(CHECKS) - failed}/{len(CHECKS)} checks passed")
+    sys.exit(1 if failed else 0)
+
+
+if __name__ == "__main__":
+    main()
