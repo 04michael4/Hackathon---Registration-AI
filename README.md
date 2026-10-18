@@ -202,6 +202,14 @@ PGHOST=127.0.0.1 PGPORT=<local port> PGUSER=catalog_reader PGDATABASE=registrati
   python3 -I data/catalog-research/verify_local_database.py --input ~/.registration-demo/spring-2027.json
 ```
 
+### 4a-2. CSB degree research (`catalog_csb`, isolated local database only)
+
+The Computer Science and Business Honors degree (136 credits, its alternatives and categories, 17 suggested natural-science sequences) and
+the Spring 2027 sections of the business, science and CSB courses it needs are stored, additively and apart from `catalog_research`, in `catalog_csb`
+([data/csb-research](data/csb-research/README.md), [ADR-0009](docs/decisions/0009-store-the-csb-research-additively-in-catalog-csb.md)). Storage only: nothing is
+approved, served or read by the backend. The Banner-derived rows are local-only; the committed tests are synthetic:
+`python3 -I data/csb-research/test_csb_dataset.py` (no database) and `run_csb_validation.py` (scratch database on a local cluster).
+
 ### 4b. Spring 2027 demo (local, feature-flagged)
 
 `CATALOG_SOURCE=demo` runs the existing schedule service and engine on a local fixture of the 42 researched Spring 2027 CSE offerings,

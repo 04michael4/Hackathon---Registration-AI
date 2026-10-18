@@ -14,6 +14,7 @@ Smaller decisions live in [architecture.md § 15](../architecture.md#15-phase-1-
 | [0005](0005-store-the-researched-term-catalog-separately-from-serving.md) | Store the complete researched term catalog separately from serving (`catalog_research`) | Proposed (implemented locally; nothing served) | 2026-10-17 |
 | [0008](0008-spring-2027-planning-decisions-of-the-project-owner.md) | Spring 2027 planning decisions of the project owner (CSE 303, CSE 398 topics, ECO/MKT 325, exams, ...) | Accepted; 2 of 11 need backend/engine work | 2026-10-17 |
 | [0007](0007-serve-researched-courses-with-their-conditions.md) | Serve the researched READY and CONDITIONAL courses to the backend with their conditions (`catalog_serving`) | Proposed (implemented; needs team review) | 2026-10-17 |
+| [0009](0009-store-the-csb-research-additively-in-catalog-csb.md) | Store the CSB (Computer Science and Business) research additively in a separate schema (`catalog_csb`) | Proposed (verified on an isolated copy; not installed in any shared database) | 2026-10-18 |
 | [0006](0006-store-professor-ratings-separately-from-the-catalog.md) | Store instructors and Rate My Professors ratings in a separate schema (`professor_ratings`) | Proposed (installed in the team database; not read by the backend) | 2026-10-17 |
 
 ## How to add one
