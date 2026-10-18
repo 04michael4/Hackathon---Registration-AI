@@ -1,0 +1,428 @@
+{
+  "verifiedAt": "2026-10-16T23:18:27.097877+00:00",
+  "branch": "feature/backend-schedule-final-integration",
+  "base": "4fb4ff2b97dbab2323532aa342b97a1a13c402c7",
+  "command": "./mvnw -B -Pdatabase-it clean verify",
+  "environment": {
+    "RUN_DB_IT": "true",
+    "DB_URL": "isolated source-only PostgreSQL fixture",
+    "TEST_DATABASE_URL": "isolated loopback course_schedule_test seed prefix"
+  },
+  "buildResult": "BUILD SUCCESS",
+  "groups": {
+    "regular": {
+      "tests": 683,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "suites": [
+        {
+          "name": "io.github.michael04.registration.ai.AiConfigurationTest",
+          "tests": "10",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.521"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.AiEvalDatasetTest",
+          "tests": "22",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.43"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.AnthropicClaudeGatewayTest",
+          "tests": "57",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "2.025"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.ClaudeEndpointFakeServerIntegrationTest",
+          "tests": "17",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.577"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.ClaudeExtractionValidatorTest",
+          "tests": "24",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.054"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.ClaudePreferenceExtractorTest",
+          "tests": "21",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.043"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.CourseMentionResolverTest",
+          "tests": "14",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.015"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.PreferenceAssemblerTest",
+          "tests": "104",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.234"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.PreferenceControllerTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "3.417"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.PreferenceEndpointFailureIntegrationTest",
+          "tests": "5",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.973"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.PreferenceEndpointIntegrationTest",
+          "tests": "7",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.864"
+        },
+        {
+          "name": "io.github.michael04.registration.ai.PreferenceExtractionServiceTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.034"
+        },
+        {
+          "name": "io.github.michael04.registration.common.ConfiguredCorsTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.548"
+        },
+        {
+          "name": "io.github.michael04.registration.common.DisabledCorsTest",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.442"
+        },
+        {
+          "name": "io.github.michael04.registration.common.GlobalExceptionHandlerTest",
+          "tests": "21",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.946"
+        },
+        {
+          "name": "io.github.michael04.registration.common.json.JsonConfigurationTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.135"
+        },
+        {
+          "name": "io.github.michael04.registration.common.WebConfigTest",
+          "tests": "20",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.56"
+        },
+        {
+          "name": "io.github.michael04.registration.course.CourseCatalogSelectionTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.052"
+        },
+        {
+          "name": "io.github.michael04.registration.course.CourseControllerTest",
+          "tests": "14",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.879"
+        },
+        {
+          "name": "io.github.michael04.registration.course.CourseServiceTest",
+          "tests": "3",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.006"
+        },
+        {
+          "name": "io.github.michael04.registration.course.DummySectionCatalogTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.216"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.CatalogDatabaseConfigurationTest",
+          "tests": "14",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.528"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.DatabaseCatalogIntegrationTest",
+          "tests": "10",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.51"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.DatabaseModeFailureEndpointTest",
+          "tests": "5",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.135"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.DefaultModeStartsWithoutDatabaseTest",
+          "tests": "2",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.366"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.JdbcCatalogDaoSqlTest",
+          "tests": "5",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.007"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.JdbcCourseCatalogTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.012"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.JdbcSectionCatalogTest",
+          "tests": "29",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.062"
+        },
+        {
+          "name": "io.github.michael04.registration.course.persistence.TermMappingTest",
+          "tests": "21",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.053"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.BacktrackingScheduleSolverTest",
+          "tests": "26",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.679"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.CourseOptionTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.011"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.ElectiveAdvisorTest",
+          "tests": "11",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.089"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.MeetingTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.028"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.ScheduleProblemTest",
+          "tests": "14",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.029"
+        },
+        {
+          "name": "io.github.michael04.registration.engine.SelectionCheckerTest",
+          "tests": "12",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.193"
+        },
+        {
+          "name": "io.github.michael04.registration.health.HealthControllerTest",
+          "tests": "2",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.316"
+        },
+        {
+          "name": "io.github.michael04.registration.RegistrationBackendApplicationTests",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.287"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.DemoCatalogScheduleTest",
+          "tests": "2",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.163"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.EngineMapperTest",
+          "tests": "17",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.156"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.integration.NativeSchedulingEngineTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.043"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.ManualModeEndpointsTest",
+          "tests": "12",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.155"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.ScheduleControllerTest",
+          "tests": "86",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.635"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.ScheduleEngineIntegrationTest",
+          "tests": "4",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.34"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.ScheduleUnavailableTest",
+          "tests": "2",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.311"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.SchedulingConfigurationTest",
+          "tests": "9",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.25"
+        }
+      ]
+    },
+    "integrationAndPackaging": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "suites": [
+        {
+          "name": "io.github.michael04.registration.schedule.ProductionPackagingIT",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.228"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.ScheduleDatabaseIT",
+          "tests": "16",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "8.206"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.SchedulingNodeCapDatabaseIT",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "0.782"
+        },
+        {
+          "name": "io.github.michael04.registration.schedule.SourceCatalogDatabaseIT",
+          "tests": "1",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0",
+          "time": "1.88"
+        }
+      ]
+    }
+  },
+  "total": {
+    "tests": 702,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

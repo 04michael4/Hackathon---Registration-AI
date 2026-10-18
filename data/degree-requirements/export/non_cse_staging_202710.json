@@ -1,0 +1,2386 @@
+{
+ "banner_data": {
+  "status": "NOT_INCLUDED_REDISTRIBUTION_NOT_VERIFIED"
+ },
+ "course_credit_exclusions": [
+  {
+   "course_code": "MATH 021",
+   "excluded_text": "MATH 031",
+   "status": "VERIFIED_CATALOG_TEXT"
+  },
+  {
+   "course_code": "MATH 021",
+   "excluded_text": "MATH 051",
+   "status": "VERIFIED_CATALOG_TEXT"
+  },
+  {
+   "course_code": "MATH 021",
+   "excluded_text": "MATH 081",
+   "status": "VERIFIED_CATALOG_TEXT"
+  },
+  {
+   "course_code": "MATH 021",
+   "excluded_text": "(MATH 075 and MATH 076)",
+   "status": "VERIFIED_CATALOG_TEXT"
+  }
+ ],
+ "course_prerequisites": [
+  {
+   "course_code": "BIS 324",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "BUAN 348",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "BUAN 352",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CHM 030",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 003",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 004",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 007",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 017",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 109",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 140",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 160",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 202",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 216",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 241",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 252",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 262",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 280",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 281",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 303",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 320",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 323",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 325",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 326",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 327",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 330",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 337",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 340",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 341",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 345",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 347",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 349",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 360",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 371",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "CSE 375",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ECO 001",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ECO 325",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ECO 357",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ECO 360",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ECO 367",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ENGR 005",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ENGR 010",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 111",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 121",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 224",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 309",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 364",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "ISE 365",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 021",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 022",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 031",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 032",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 043",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 051",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 052",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 062",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 076",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 081",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 082",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 205",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 231",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 241",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 242",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 309",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 312",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MATH 334",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MKT 325",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "MKT 326",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "PHY 011",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "PHY 012",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "STAT 342",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "WRT 001",
+   "status": "NOT_COLLECTED"
+  },
+  {
+   "course_code": "WRT 002",
+   "status": "NOT_COLLECTED"
+  }
+ ],
+ "courses": [
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "BIS 324",
+   "number": "324",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "BIS",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "BUAN 348",
+   "number": "348",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "BUAN",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "BUAN 352",
+   "number": "352",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "BUAN",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CHM 030",
+   "number": "030",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CHM",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 003",
+   "number": "003",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 004",
+   "number": "004",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 007",
+   "number": "007",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 017",
+   "number": "017",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 109",
+   "number": "109",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 140",
+   "number": "140",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 160",
+   "number": "160",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 202",
+   "number": "202",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 216",
+   "number": "216",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 241",
+   "number": "241",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 252",
+   "number": "252",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 262",
+   "number": "262",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 280",
+   "number": "280",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 281",
+   "number": "281",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 303",
+   "number": "303",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 320",
+   "number": "320",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 323",
+   "number": "323",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 325",
+   "number": "325",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 326",
+   "number": "326",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 327",
+   "number": "327",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 330",
+   "number": "330",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 337",
+   "number": "337",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 340",
+   "number": "340",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 341",
+   "number": "341",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 345",
+   "number": "345",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 347",
+   "number": "347",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 349",
+   "number": "349",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 360",
+   "number": "360",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 371",
+   "number": "371",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "CSE 375",
+   "number": "375",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "CSE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ECO 001",
+   "number": "001",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ECO",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ECO 325",
+   "number": "325",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ECO",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ECO 357",
+   "number": "357",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ECO",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ECO 360",
+   "number": "360",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ECO",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ECO 367",
+   "number": "367",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ECO",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ENGR 005",
+   "number": "005",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ENGR",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ENGR 010",
+   "number": "010",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ENGR",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 111",
+   "number": "111",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 121",
+   "number": "121",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 224",
+   "number": "224",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 309",
+   "number": "309",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 364",
+   "number": "364",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "ISE 365",
+   "number": "365",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "ISE",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 021",
+   "number": "021",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 022",
+   "number": "022",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 031",
+   "number": "031",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 032",
+   "number": "032",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 043",
+   "number": "043",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 051",
+   "number": "051",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 052",
+   "number": "052",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 062",
+   "number": "062",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 076",
+   "number": "076",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 081",
+   "number": "081",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 082",
+   "number": "082",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 205",
+   "number": "205",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 231",
+   "number": "231",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 241",
+   "number": "241",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 242",
+   "number": "242",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 309",
+   "number": "309",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 312",
+   "number": "312",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MATH 334",
+   "number": "334",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MATH",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MKT 325",
+   "number": "325",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MKT",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "MKT 326",
+   "number": "326",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "MKT",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "PHY 011",
+   "number": "011",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "PHY",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "PHY 012",
+   "number": "012",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "PHY",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "STAT 342",
+   "number": "342",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "STAT",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "WRT 001",
+   "number": "001",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "WRT",
+   "title": null
+  },
+  {
+   "catalog_status": "PROGRAM_TABLE_ONLY",
+   "code": "WRT 002",
+   "number": "002",
+   "prerequisite_status": "NOT_COLLECTED",
+   "spring2027_status": "NOT_COLLECTED",
+   "subject": "WRT",
+   "title": null
+  }
+ ],
+ "evidence": [
+  {
+   "collected": "2026-10-17",
+   "id": 1,
+   "level": "catalog",
+   "locator": "https://catalog.lehigh.edu/coursesprogramsandcurricula/engineeringandappliedscience/computerscienceandengineering/",
+   "origin": "public_catalog",
+   "term_or_catalog_year": "2026-27",
+   "verification": "VERIFIED_CATALOG_TEXT"
+  }
+ ],
+ "format": "non_cse_staging/1",
+ "instructor_data": {
+  "status": "NOT_INCLUDED_REDISTRIBUTION_NOT_VERIFIED"
+ },
+ "note": "Staging data only; nothing here is university-approved or schedule-ready. Missing values are NOT_COLLECTED, never guessed.",
+ "programs": [
+  {
+   "catalog_year": "2026-27",
+   "college": "College of Arts and Sciences",
+   "conflicts": [],
+   "degree_type": "BA",
+   "department": "Computer Science and Engineering",
+   "evidence_id": 1,
+   "id": "CAS_BA_CS",
+   "name": "Bachelor of Arts in Computer Science",
+   "requirements": [
+    {
+     "category": "CSE",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 19,
+       "key": "cse_core.any1",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "CSE 003",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 004",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 007",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 18,
+       "program_id": "CAS_BA_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 18,
+     "key": "cse_core",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 017",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 109",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 216",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 262",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 140",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 340",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BA_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "MATH",
+     "children": [],
+     "credits_text": null,
+     "id": 20,
+     "key": "calc1",
+     "logic": "ANY",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "MATH 021",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 031",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 051",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 081",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 076",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 062",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BA_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "MATH",
+     "children": [],
+     "credits_text": null,
+     "id": 21,
+     "key": "calc2",
+     "logic": "ANY",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "MATH 022",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 032",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 052",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 082",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BA_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "MATH",
+     "children": [],
+     "credits_text": null,
+     "id": 22,
+     "key": "linear_algebra",
+     "logic": "ANY",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "MATH 043",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 205",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 242",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BA_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "TECH_ELECTIVE",
+     "children": [],
+     "credits_text": "12",
+     "id": 23,
+     "key": "tech_electives",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "CAS_BA_CS",
+     "rule_text": "any CSE course 200-level or above except CSE 252 and department exclusions",
+     "status": "STATED"
+    }
+   ],
+   "restriction": null,
+   "total_credits_text": "120 (major 46)",
+   "unknowns": [
+    "General education beyond the A&S Liberal Arts program is not on the CS page"
+   ]
+  },
+  {
+   "catalog_year": "2026-27",
+   "college": "College of Arts and Sciences",
+   "conflicts": [],
+   "degree_type": "BS",
+   "department": "Computer Science and Engineering",
+   "evidence_id": 1,
+   "id": "CAS_BS_CS",
+   "name": "Bachelor of Science in Computer Science",
+   "requirements": [
+    {
+     "category": "CSE",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 10,
+       "key": "cse_core.any1",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "CSE 003",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 004",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 007",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 9,
+       "program_id": "CAS_BS_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 9,
+     "key": "cse_core",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 017",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 109",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 202",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 216",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 262",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 140",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 280",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 281",
+       "credits": null,
+       "option_set": 9,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 303",
+       "credits": null,
+       "option_set": 10,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 340",
+       "credits": null,
+       "option_set": 11,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "MATH",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 12,
+       "key": "math.any3",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "MATH 205",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "MATH 241",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "MATH 242",
+         "credits": null,
+         "option_set": 3,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 11,
+       "program_id": "CAS_BS_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 11,
+     "key": "math",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "MATH 021",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 022",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 231",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "NATURAL_SCIENCE",
+     "children": [],
+     "credits_text": "12",
+     "id": 13,
+     "key": "natural_world",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": "12 credits of natural science: one course with an attached lab, and two courses in a lab science with the first a prerequisite to the second",
+     "status": "UNRESOLVED_LIST"
+    },
+    {
+     "category": "TECH_ELECTIVE",
+     "children": [],
+     "credits_text": "15",
+     "id": 14,
+     "key": "tech_electives",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": "any CSE course 200-level or above unless explicitly excluded",
+     "status": "STATED"
+    },
+    {
+     "category": "SCIENCE_TECH_ELECTIVE",
+     "children": [],
+     "credits_text": "10",
+     "id": 15,
+     "key": "science_tech",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": "advisor approval",
+     "status": "ADVISOR_DEPENDENT"
+    },
+    {
+     "category": "OTHER",
+     "children": [],
+     "credits_text": null,
+     "id": 16,
+     "key": "other",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 252",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "WRT 001",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "WRT 002",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": null,
+       "credits": 21,
+       "option_set": 4,
+       "rule_text": "additional HE, SW and AL courses satisfying A&S distribution requirements",
+       "status": "UNRESOLVED_LIST"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "FREE_ELECTIVE",
+     "children": [],
+     "credits_text": "11",
+     "id": 17,
+     "key": "free",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "CAS_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    }
+   ],
+   "restriction": null,
+   "total_credits_text": "127-128",
+   "unknowns": []
+  },
+  {
+   "catalog_year": "2026-27",
+   "college": null,
+   "conflicts": [],
+   "degree_type": "MINOR",
+   "department": "Computer Science and Engineering",
+   "evidence_id": 1,
+   "id": "MINOR_CS",
+   "name": "Minor in Computer Science",
+   "requirements": [
+    {
+     "category": "CSE",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 25,
+       "key": "core.any1",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "CSE 003",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 004",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 007",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 24,
+       "program_id": "MINOR_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 24,
+     "key": "core",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 017",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": null,
+       "credits": 3,
+       "option_set": 3,
+       "rule_text": "CSE courses at the 100 level or higher excluding CSE 252",
+       "status": "STATED"
+      },
+      {
+       "course_code": null,
+       "credits": 6,
+       "option_set": 4,
+       "rule_text": "CSE courses at the 200 level or higher excluding CSE 252",
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "MINOR_CS",
+     "rule_text": null,
+     "status": "STATED"
+    }
+   ],
+   "restriction": "not available to Computer Engineering, Computer Science or Computer Science and Business majors",
+   "total_credits_text": "16",
+   "unknowns": []
+  },
+  {
+   "catalog_year": "2026-27",
+   "college": null,
+   "conflicts": [
+    "CSE 109 credit value is blank in the catalog table; table total shows 10 rather than 10-11",
+    "catalog lists STAT 342 as 'Applied Linear Algebra'; unverified against the STAT 342 course page",
+    "ECO 325/MKT 325 and ECO 360/ISE 309 share titles; shared titles are NOT proof of cross-listing"
+   ],
+   "degree_type": "MINOR",
+   "department": "Computer Science and Engineering",
+   "evidence_id": 1,
+   "id": "MINOR_DS",
+   "name": "Minor in Data Science",
+   "requirements": [
+    {
+     "category": "REQUIRED",
+     "children": [],
+     "credits_text": null,
+     "id": 26,
+     "key": "required",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 160",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 017",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 109",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 312",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "MINOR_DS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "APPLIED_ANALYTICS",
+     "children": [],
+     "credits_text": "3",
+     "id": 27,
+     "key": "applied",
+     "logic": "CHOOSE_N",
+     "n": 1,
+     "note": "director may approve others (UNRESOLVED)",
+     "options": [
+      {
+       "course_code": "CSE 323",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 326",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 347",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "BUAN 348",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "BUAN 352",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ECO 325",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ECO 360",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 309",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 364",
+       "credits": null,
+       "option_set": 9,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 365",
+       "credits": null,
+       "option_set": 10,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MKT 325",
+       "credits": null,
+       "option_set": 11,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MKT 326",
+       "credits": null,
+       "option_set": 12,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "MINOR_DS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "DS_ELECTIVE",
+     "children": [],
+     "credits_text": "3-4",
+     "id": 28,
+     "key": "electives",
+     "logic": "CHOOSE_N",
+     "n": 1,
+     "note": "'including but not limited to'; one or more; applied-list courses also qualify",
+     "options": [
+      {
+       "course_code": "CSE 241",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 320",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 325",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 327",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 330",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 337",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 341",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 345",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 349",
+       "credits": null,
+       "option_set": 9,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 360",
+       "credits": null,
+       "option_set": 10,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 371",
+       "credits": null,
+       "option_set": 11,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 375",
+       "credits": null,
+       "option_set": 12,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 111",
+       "credits": null,
+       "option_set": 13,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 121",
+       "credits": null,
+       "option_set": 14,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ISE 224",
+       "credits": null,
+       "option_set": 15,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 043",
+       "credits": null,
+       "option_set": 16,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 205",
+       "credits": null,
+       "option_set": 17,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 242",
+       "credits": null,
+       "option_set": 18,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "STAT 342",
+       "credits": null,
+       "option_set": 19,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 309",
+       "credits": null,
+       "option_set": 20,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 334",
+       "credits": null,
+       "option_set": 21,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "BIS 324",
+       "credits": null,
+       "option_set": 22,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ECO 357",
+       "credits": null,
+       "option_set": 23,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ECO 367",
+       "credits": null,
+       "option_set": 24,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "MINOR_DS",
+     "rule_text": null,
+     "status": "STATED"
+    }
+   ],
+   "restriction": "open to undergraduates in all majors; prerequisites do not count toward the minor",
+   "total_credits_text": "minimum 16 (required block shown as 10-11, table total 10)",
+   "unknowns": []
+  },
+  {
+   "catalog_year": "2026-27",
+   "college": "P.C. Rossin College of Engineering and Applied Science",
+   "conflicts": [
+    "Advanced HSS: college page says min 3 courses / 12 credits; CS table says 16 credits. Both are Lehigh catalog text. Working value 12 credits chosen by the team, not verified with Lehigh."
+   ],
+   "degree_type": "BS",
+   "department": "Computer Science and Engineering",
+   "evidence_id": 1,
+   "id": "ROSSIN_BS_CS",
+   "name": "Bachelor of Science in Computer Science",
+   "requirements": [
+    {
+     "category": "CSE",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 2,
+       "key": "cse_core.any1",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "CSE 003",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 004",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "CSE 007",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 1,
+       "program_id": "ROSSIN_BS_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 1,
+     "key": "cse_core",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CSE 017",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 109",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 202",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 216",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 262",
+       "credits": null,
+       "option_set": 6,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 140",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 280",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 281",
+       "credits": null,
+       "option_set": 9,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 303",
+       "credits": null,
+       "option_set": 10,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 340",
+       "credits": null,
+       "option_set": 11,
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "MATH_SCIENCE",
+     "children": [
+      {
+       "children": [],
+       "credits_text": null,
+       "id": 4,
+       "key": "math_science.any6",
+       "logic": "ANY",
+       "n": null,
+       "note": null,
+       "options": [
+        {
+         "course_code": "MATH 205",
+         "credits": null,
+         "option_set": 1,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "MATH 241",
+         "credits": null,
+         "option_set": 2,
+         "rule_text": null,
+         "status": "STATED"
+        },
+        {
+         "course_code": "MATH 242",
+         "credits": null,
+         "option_set": 3,
+         "rule_text": null,
+         "status": "STATED"
+        }
+       ],
+       "parent_id": 3,
+       "program_id": "ROSSIN_BS_CS",
+       "rule_text": null,
+       "status": "STATED"
+      }
+     ],
+     "credits_text": null,
+     "id": 3,
+     "key": "math_science",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "CHM 030",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ENGR 010",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "ENGR 005",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 021",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 022",
+       "credits": null,
+       "option_set": 5,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "MATH 231",
+       "credits": null,
+       "option_set": 7,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "PHY 011",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "PHY 012",
+       "credits": null,
+       "option_set": 8,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": null,
+       "credits": 3,
+       "option_set": 9,
+       "rule_text": "additional natural science: a course that has another natural science course as a prerequisite",
+       "status": "UNRESOLVED_LIST"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "TECH_ELECTIVE",
+     "children": [],
+     "credits_text": "15",
+     "id": 5,
+     "key": "tech_electives",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": "any CSE course 200-level or above unless explicitly excluded by the department",
+     "status": "STATED"
+    },
+    {
+     "category": "SCIENCE_TECH_ELECTIVE",
+     "children": [],
+     "credits_text": "12",
+     "id": 6,
+     "key": "science_tech",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": "chosen with advisor approval",
+     "status": "ADVISOR_DEPENDENT"
+    },
+    {
+     "category": "HSS",
+     "children": [],
+     "credits_text": null,
+     "id": 7,
+     "key": "hss",
+     "logic": "ALL",
+     "n": null,
+     "note": null,
+     "options": [
+      {
+       "course_code": "ECO 001",
+       "credits": null,
+       "option_set": 1,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "WRT 001",
+       "credits": null,
+       "option_set": 2,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "WRT 002",
+       "credits": null,
+       "option_set": 3,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": "CSE 252",
+       "credits": null,
+       "option_set": 4,
+       "rule_text": null,
+       "status": "STATED"
+      },
+      {
+       "course_code": null,
+       "credits": 12,
+       "option_set": 5,
+       "rule_text": "Engineering College Advanced HSS. Lehigh's college page says minimum 3 courses and 12 credits; the CS requirements table says 16 credits. The two sources still disagree. 12 credits / 3 courses is a team working value chosen on 2026-10-17, not confirmed by Lehigh or an advisor.",
+       "status": "USER_CHOSEN_CONFLICT_UNRESOLVED_WITH_SOURCE"
+      }
+     ],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    },
+    {
+     "category": "FREE_ELECTIVE",
+     "children": [],
+     "credits_text": "8",
+     "id": 8,
+     "key": "free",
+     "logic": "CREDITS",
+     "n": null,
+     "note": null,
+     "options": [],
+     "parent_id": null,
+     "program_id": "ROSSIN_BS_CS",
+     "rule_text": null,
+     "status": "STATED"
+    }
+   ],
+   "restriction": null,
+   "total_credits_text": "130 (table total 130-131)",
+   "unknowns": [
+    "Minimum grade/GPA not stated on the catalog pages read",
+    "Which courses count as natural science with a natural-science prerequisite"
+   ]
+  }
+ ],
+ "sections": [],
+ "term": "202710",
+ "unresolved": [
+  {
+   "detail": "NOT_INCLUDED: instructor names were read from the Banner results grid but are withheld because redistribution of names from an authenticated Banner session is not verified.",
+   "subject": "INSTRUCTORS"
+  },
+  {
+   "detail": "NOT_INCLUDED: Spring 2027 section, meeting and offering data were read from Banner but are withheld. Repo rule: synthetic data only until permission to redistribute real section data is verified.",
+   "subject": "BANNER_SECTIONS"
+  },
+  {
+   "detail": "Prerequisites, corequisites, descriptions, equivalences not yet collected from the catalog course pages",
+   "subject": "ALL_COURSES"
+  },
+  {
+   "detail": "Restrictions, cross-lists and linked sections are not inspected unless a local data set says so; seat counts and waitlists are never stored",
+   "subject": "ALL_SECTIONS"
+  },
+  {
+   "detail": "Treated as cross-listed on a team assertion; the Banner Cross Listed Courses panel was not opened, so this is unverified",
+   "subject": "ECO 325 / MKT 325"
+  },
+  {
+   "detail": "Catalog college page says min 12 credits / 3 courses; CS table says 16 credits. Sources still conflict; 12 is a team working value, not confirmed by Lehigh",
+   "subject": "ROSSIN_BS_CS advanced HSS"
+  }
+ ]
+}
