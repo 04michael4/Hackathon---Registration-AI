@@ -8,12 +8,12 @@ BEGIN
 			WHERE n.nspname = 'catalog_research' AND c.relkind IN ('r', 'v'))
 		IS DISTINCT FROM ARRAY['active_tier_policy_decision:v', 'candidate_course_offering:v', 'candidate_section_meeting:v', 'candidate_section_offering:v',
 			'catalog_course:r', 'catalog_course_equivalence:r', 'catalog_course_exclusion:r', 'course_alias:r', 'course_term_status:v', 'credit_exclusion:r',
-			'eligibility_rule:r', 'evidence_mismatch:v', 'exam_meeting:v', 'grid_extra_meeting_observation:r', 'grid_mismatch:v', 'grid_observation:r',
+			'detail_inspection:r', 'detail_mismatch:v',			'eligibility_rule:r', 'evidence_mismatch:v', 'exam_meeting:v', 'grid_extra_meeting_observation:r', 'grid_mismatch:v', 'grid_observation:r',
 			'grid_search_result:r', 'grid_source:r', 'import_run:r', 'offering:r', 'offering_status:v', 'offering_tier:v', 'prerequisite_banner_check:v',
 			'program:r', 'program_course_link:v', 'program_requirement:r', 'program_structure_problem:v', 'requirement_course_option:r', 'requirement_group:r',
-			'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_meeting:r', 'tier_policy_decision:r', 'unresolved_item:r',
+			'requirement_status:r', 'section:r', 'section_arranged_meeting:r', 'section_detail_observation:r', 'section_meeting:r', 'tier_policy_decision:r', 'unresolved_item:r',
 			'unresolved_requirement:v'] THEN
-		RAISE EXCEPTION 'catalog_research must contain exactly 22 tables and 14 views';
+		RAISE EXCEPTION 'catalog_research must contain exactly 24 tables and 15 views';
 	END IF;
 	-- Policy decisions and import runs are append-only (update/delete and truncate are refused).
 	IF (SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -60,8 +60,8 @@ BEGIN
 	END IF;
 	-- The writing functions are closed to PUBLIC.
 	IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'catalog_research'
-			AND p.proname IN ('import_term', 'record_tier_policy_decision') AND has_function_privilege('public', p.oid, 'EXECUTE')) THEN
-		RAISE EXCEPTION 'import_term and record_tier_policy_decision must not be executable by PUBLIC';
+			AND p.proname IN ('import_term', 'record_tier_policy_decision', 'import_noncse_details') AND has_function_privilege('public', p.oid, 'EXECUTE')) THEN
+		RAISE EXCEPTION 'import_term, record_tier_policy_decision and import_noncse_details must not be executable by PUBLIC';
 	END IF;
 	-- The candidate views have exactly the columns and types the adapter reads from catalog_live.
 	IF (SELECT array_agg(a.attname || ':' || format_type(a.atttypid, a.atttypmod) ORDER BY a.attnum) FROM pg_attribute a
@@ -78,5 +78,5 @@ BEGIN
 			WHERE a.attrelid = 'catalog_live.section_meeting'::regclass AND a.attnum > 0 AND NOT a.attisdropped) THEN
 		RAISE EXCEPTION 'a candidate view no longer has the column names and types of its catalog_live counterpart';
 	END IF;
-	RAISE NOTICE 'PASS: catalog_research (22 tables, 14 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
+	RAISE NOTICE 'PASS: catalog_research (24 tables, 15 views): append-only decisions, read-only over evidence and serving layers, not read by any serving view, candidate views match catalog_live';
 END $$;

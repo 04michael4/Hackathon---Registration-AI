@@ -15,11 +15,11 @@ It reads `catalog_research` and writes nothing. An offering is served when its t
 
 ## Install (database that already has `catalog_research` and `professor_ratings`)
 ```
-psql -X -v ON_ERROR_STOP=1 -f data/catalog-serving/install.sql                       # as the owner; one transaction, structure check inside; rerunnable
+psql -X -v ON_ERROR_STOP=1 -f data/catalog-serving/install.sql                       # as the owner (V1-V3); one transaction, structure check inside; rerunnable
 psql -X -v ON_ERROR_STOP=1 -v reader=catalog_reader -f data/catalog-serving/grant_reader.sql
 python3 -I data/catalog-serving/verify_serving.py                                    # 18 read-only checks (safe on the team database)
 ```
-The reader needs no access to `catalog_research`: the views read it as their owner. The backend also reads a few `cse007_snapshot` columns for term names and descriptions, which `data/catalog-promotion/grant_reader.sql` grants.
+`install.sql` re-applies `SELECT` on the views to every role that already has `USAGE` on the schema (`regrant.sql`), because it drops and recreates some views; the structure check fails the install if a role with `USAGE` cannot read a view. The reader needs no access to `catalog_research`: the views read it as their owner. The backend also reads a few `cse007_snapshot` columns for term names and descriptions, which `data/catalog-promotion/grant_reader.sql` grants.
 
 ## Run the backend on it
 ```
@@ -39,6 +39,9 @@ curl "http://localhost:8080/api/courses/CSE-216?term=2027-SPRING"     # sections
 | `LINKED_COMPONENTS` | whether a lab or recitation is required is unverified, or was reported by the team | Whether this course also requires a lab or recitation has not been verified. |
 | `CROSS_LISTING` | asserted by the team, not confirmed | Reported as cross-listed with another subject |
 | `SECTION_TYPE` | a non-lecture Banner section type allowed by team policy (CSE 217) | Banner lists this section as "Independent Study" |
+
+## Inspected non-CSE courses (V3)
+`served_offering` also admits a grid-staged (non-CSE) course once its Class Details were imported (`catalog_research` V4, [README](../catalog-research/README.md#class-details-for-the-non-cse-courses-v4)), and only when every lab or recitation is linked to a lecture (the backend refuses a component without its lecture) and its credits are known. `course_condition` now also renders corequisites, shows an enrollment restriction Banner states only in words, and flags any requirement still `UNKNOWN`, so nothing is dropped silently. Until captures are imported, nothing new is served.
 
 ## Predicted ratings and instructors (V2)
 `course_rating` and `section_instructor` read `professor_ratings` (predictions for Spring 2027, [ADR-0006](../../docs/decisions/0006-store-professor-ratings-separately-from-the-catalog.md)). The backend returns them as `predictedRating` on course search and detail and `instructorRatings` on each section. If the views cannot be read the backend returns no ratings and the course endpoints still work. Instructor names are real people's names, so they are for the team's own app only.

@@ -53,6 +53,15 @@ CHECKS = [
      "AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_rating r LEFT JOIN catalog_serving.course_offering c ON c.term_code = r.term_code AND c.course_id = r.course_id WHERE c.course_id IS NULL)"),
     ("a course rating agrees with the stored professor_ratings course prediction",
      "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_rating r JOIN professor_ratings.course_prediction p ON p.term_code = r.term_code AND p.offering_id = r.course_id WHERE r.pred_quality IS DISTINCT FROM p.pred_quality OR r.pred_difficulty IS DISTINCT FROM p.pred_difficulty)"),
+    ("a grid-staged course is served only after its Class Details were inspected",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.offering o ON o.term_code = c.term_code AND o.offering_id = c.course_id "
+     "WHERE o.data_source = 'BANNER_GRID_STAGING' AND NOT EXISTS (SELECT 1 FROM catalog_research.detail_inspection i WHERE i.term_code = o.term_code AND i.offering_id = o.offering_id))"),
+    ("no served course has a requirement left UNKNOWN",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.requirement_status q ON q.term_code = c.term_code AND q.offering_id = c.course_id WHERE q.status = 'UNKNOWN')"),
+    ("a words-only restriction or prerequisite of a served course is shown as a condition, never dropped",
+     "SELECT NOT EXISTS (SELECT 1 FROM catalog_serving.course_offering c JOIN catalog_research.requirement_status q ON q.term_code = c.term_code AND q.offering_id = c.course_id "
+     "WHERE q.status = 'TEXT_ONLY' AND NOT EXISTS (SELECT 1 FROM catalog_serving.course_condition k WHERE k.term_code = c.term_code AND k.course_id = c.course_id "
+     "AND k.code = CASE q.requirement_type WHEN 'ENROLLMENT_RESTRICTION' THEN 'ENROLLMENT_RESTRICTION' ELSE q.requirement_type END))"),
 ]
 
 

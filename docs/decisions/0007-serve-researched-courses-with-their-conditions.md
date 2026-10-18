@@ -23,5 +23,8 @@ Through `catalog_api` or `catalog_live` the backend serves one course (CSE 007):
 ## Addendum (2026-10-17): instructors and predicted ratings
 `catalog_serving` also exposes `section_instructor` and `course_rating` over `professor_ratings`, and the backend returns them as `predictedRating` (course search and detail) and `instructorRatings` (sections), filling `instructors` when the catalog stores none. They are labelled predicted, carry a confidence, and are `null` when an instructor has no earlier rating. The backend degrades to no ratings if the views are unreadable, so supplementary data cannot take the course endpoints down. Exposing instructor names through the API relies on the project owner's decision to store them (ADR-0006 point 2); keep it inside the team's own app.
 
+## Addendum (2026-10-17): the non-CSE courses
+`catalog_research` V4 lets Class Details captured for the grid-staged non-CSE courses be imported (restrictions, prerequisites, corequisites, lab/recitation links). An inspected course is judged by the same rules as the CSE ones, so it becomes `CONDITIONAL` and `catalog_serving` V3 serves it with its conditions, but only when its labs and recitations are linked to lectures and its credits are known. Parsing is fail-closed: unrecognized text and ambiguous And/Or stay words. Banner's silence is recorded as "none listed" under the project owner's earlier rule (user-supplied evidence, not Registrar certification).
+
 ## Not decided here
 Enforcing prerequisites and class standing from a student's transcript ([ADR-0004](0004-proposed-class-standing-eligibility.md)), conditions on schedule responses, and installing `catalog_serving` in any shared database beyond the team's.

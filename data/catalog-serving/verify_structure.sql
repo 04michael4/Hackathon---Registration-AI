@@ -18,6 +18,13 @@ BEGIN
 			AND (s.column_name IS NULL OR s.data_type <> l.data_type OR s.ordinal_position <> l.ordinal_position)) THEN
 		RAISE EXCEPTION 'catalog_serving views differ from catalog_live in columns or types';
 	END IF;
+	-- Every role that may enter the schema can read every view in it (a rerun that drops and recreates views must not cut a role off).
+	IF EXISTS (SELECT 1 FROM pg_namespace n CROSS JOIN LATERAL aclexplode(n.nspacl) a
+			JOIN pg_class c ON c.relnamespace = n.oid AND c.relkind = 'v'
+			WHERE n.nspname = 'catalog_serving' AND a.privilege_type = 'USAGE' AND a.grantee <> 0 AND a.grantee <> n.nspowner
+				AND NOT has_table_privilege(a.grantee, c.oid, 'SELECT')) THEN
+		RAISE EXCEPTION 'a role with USAGE on catalog_serving cannot read one of its views';
+	END IF;
 	-- A BLOCKED offering is never served, and every served offering has a lecture.
 	IF EXISTS (SELECT 1 FROM catalog_serving.served_offering v JOIN catalog_research.offering_tier t USING (term_code, offering_id) WHERE t.tier = 'BLOCKED') THEN
 		RAISE EXCEPTION 'a BLOCKED offering is served';
