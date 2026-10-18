@@ -7,7 +7,7 @@ Everything below was rehearsed on 2026-10-18 on a **fresh copy of the live team 
 ## Before you start (all must hold)
 
 - **Approval** of the project owner, and Account 1 not writing to the database (check step 1).
-- **Branch:** `feature/data-csb-course-research` must be rebased onto (or merged with) the then-current `origin/pre-main` first, with `HANDOFF.md` and `docs/decisions/README.md` conflicts resolved by keeping both sides. The code in `data/csb-research` does not depend on anything that changed in `pre-main` since `3257607` (PR #17 changed only the frontend, `.env.example`, `README.md`, `HANDOFF.md` and one line of `docs/architecture.md`).
+- **Branch:** `feature/data-csb-course-research` must be based on the then-current `origin/pre-main`, with `HANDOFF.md` and `docs/decisions/README.md` conflicts resolved by keeping both sides. It was rebased onto `3589fbd` (PR #18) on 2026-10-18; rebase again if `pre-main` has moved. The code in `data/csb-research` does not depend on anything that changed in `pre-main` since `3257607` (PR #17 and #18 changed the frontend, `.env.example`, `CLAUDE.md`, `PLANS.md`, `README.md`, `HANDOFF.md`, `docs/` and the Windows launcher `backend/start-local.ps1`; nothing in `data/` and no backend source).
 - **Local-only inputs** on the machine that runs the import: `~/.registration-csb/csb_import_202710.json` (sha256 below; regenerate it with `build_csb_dataset.py` from `~/.registration-csb/{grids,packs,catalog}`; the result is byte-identical). Back that directory up: it is the only copy of the Banner capture and is not in git.
 - **Role:** `catalog_owner` (owns the database, has CREATE on it). The schema must not be created by a superuser.
 - **Tests pass on the rebased branch:** `python3 -I data/csb-research/test_csb_dataset.py`, `test_check_no_restricted_data.py`, and (scratch databases on a local cluster, never the shared one) `run_csb_validation.py` and `run_rollback_validation.py`.
@@ -52,7 +52,8 @@ PGUSER=catalog_owner python3 -I data/csb-research/verify_csb_database.py --grids
 
 # 7. the serving path is unchanged (nothing reads catalog_csb)
 PGUSER=catalog_owner  python3 -I data/catalog-serving/verify_serving.py     # 22 of 22
-PGUSER=catalog_reader python3 -I data/catalog-serving/verify_serving.py     # 21 of 22: the one failure ("permission denied for table instructor_prediction") is the same before the install (verified on the live database, read-only)
+PGUSER=catalog_reader python3 -I data/catalog-serving/verify_serving.py     # 21 of 22: the one failure ("permission denied for table instructor_prediction") is the same before the install (verified on the live database, read-only).
+#    It is by design, not a CSB effect: that check reads a professor_ratings base table and the reader is granted only views (HANDOFF.md, Known bugs #6). Change no GRANT for it.
 
 # 8. backup of the new schema alone (the quick way back if it is ever removed by mistake)
 pg_dump -U postgres -Fc -n catalog_csb -f $BAK/catalog_csb-only-$(date +%Y%m%d-%H%M%S).dump registration_unified_spring2027

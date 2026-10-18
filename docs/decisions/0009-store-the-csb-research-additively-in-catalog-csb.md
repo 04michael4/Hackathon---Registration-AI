@@ -1,6 +1,6 @@
 # ADR-0009: Store the Computer Science and Business (CSB) research additively in `catalog_csb`
 
-- **Status:** Proposed. Implemented in [data/csb-research](../../data/csb-research/README.md) and verified (2026-10-18) on isolated copies of the unified database, the last one a fresh copy of the live team database taken that day. Not installed in any shared database, not pushed. It changes no shared interface. The owner of `catalog_research` (Account 1) has not reviewed it yet.
+- **Status:** Proposed. Implemented in [data/csb-research](../../data/csb-research/README.md) and verified (2026-10-18) on isolated copies of the unified database, the last one a fresh copy of the live team database taken that day. Not installed in any shared database; proposed in a draft pull request to `pre-main` (rebased onto `3589fbd`), not merged. It changes no shared interface. The owner of `catalog_research` (Account 1) has not reviewed it yet.
 - **Scope:** a new additive schema `catalog_csb`. No change to `catalog_research`, `catalog_serving`, `professor_ratings`, `catalog_promoted`, `catalog_live`, `catalog_api`, `banner_evidence`, `cse007_snapshot`, the backend, the engine or the frontend.
 - **Number:** 0009 is the next free number: no other branch, remote or worktree of the repository holds an ADR numbered 0009 or higher (checked 2026-10-18 against all local and remote branches and all worktrees). Renumber if another ADR lands first.
 
