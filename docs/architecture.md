@@ -1,6 +1,6 @@
 # Architecture
 
-> **Status at a glance (2026-10-16):** Final Schedule integration uses the authoritative pre-main Hikari/JDBC catalogs, Data views and native solver. Production defaults to database with no synthetic catalog fallback. Test-only fixtures remain offline; opt-in tests execute real PostgreSQL/HTTP/solver paths. See [final integration evidence](schedule-final-integration.md).
+> **Status at a glance (2026-10-18):** Semester frontend integration uses the existing real APIs and same-origin proxy; degree/advisor prototypes remain explicit. Scheduling uses the authoritative pre-main Hikari/JDBC catalogs, Data views and native solver. Production defaults to database with no synthetic catalog fallback. Test-only fixtures remain offline; opt-in tests execute real PostgreSQL/HTTP/solver paths. See [frontend integration](frontend-backend-integration.md) and [earlier backend evidence](schedule-final-integration.md).
 
 Related: [API contract](api-contract.md) · [Decision records](decisions/README.md) · [Development guide](development-guide.md)
 
@@ -28,7 +28,7 @@ Related: [API contract](api-contract.md) · [Decision records](decisions/README.
 
 ```mermaid
 flowchart LR
-    S([Student]) --> FE["Next.js frontend 🟡<br/>browser-local mock"]
+    S([Student]) --> FE["Next.js frontend 🟡<br/>API-backed semester planner"]
     FE -->|"HTTP/JSON /api/**"| API["Spring Boot backend ✅ foundation"]
     subgraph API_INT [Backend]
         API --> COURSE["course ⬜<br/>catalog search"]
@@ -54,7 +54,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 ## 2. Frontend and backend responsibilities
 
-| Concern | Frontend (Next.js) 🟡 mock implemented | Backend (Spring Boot) |
+| Concern | Frontend (Next.js), semester integrated | Backend (Spring Boot) |
 |---|---|---|
 | UI, routing, calendar view | ✔ | |
 | Free-text input and editable preference form | ✔ | |
@@ -71,7 +71,7 @@ The **central design principle** is that the AI interprets and explains, and the
 
 Main user flow (status per package in [§4](#4-backend-package-structure)):
 
-The planning screens use browser-local mock data (see [frontend/README.md](../frontend/README.md)). When the Next.js server has `BACKEND_URL` configured for the team's private app, a separate live catalog browser calls course search/detail through the read-only same-origin `/api/catalog/courses` proxy. It shows predicted quality/difficulty with confidence, course conditions and each section's instructor ratings without changing demo course identities or persisting real names. API responses are private and uncached, and names are fetched only at runtime. Keep the connection disabled on public deployments until Banner redistribution is settled. Schedule generation and Claude remain unconnected in the frontend.
+The default semester workflow uses `ConnectedPlanner` and shared typed API clients. Browser requests go through an allowlisted same-origin Next.js `/api/backend` route to server-only `BACKEND_URL`, then the existing Spring controllers, production JDBC catalogs and native solver. JSON schemas and Problem Details mirror the existing contract; no client solver computes scores. Catalog facts/instructor names are private/no-store and are not persisted; browser-saved plans contain only identifiers, preferences and a user-entered name. AI extraction is reviewed before applying and AI-off is a useful 503 state. Explicit `FRONTEND_MODE=demo` retains the offline semester prototype. Degree/transcript/advisor workspaces still use labeled sample data because matching APIs do not exist. See the [integration runbook](frontend-backend-integration.md).
 
 ```mermaid
 sequenceDiagram

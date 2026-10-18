@@ -1,62 +1,52 @@
 # Syllo frontend
 
-The Syllo frontend is a Next.js App Router application written in strict TypeScript and React. Its root route hosts the Syllo reference markup, stylesheet cascade, assets and browser runtime directly, without an iframe. The semester and degree plans, transcript history, AI-style responses, saved schedules and advisor feedback remain browser-local demo data. An optional live catalog browser shows API course predictions, conditions and section instructor ratings separately from those demo plans.
+The default Plan My Semester workflow connects the existing Next.js 16/React 19 UI to the Spring Boot Course and Schedule APIs. It loads actual catalog terms/courses/sections, submits reviewed preferences to the native Java solver, compares returned alternatives and checks manual section changes. Degree/transcript/advisor screens remain labeled sample-data prototypes; they have no matching backend APIs.
 
-## Requirements
+## Setup and run
 
-- Node.js 24 LTS
-- npm 11 or newer (included with Node.js 24)
-
-The application uses Next.js 16 and requires at least Node.js 20.9. The project standardizes local development on Node.js 24 LTS; `package-lock.json` pins the complete dependency tree.
-
-## Install and run
+Use Node.js 24 LTS/npm 11 and Java 21. Start Spring Boot with the authorized PostgreSQL catalog configuration, then:
 
 ```bash
 cd frontend
 npm ci
+# Copy .env.example to .env.local only if .env.local does not already exist.
 npm run dev
 ```
 
-Open <http://localhost:3000>. No backend, database, credentials or environment variables are required for the current mock experience.
+Set `BACKEND_URL=http://127.0.0.1:8080` in `frontend/.env.local`, restart Next.js, and open <http://localhost:3000>. This URL stays server-only: the browser uses the allowlisted same-origin `/api/backend` proxy. Missing configuration or an unreachable backend shows an error and Retry. Normal mode never falls back to fake courses or schedules. No SSO/session authentication is implemented; the entry button opens the planner.
 
-### Live course predictions, conditions and instructors
+Set `FRONTEND_MODE=demo` explicitly to retain the original offline semester prototype. Existing developer environment files are never overwritten. On Windows use `npm.cmd`/`npx.cmd` if PowerShell blocks the `.ps1` shims. Production: `npm run build`, then `npm run start`.
 
-For the team's private app, set this in `frontend/.env.local` and restart Next.js:
+See the [integration runbook](../docs/frontend-backend-integration.md) for backend/database setup, all variables, contract mapping, validation, CORS troubleshooting, test fixture provisioning and real HTTP acceptance commands. Do not place AI keys or database credentials in browser-accessible variables.
 
-```dotenv
-BACKEND_URL=http://127.0.0.1:8080
-```
+## Data and behavior
 
-Run the backend with its existing database configuration and `DB_CATALOG_SCHEMA=catalog_serving`; install the catalog-serving views and ratings through their owner ([runbook](../data/catalog-serving/README.md)). The Plan My Semester screen then includes **Live course catalog**, with real API search and pagination. **Conditions & instructors** opens details for that exact API course, including all sections. These read-only courses are separate from the demo planner's simulated courses and times.
+Plan My Semester retains its calendar-first design: one course/interest search above the calendar, a course list on the right, Save/Undo/View bigger beside the calendar, and the header's collapsible **Ask Syllo AI** panel. Scheduling preferences remain inside that panel. The standard calendar shows weekdays and adds weekends when returned meetings require them; View bigger always includes all seven days. The header's term selector uses backend terms rather than a simulated registration countdown.
 
-Course identifiers may include a numeric topic suffix, such as `CSE-398-042`. Search results, detail loading and the proxy preserve that suffix, matching the updated `pre-main` API contract.
+The single course/interest search searches backend code/title keywords, with subject filtering and pagination. Course details preserve exact identifiers (including topic suffixes), credits, lecture/lab links, availability, meetings, descriptions, conditions and per-section instructor predictions. `predictedRating` remains **predicted**, with confidence and coverage; it is never presented as the course's rating. Eligibility remains unverified.
 
-`predictedRating` is always labeled **Predicted quality**, alongside confidence; details also show predicted difficulty and lecture-section coverage. Missing predictions remain unavailable. Course conditions retain their unverified status; an empty list never confirms eligibility. Each section shows its own instructors and predictions, including instructors with no earlier ratings, historical rating counts and whether that history is course-specific.
+Required and optional courses, credits 1–21, weights 0–5, blocked times, preferred times/days, result limits and closed-section policy map to the existing API contract. Generated scores, breakdowns, overload flags and sections come directly from the solver response. TBA/asynchronous sections are listed without fake calendar events. Empty results have correction guidance. Manual add/drag/remove and undo/redo call the backend checker. Saved browser plans store identifiers/preferences, then refresh actual catalog facts when opened. Plans do not enroll students. AI extraction requires review before applying, and unavailable AI is reported honestly; manual scheduling continues to work.
 
-Instructor names are real. Use this connection only within the team's own private app; leave `BACKEND_URL` unset on public deployments until the Banner redistribution question is settled. Do not copy API responses or real names into source, fixtures, screenshots, exports or public materials. The connection uses the same-origin read-only `/api/catalog/courses` proxy with `private, no-store` responses. Names are loaded at runtime, never embedded in static build output or written to the demo store, browser storage or application logs. The proxy is disabled when `BACKEND_URL` is unset. Failures show an unavailable state and Retry.
+Instructor names are real. Keep real catalog access in the team's private app until Banner redistribution is settled. No real names are embedded in builds, copied into fixtures/screenshots, logged or persisted in saved plans. API responses are private/no-store. Do not publish a configured catalog connection.
 
-On Windows, use `npm.cmd` if PowerShell blocks `npm.ps1`; no execution-policy change is needed.
-
-Production build and server:
+## Verification
 
 ```bash
-npm run build
-npm run start
-```
-
-Quality checks:
-
-```bash
-npm run lint
 npm test
-npm run build && npm run verify:catalog
+npm run lint
+npm run build
+npm run verify:catalog
 ```
 
-`verify:catalog` uses the installed Chrome executable, a production Next.js server and a loopback fake backend with synthetic instructors only. It checks live search/pagination, prediction labels/confidence, conditions, every section's ratings, null values, failures/retry, stale requests, private caching, storage separation and the default offline demo. It saves synthetic desktop/mobile screenshots in a temporary directory. Set `CHROME_PATH` if Chrome is elsewhere; no real API or database is used.
+`verify:catalog` starts an explicit demo-mode frontend and fake HTTP server with synthetic instructors. For the existing 228-check degree/navigation/demo-search regression suite, start a built frontend with `FRONTEND_MODE=demo`, set `SYLLO_LAYOUT_URL` to that process, then run `npm run verify:degree`. Both use an installed Chrome; override `CHROME_PATH` as needed.
 
-To check an already running development server, set `SYLLO_CATALOG_DEV_URL=http://localhost:3000` before running `verify:catalog`. This mode checks HTTP success, login/planner rendering, the catalog stylesheet and browser errors without starting a second development server. Catalog CSS is imported directly by `src/app/layout.tsx` so Next.js tracks it as a stylesheet dependency during development.
+To check an already running development server, set `SYLLO_CATALOG_DEV_URL=http://localhost:3000` and run `npm run verify:catalog`. It supports API and demo modes and checks page success, planner/CSS rendering and browser errors. API planner and catalog styles are imported directly by the root layout so Next.js tracks them during development.
 
-`npm run verify:degree` checks the calendar workspace and permanent navigation against a running app at `http://localhost:3000` (override `SYLLO_LAYOUT_URL` for a different dev or production URL). It checks twelve viewport sizes, closed/open plan tools, all semester headings, absence of the placeholder row, navigation visibility, minor search/staging, two-way drag/drop, staging removal, undo, individual-semester restoration, multi-select controls and the toolbar AI launcher. It also checks the unified semester course/interest search at desktop, tablet and phone widths, including aliases, prerequisites, details, add/drag/drop, undo, elective filtering and keyboard controls. It saves screenshots containing only the local demo in a temporary directory.
+`SMARTCOURSE_TEST_BACKEND_URL=http://127.0.0.1:58080 npm run verify:integration` uses a real running Spring Boot instance backed by the isolated synthetic PostgreSQL fixture and native solver. It launches its own production frontend and browser, verifies the complete workflows including actual backend connection refusal, and writes evidence to a temporary directory. The [runbook](../docs/frontend-backend-integration.md#checks-and-deterministic-acceptance-setup) explains safe provisioning. Mocked tests alone do not establish real integration.
+
+## Retained prototype history and reference checks
+
+The following design notes describe the explicit offline prototype. The live semester workflow is documented above and in the integration runbook.
 
 Reference parity can be checked when the extracted reference is served at `http://127.0.0.1:4173` and this app is running at `http://127.0.0.1:3000`:
 

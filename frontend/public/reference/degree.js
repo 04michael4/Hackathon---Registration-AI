@@ -72,7 +72,7 @@
     const focus=document.activeElement?.id;
     shell.innerHTML = `
       <header class="dp-header">
-        <div class="dp-title"><span class="dp-university">Lehigh University</span><h1>Degree Planner</h1></div>
+        <div class="dp-title"><span class="dp-university ${document.documentElement.dataset.sylloMode==='api'?'api-prototype-label':''}" title="This degree workspace uses sample data, separate from the live semester plan.">${document.documentElement.dataset.sylloMode==='api'?'Sample degree data · Demo':'Lehigh University'}</span><h1>Degree Planner</h1></div>
         ${renderProfile()}
       </header>
       <section class="degree-course-search dp-search" aria-label="Search courses, minors and concentrations">

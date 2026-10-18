@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "verify:parity": "node scripts/verify-reference-parity.mjs",
     "verify:catalog": "node scripts/verify-catalog-metadata.mjs",
-    "verify:degree": "node scripts/verify-degree-layout.mjs"
+    "verify:degree": "node scripts/verify-degree-layout.mjs",
+    "verify:integration": "node scripts/verify-api-integration.mjs"
   },
   "dependencies": {
     "next": "^16.0.0",
