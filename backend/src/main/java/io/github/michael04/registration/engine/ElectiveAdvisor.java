@@ -97,12 +97,12 @@ public final class ElectiveAdvisor {
 		for (int i = 0; i < blocked.size(); i++) {
 			List<Meeting> fewer = new ArrayList<>(blocked);
 			Meeting freed = fewer.remove(i);
-			Constraints relaxed = new Constraints(constraints.minCredits(), constraints.maxCredits(), fewer);
+			Constraints relaxed = new Constraints(constraints.minCredits(), constraints.maxCredits(), fewer, constraints.latestStart());
 			if (fits(focus(problem, elective, relaxed, null))) {
 				fixes.add("Free up your blocked time " + describe(freed) + ".");
 			}
 		}
-		Constraints noCap = new Constraints(constraints.minCredits(), Integer.MAX_VALUE, blocked);
+		Constraints noCap = new Constraints(constraints.minCredits(), Integer.MAX_VALUE, blocked, constraints.latestStart());
 		ScheduleResult uncapped = solver.solve(focus(problem, elective, noCap, null));
 		if (!uncapped.schedules().isEmpty() && uncapped.schedules().getFirst().totalCredits() > constraints.maxCredits()) {
 			int needed = uncapped.schedules().stream().mapToInt(ScoredSchedule::totalCredits).min().orElseThrow();
@@ -142,7 +142,7 @@ public final class ElectiveAdvisor {
 		}
 		// The minimum is ignored: without the other electives it may be unreachable, which says nothing
 		// about whether this elective fits.
-		return new ScheduleProblem(courses, new Constraints(0, constraints.maxCredits(), constraints.blockedTimes()),
+		return new ScheduleProblem(courses, new Constraints(0, constraints.maxCredits(), constraints.blockedTimes(), constraints.latestStart()),
 				problem.soft(), 1);
 	}
 
@@ -206,7 +206,7 @@ public final class ElectiveAdvisor {
 				for (Bundle bundle : Bundle.expand(candidate)) {
 					int credits = baseCredits + bundle.credits();
 					if (credits > constraints.maxCredits() || bundle.hasInternalConflict()
-							|| bundle.overlapsAny(constraints.blockedTimes()) || bundle.overlapsAny(baseMeetings)) {
+							|| !bundle.meetings().stream().allMatch(constraints::allows) || bundle.overlapsAny(baseMeetings)) {
 						continue;
 					}
 					List<Meeting> meetings = new ArrayList<>(baseMeetings);
@@ -215,9 +215,10 @@ public final class ElectiveAdvisor {
 					int late = meetings.stream().mapToInt(scorer::lateMinutes).sum();
 					int mask = ScheduleScorer.dayMask(meetings.stream().flatMap(m -> m.days().stream()).toList());
 					int gaps = ScheduleScorer.gapMinutes(meetings);
-					long key = scorer.rankKey(early, late, mask, gaps, 0);
+					int shortfall = ScheduleScorer.breakShortfallMinutes(meetings, problem.soft().minBreakMinutes());
+					long key = scorer.rankKey(early, late, mask, gaps, 0, shortfall);
 					if (best == null || key < best.key()) {
-						SortedMap<String, Integer> breakdown = scorer.breakdown(early, late, mask, gaps, 0);
+						SortedMap<String, Integer> breakdown = scorer.breakdown(early, late, mask, gaps, 0, shortfall);
 						int penalty = breakdown.values().stream().mapToInt(Integer::intValue).sum();
 						best = new Ranked(key, new ElectiveSuggestion(candidate.courseId(),
 								bundle.sections().stream().map(SectionOption::crn).toList(), credits, 100 - penalty,

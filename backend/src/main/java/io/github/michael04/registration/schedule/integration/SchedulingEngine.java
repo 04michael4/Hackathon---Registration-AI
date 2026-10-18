@@ -19,9 +19,22 @@ public interface SchedulingEngine {
 	record Section(String crn, String courseId, int credits, String componentType,
 			String lectureLink, List<Meeting> meetings) {}
 	record Meeting(List<DayOfWeek> days, LocalTime start, LocalTime end) {}
-	record Constraints(int minCredits, int maxCredits, List<Meeting> blockedTimes) {}
+	record Constraints(int minCredits, int maxCredits, List<Meeting> blockedTimes, LocalTime latestStart) {
+		/** Without a latest-start rule. */
+		public Constraints(int minCredits, int maxCredits, List<Meeting> blockedTimes) {
+			this(minCredits, maxCredits, blockedTimes, null);
+		}
+	}
 	record SoftWeights(int optionalCourseWeight, LocalTime earliestStart, int earliestStartWeight,
-			LocalTime latestEnd, int latestEndWeight, List<DayOfWeek> daysOff, int daysOffWeight, int gapsWeight) {}
+			LocalTime latestEnd, int latestEndWeight, List<DayOfWeek> daysOff, int daysOffWeight, int gapsWeight,
+			int minBreakMinutes, int minBreakWeight) {
+		/** Without a minimum-break wish. */
+		public SoftWeights(int optionalCourseWeight, LocalTime earliestStart, int earliestStartWeight,
+				LocalTime latestEnd, int latestEndWeight, List<DayOfWeek> daysOff, int daysOffWeight, int gapsWeight) {
+			this(optionalCourseWeight, earliestStart, earliestStartWeight, latestEnd, latestEndWeight, daysOff,
+					daysOffWeight, gapsWeight, 0, 0);
+		}
+	}
 	/** CRNs refer to the exact prepared input snapshot. No scores or missing breakdowns are synthesized. */
 	record ScoredSchedule(List<String> sectionCrns, int totalCredits, BigDecimal score,
 			Map<String, BigDecimal> scoreBreakdown) {}

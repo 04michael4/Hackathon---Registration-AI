@@ -47,8 +47,17 @@ public class PreferenceAssembler {
 
 	private final CourseMentionResolver resolver;
 
+	private final CourseInterestSearch interests;
+
+	/** Without interest search (tests of the other rules). */
 	public PreferenceAssembler(CourseMentionResolver resolver) {
+		this(resolver, null);
+	}
+
+	@org.springframework.beans.factory.annotation.Autowired
+	public PreferenceAssembler(CourseMentionResolver resolver, CourseInterestSearch interests) {
 		this.resolver = resolver;
+		this.interests = interests;
 	}
 
 	public ExtractPreferencesResponse assemble(String term, RawPreferences raw) {
@@ -57,28 +66,53 @@ public class PreferenceAssembler {
 		Set<String> required = resolveCourses(term, raw.requiredCourses(), result);
 		Set<String> optional = resolveCourses(term, raw.optionalCourses(), result);
 		optional.removeAll(required);
-		if (required.isEmpty()) {
+		List<String> topics = CourseInterestSearch.clean(raw.interestTopics());
+		// Asking for courses by interest is a valid request, not a missing one; only warn when there is neither.
+		if (required.isEmpty() && topics.isEmpty()) {
 			result.warnings.add("No required courses were identified; add them before generating schedules.");
 		}
 
 		int[] credits = creditRange(raw.minCredits(), raw.maxCredits(), result);
 		List<TimeBlock> blocked = blockedTimes(raw.blockedTimes(), result);
+		LocalTime latestStart = parseTime(raw.latestStart(), "latest class start", result).orElse(null);
 
 		SoftPreferences soft = new SoftPreferences(
 				optional.isEmpty() ? null : weighted(List.copyOf(optional), raw.optionalCoursesWeight()),
 				parseTime(raw.earliestStart(), "earliest start", result).map(t -> weighted(t, raw.earliestStartWeight())).orElse(null),
 				parseTime(raw.latestEnd(), "latest end", result).map(t -> weighted(t, raw.latestEndWeight())).orElse(null),
 				daysOff(raw.daysOff(), raw.daysOffWeight(), result),
-				gaps(raw.minimizeGapsWeight()));
+				gaps(raw.minimizeGapsWeight()),
+				minBreak(raw.minBreakMinutes(), raw.minBreakWeight(), result));
 		soft = withoutZeroWeights(soft);
 
 		if (raw.assumptions() != null) {
-			raw.assumptions().stream().filter(a -> a != null && !a.isBlank()).map(String::trim).forEach(result.warnings::add);
+			// An interest request needs no "no required courses" note from the model; every other interpretation is kept.
+			raw.assumptions().stream().filter(a -> a != null && !a.isBlank()).map(String::trim)
+				.filter(a -> topics.isEmpty() || !a.toLowerCase(Locale.ROOT).contains("no required course"))
+				.forEach(result.warnings::add);
 		}
 
 		SchedulePreferences preferences = new SchedulePreferences(
-				new HardConstraints(List.copyOf(required), credits[0], credits[1], blocked), soft);
-		return new ExtractPreferencesResponse(preferences, List.copyOf(result.unresolved), List.copyOf(result.warnings));
+				new HardConstraints(List.copyOf(required), credits[0], credits[1], blocked, latestStart), soft);
+		List<ExtractPreferencesResponse.CourseSuggestion> suggestions = List.of();
+		if (interests != null && !topics.isEmpty()) {
+			Set<String> taken = new LinkedHashSet<>(required);
+			taken.addAll(optional);
+			var found = interests.find(term, topics, taken, blocked, latestStart);
+			suggestions = found.suggestions();
+			if (suggestions.isEmpty() && found.leftOutByTime() > 0) {
+				result.warnings.add("No course fits both your interest and your time rules: " + found.leftOutByTime()
+						+ " related course(s) have no complete set of sections that fits. Your rules were not relaxed; browse the full course list to see them.");
+			}
+			else if (suggestions.isEmpty()) {
+				result.warnings.add("No course in this semester's catalog matched your interest (" + String.join(", ", topics)
+						+ "). Try different words, or search the course list.");
+			}
+			else if (found.leftOutByTime() > 0) {
+				result.warnings.add(found.leftOutByTime() + " other related course(s) were left out because no section combination fits your time rules.");
+			}
+		}
+		return new ExtractPreferencesResponse(preferences, List.copyOf(result.unresolved), List.copyOf(result.warnings), suggestions);
 	}
 
 	private Set<String> resolveCourses(String term, List<String> mentions, Result result) {
@@ -178,6 +212,18 @@ public class PreferenceAssembler {
 		return days.isEmpty() ? null : weighted(days, weight);
 	}
 
+	/** A wish for at least this many minutes between classes, kept inside what the engine accepts (5-240). */
+	private static Weighted<Integer> minBreak(Integer minutes, Integer weight, Result result) {
+		if (minutes == null) {
+			return null;
+		}
+		if (minutes < 5 || minutes > 240) {
+			result.warnings.add("Ignored a break length of " + minutes + " minutes (use 5 to 240)");
+			return null;
+		}
+		return weighted(minutes, weight);
+	}
+
 	private static GapsPreference gaps(Integer weight) {
 		return weight == null ? null : new GapsPreference(Weights.clamp(weight));
 	}
@@ -186,7 +232,8 @@ public class PreferenceAssembler {
 	private static SoftPreferences withoutZeroWeights(SoftPreferences s) {
 		return new SoftPreferences(
 				nonZero(s.optionalCourseIds()), nonZero(s.earliestStart()), nonZero(s.latestEnd()), nonZero(s.daysOff()),
-				s.minimizeGaps() == null || s.minimizeGaps().weight() == 0 ? null : s.minimizeGaps());
+				s.minimizeGaps() == null || s.minimizeGaps().weight() == 0 ? null : s.minimizeGaps(),
+				nonZero(s.minBreakMinutes()));
 	}
 
 	private static <T> Weighted<T> nonZero(Weighted<T> w) {

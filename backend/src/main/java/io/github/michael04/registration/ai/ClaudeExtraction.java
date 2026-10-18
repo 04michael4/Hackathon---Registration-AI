@@ -45,8 +45,27 @@ record ClaudeExtraction(
 		Optional<Integer> daysOffWeight,
 		@JsonPropertyDescription("Importance 0-5 of having classes close together with few gaps; null if not mentioned.")
 		Optional<Integer> minimizeGapsWeight,
+		@JsonPropertyDescription("Minimum minutes the student wants between consecutive classes on the same day (e.g. 60 for \"at least an hour between classes\"); null if not mentioned. This is the opposite of minimizeGapsWeight.")
+		Optional<Integer> minBreakMinutes,
+		@JsonPropertyDescription("Importance 0-5 of minBreakMinutes; null if minBreakMinutes is null.")
+		Optional<Integer> minBreakWeight,
+		@JsonPropertyDescription("When the student describes a topic, interest or learning goal instead of naming a course (\"data science\", \"AI\", \"business analytics\"), 3 to 10 lowercase search keywords that would appear in real course titles or descriptions: the topic, close synonyms, and related fields (e.g. \"data science\" -> data, statistics, analytics, machine learning, programming, database). Empty if the student only named specific courses or gave no interest.")
+		List<String> interestTopics,
+		@JsonPropertyDescription("HARD rule: the latest time any class may START, 24-hour HH:mm. Only when the student says classes must start or begin before/by a time (\"classes that start before 10\"); the class may end later. null otherwise. Do NOT use this for \"no classes before X\" or \"classes must end by X\", which are blockedTimes.")
+		Optional<String> latestStart,
 		@JsonPropertyDescription("Short notes on any interpretation, guess, contradiction, or ignored instruction. Empty if none.")
 		List<String> assumptions) {
+
+	/** Without a minimum-break wish (the shape before {@code minBreakMinutes} existed); used by tests and fixtures. */
+	ClaudeExtraction(List<String> requiredCourses, List<String> optionalCourses, Optional<Integer> optionalCoursesWeight,
+			Optional<Integer> minCredits, Optional<Integer> maxCredits, List<ClaudeTimeBlock> blockedTimes,
+			Optional<String> earliestStart, Optional<Integer> earliestStartWeight, Optional<String> latestEnd,
+			Optional<Integer> latestEndWeight, List<DayOfWeek> daysOff, Optional<Integer> daysOffWeight,
+			Optional<Integer> minimizeGapsWeight, List<String> assumptions) {
+		this(requiredCourses, optionalCourses, optionalCoursesWeight, minCredits, maxCredits, blockedTimes, earliestStart,
+				earliestStartWeight, latestEnd, latestEndWeight, daysOff, daysOffWeight, minimizeGapsWeight, Optional.empty(),
+				Optional.empty(), List.of(), Optional.empty(), assumptions);
+	}
 
 	/** A weekly time range the student can't attend. */
 	record ClaudeTimeBlock(
@@ -74,7 +93,11 @@ record ClaudeExtraction(
 				dayNames(daysOff),
 				orNull(daysOffWeight),
 				orNull(minimizeGapsWeight),
-				copy(assumptions));
+				copy(assumptions),
+				orNull(minBreakMinutes),
+				orNull(minBreakWeight),
+				copy(interestTopics),
+				orNull(latestStart));
 	}
 
 	// Jackson leaves an Optional null (not empty) when the key is missing entirely, so handle both. Missing keys never

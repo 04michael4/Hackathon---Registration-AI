@@ -27,7 +27,7 @@ export async function proxyBackend(request: Request, segments: string[], backend
       if (new TextEncoder().encode(body).length > 65_536) return problem(request, 413, "The request is too large.");
       try { JSON.parse(body); } catch { return problem(request, 400, "The request must contain valid JSON."); }
     }
-    const response = await fetch(url, { method: request.method, body, cache: "no-store", redirect: "error", headers: { Accept: "application/json", ...(post ? { "Content-Type": "application/json" } : {}) }, signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]) });
+    const response = await fetch(url, { method: request.method, body, cache: "no-store", redirect: "error", headers: { Accept: "application/json", ...(post ? { "Content-Type": "application/json" } : {}) }, signal: AbortSignal.any([request.signal, AbortSignal.timeout(post && (route === "preferences/extract" || route === "schedules/explain") ? 60_000 : 30_000)]) });
     const headers: Record<string, string> = { ...privateHeaders };
     const requestId = response.headers.get("X-Request-Id");
     if (requestId) headers["X-Request-Id"] = requestId;

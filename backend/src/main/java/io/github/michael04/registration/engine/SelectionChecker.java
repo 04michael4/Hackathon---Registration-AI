@@ -88,6 +88,10 @@ public final class SelectionChecker {
 				conflicts.add(issue(SelectionIssue.Type.BLOCKED_TIME, List.of(section.crn()),
 						label(section) + " overlaps one of your blocked times."));
 			}
+			else if (section.meetings().stream().anyMatch(constraints::startsTooLate)) {
+				conflicts.add(issue(SelectionIssue.Type.BLOCKED_TIME, List.of(section.crn()),
+						label(section) + " starts at or after your latest allowed start of " + constraints.latestStart() + "."));
+			}
 		}
 		if (selection.credits > constraints.maxCredits()) {
 			conflicts.add(issue(SelectionIssue.Type.OVER_MAX_CREDITS, List.of(), "Placed sections total "
@@ -190,7 +194,8 @@ public final class SelectionChecker {
 		int skipped = (int) optional.stream()
 			.filter(c -> !selection.lecturesByCourse.containsKey(c.courseId()))
 			.count();
-		return scorer.breakdown(early, late, mask, ScheduleScorer.gapMinutes(meetings), skipped);
+		return scorer.breakdown(early, late, mask, ScheduleScorer.gapMinutes(meetings), skipped,
+				ScheduleScorer.breakShortfallMinutes(meetings, problem.soft().minBreakMinutes()));
 	}
 
 	/** Component types linked to a lecture in the catalog, e.g. [LAB, REC]. */

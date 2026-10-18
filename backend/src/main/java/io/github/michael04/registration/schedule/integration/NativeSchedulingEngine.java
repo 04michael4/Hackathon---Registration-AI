@@ -115,7 +115,8 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 		List<CourseOption> courses = problem.courses().stream().map(NativeSchedulingEngine::toNative).toList();
 		var constraints = new io.github.michael04.registration.engine.Constraints(problem.constraints().minCredits(),
 				problem.constraints().maxCredits(),
-				problem.constraints().blockedTimes().stream().map(NativeSchedulingEngine::toNative).toList());
+				problem.constraints().blockedTimes().stream().map(NativeSchedulingEngine::toNative).toList(),
+				problem.constraints().latestStart());
 		SoftWeights soft = problem.soft();
 		var weights = new io.github.michael04.registration.engine.SoftWeights(
 				soft.earliestStart(), soft.earliestStartWeight(),
@@ -123,7 +124,8 @@ public class NativeSchedulingEngine implements SchedulingEngine {
 				soft.daysOff().isEmpty() ? EnumSet.noneOf(DayOfWeek.class) : EnumSet.copyOf(soft.daysOff()),
 				soft.daysOffWeight(),
 				soft.gapsWeight(),
-				soft.optionalCourseWeight());
+				soft.optionalCourseWeight(),
+				soft.minBreakMinutes(), soft.minBreakWeight());
 		return new ScheduleProblem(courses, constraints, weights, problem.maxResults());
 	}
 

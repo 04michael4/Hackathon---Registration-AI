@@ -80,7 +80,7 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 	}
 
 	private record Candidate(long value, List<Option> chosen, int credits, int earlyMinutes, int lateMinutes,
-			int dayMask, int gapMinutes, int skipped) {
+			int dayMask, int gapMinutes, int skipped, int breakShortfall) {
 	}
 
 	/** One run of the search. Holds mutable state, so it is never shared. */
@@ -147,10 +147,11 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 			for (CourseOption course : courses) {
 				List<Bundle> all = Bundle.expand(course);
 				List<Bundle> coherent = all.stream().filter(b -> !b.hasInternalConflict()).toList();
-				List<Bundle> usable = coherent.stream().filter(b -> !b.overlapsAny(constraints.blockedTimes())).toList();
+				List<Bundle> usable = coherent.stream().filter(b -> b.meetings().stream().allMatch(constraints::allows)).toList();
 				if (usable.isEmpty()) {
 					String reason = all.isEmpty() ? "no sections available"
 							: coherent.isEmpty() ? "no lecture/lab combination fits together without a time conflict"
+							: constraints.latestStart() != null ? "every section overlaps your blocked times or starts after your latest allowed start"
 							: "every section overlaps your blocked times";
 					if (course.required()) {
 						diagnostics.add(course.courseId() + ": " + reason + ".");
@@ -322,7 +323,9 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 				return;
 			}
 			int gaps = ScheduleScorer.gapMinutes(chosen.stream().flatMap(o -> o.bundle().meetings().stream()).toList());
-			long value = scorer.rankKey(early, late, mask, gaps, skipped);
+			int shortfall = ScheduleScorer.breakShortfallMinutes(chosen.stream().flatMap(o -> o.bundle().meetings().stream()).toList(),
+					problem.soft().minBreakMinutes());
+			long value = scorer.rankKey(early, late, mask, gaps, skipped, shortfall);
 			if (top.size() == problem.maxResults() && rank(value, skipped, top.getLast()) >= 0) {
 				return;
 			}
@@ -330,7 +333,7 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 			while (position < top.size() && rank(value, skipped, top.get(position)) >= 0) {
 				position++;
 			}
-			top.add(position, new Candidate(value, List.copyOf(chosen), credits, early, late, mask, gaps, skipped));
+			top.add(position, new Candidate(value, List.copyOf(chosen), credits, early, late, mask, gaps, skipped, shortfall));
 			if (top.size() > problem.maxResults()) {
 				top.removeLast();
 			}
@@ -388,7 +391,7 @@ public final class BacktrackingScheduleSolver implements ScheduleSolver {
 				.flatMap(bundle -> bundle.sections().stream())
 				.toList();
 			var breakdown = scorer.breakdown(candidate.earlyMinutes(), candidate.lateMinutes(), candidate.dayMask(),
-					candidate.gapMinutes(), candidate.skipped());
+					candidate.gapMinutes(), candidate.skipped(), candidate.breakShortfall());
 			int penalty = breakdown.values().stream().mapToInt(Integer::intValue).sum();
 			return new ScoredSchedule(sections, candidate.credits(), penalty, 100 - penalty, breakdown);
 		}

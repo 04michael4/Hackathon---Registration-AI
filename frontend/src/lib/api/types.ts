@@ -83,13 +83,16 @@ export interface ProblemDetails { type: string; title: string; status: number; d
 export interface TimeBlock { days: Day[]; start: string; end: string }
 export interface Weighted<T> { value: T; weight: number }
 export interface SchedulePreferences {
-  hardConstraints: { requiredCourseIds: string[]; minCredits: number; maxCredits: number; blockedTimes: TimeBlock[] };
+  /** `blockedTimes` forbid any overlap; `latestStart` requires every class to begin before it (it may end later). */
+  hardConstraints: { requiredCourseIds: string[]; minCredits: number; maxCredits: number; blockedTimes: TimeBlock[]; latestStart?: string | null };
   softPreferences?: {
     optionalCourseIds?: Weighted<string[]>;
     earliestStart?: Weighted<string>;
     latestEnd?: Weighted<string>;
     daysOff?: Weighted<Day[]>;
     minimizeGaps?: { weight: number };
+    /** Wish for at least this many minutes between classes on the same day (ranking only, never a hard rule). */
+    minBreakMinutes?: Weighted<number>;
   } | null;
 }
 export interface GenerateRequest { term: string; preferences: SchedulePreferences; maxResults: number; includeClosedSections: boolean }
@@ -106,5 +109,8 @@ export interface CheckResponse extends Omit<Schedule, "rank"> {
   candidates: { crn: string; courseId: string; fits: boolean; completesLecture: boolean; reasons: string[] }[];
 }
 export interface SuggestResponse { term: string; suggestions: ({ courseId: string; title: string } & Omit<Schedule, "rank">)[] }
-export interface ExtractResponse { preferences: SchedulePreferences; unresolved: string[]; warnings: string[] }
+/** A real catalog course the AI found for the student. It is only a suggestion: the student chooses what joins the plan. */
+/** `qualifying` is one real lecture(+lab/recitation) combination that fits the student's time rules, when the catalog has one. */
+export interface CourseSuggestion { courseId: string; title: string; credits: number; reason: string; qualifying?: string | null }
+export interface ExtractResponse { preferences: SchedulePreferences; unresolved: string[]; warnings: string[]; suggestions: CourseSuggestion[] }
 export interface ExplainResponse { explanation: string; highlights: string[] }
